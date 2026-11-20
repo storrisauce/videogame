@@ -29,6 +29,7 @@ var motion_check := CheckBox.new()
 var music_check := CheckBox.new()
 var sfx_check := CheckBox.new()
 var vibra_check := CheckBox.new()
+var fast_check := CheckBox.new()
 
 
 func setup(card_db: CardDB, prof: Profile) -> void:
@@ -85,9 +86,11 @@ func _ready() -> void:
 	Juice.press(play_button)
 	add_child(play_button)
 	add_child(wallet)
-	gear.text = "⚙"
-	gear.add_theme_font_size_override("font_size", 22)
+	gear.text = ""   # il simbolo ⚙ non c'è nei font su iPhone: la rotellina è disegnata (GearIcon)
 	gear.custom_minimum_size = Vector2(44, 44)
+	var gi := GearIcon.new()
+	gi.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	gear.add_child(gi)
 	_round(gear, "ferro_2")
 	gear.pressed.connect(func(): settings.visible = not settings.visible)
 	Juice.press(gear)
@@ -115,8 +118,11 @@ func _ready() -> void:
 				Sfx.music("menu")
 			Sfx.buzz("light")
 			profile.save())
-	for cb in [auto_check, motion_check, music_check, sfx_check, vibra_check]:
-		cb.custom_minimum_size = Vector2(0, 44)
+	fast_check.text = "Animazioni rapide"
+	fast_check.button_pressed = profile.veloce
+	fast_check.toggled.connect(func(on: bool): profile.veloce = on; profile.save())
+	for cb in [auto_check, fast_check, motion_check, music_check, sfx_check, vibra_check]:
+		cb.custom_minimum_size = Vector2(0, 40)
 		vb.add_child(cb)
 	settings.add_child(vb)
 	settings.visible = false
@@ -312,3 +318,25 @@ class Wallet extends Control:
 		sb.set_corner_radius_all(5)
 		draw_style_box(sb, r)
 		draw_rect(Rect2(r.position.x + 3, r.position.y + 8, r.size.x - 6, 9), col)
+
+
+## Rotellina delle impostazioni disegnata (otto denti, foro al centro), bianca con contorno.
+class GearIcon extends Control:
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var c := size / 2.0
+		var r := minf(size.x, size.y) * 0.26
+		var pts := PackedVector2Array()
+		for k in 32:
+			var a := TAU * k / 32.0
+			var tooth := 1.0 if (k % 4) < 2 else 0.74
+			pts.append(c + Vector2(cos(a), sin(a)) * r * 1.3 * tooth)
+		var ink := Art.c("inchiostro")
+		var outline := pts.duplicate()
+		outline.append(pts[0])
+		draw_colored_polygon(pts, Art.c("bianco"))
+		draw_polyline(outline, ink, 2.0, true)
+		draw_circle(c, r * 0.45, Art.c("ferro_2"))
+		draw_arc(c, r * 0.45, 0, TAU, 20, ink, 2.0, true)

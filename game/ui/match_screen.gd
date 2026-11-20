@@ -17,7 +17,10 @@ var db: CardDB
 var profile: Profile
 var m: Match
 var rng := RandomNumberGenerator.new()
-var speed := 1.0                 ## 0 = nessuna attesa (test)
+var speed := 1.0                 ## 0 = nessuna attesa (test); 1,6 con "Animazioni rapide"
+## Ritmo (secondi a velocità 1). Più lento della prima versione: sul telefono certe mosse non si capivano.
+## Regola: una cosa alla volta, e prima di ogni mossa dell'avversario si vede quale carta gioca (game-ui-ux, card-game).
+const PACE := {"ai_start": 1.0, "ai_action": 0.9, "reveal": 1.25, "attack_cue": 0.4, "attack_after": 0.95, "log": 3.2, "banner": 1.3}
 var autoplay_human := false      ## test: il giocatore umano è guidato dall'IA
 var state := "busy"              ## "play", "target", "busy", "over"
 var selected_hand := -1
@@ -76,6 +79,8 @@ func start_match(card_db: CardDB, prof: Profile, hero: String, bands: Array, opp
 	m.players[HUMAN].empty_deck_rule = "bleed"
 	m.players[AI].empty_deck_rule = "reshuffle"
 	m.event.connect(_on_event)
+	if speed > 0.0 and profile and profile.veloce:
+		speed = 1.6
 	Sfx.music("match")
 	m.start()
 	_log("Inizia %s." % ("tu" if m.first_player == HUMAN else "l'avversario"))
@@ -572,7 +577,7 @@ func _log(t: String) -> void:
 			_log_tw.kill()
 		log_label.modulate.a = 1.0
 		_log_tw = create_tween()
-		_log_tw.tween_interval(2.2)
+		_log_tw.tween_interval(PACE["log"])
 		_log_tw.tween_property(log_label, "modulate:a", 0.0, 0.3)
 	if log_lines.size() > 50:
 		log_lines.remove_at(0)
@@ -856,12 +861,13 @@ func _on_end_turn() -> void:
 			if not m.attack_needs_dial(HUMAN, i):
 				continue
 			var att := m.players[HUMAN].lanes[i].creature
+			await _attack_cue(HUMAN, i)
 			var res := await _dial(att.def["name"], m.lane_undefended(HUMAN, i))
 			m.attack_lane(HUMAN, i, res == "botta")
 			refresh()
 			if _check_over():
 				return
-			await _wait(0.55)
+			await _wait(PACE["attack_after"])
 	else:
 		_flash("Primo turno: niente attacco")
 		await _wait(0.6)
@@ -878,27 +884,31 @@ func _ai_turn() -> void:
 	if speed > 0.0:
 		Sfx.play("turn_opp", 1.0, 0.0)
 	refresh()
-	await _wait(0.5)
+	await _wait(PACE["ai_start"])
 	for n in 30:
 		var a := GreedyAI.choose(m, AI)
-		if a.is_empty() or not m.apply(AI, a):
+		if a.is_empty():
+			break
+		await _reveal_ai_action(a)
+		if not m.apply(AI, a):
 			break
 		refresh()
 		if _check_over():
 			return
-		await _wait(0.6)
+		await _wait(PACE["ai_action"])
 	if m.can_attack_this_turn(AI):
 		for i in 4:
 			if not m.attack_needs_dial(AI, i):
 				continue
 			# Il quadrante compare anche in difesa ma non cambia il danno (D-005, come nel genere).
+			await _attack_cue(AI, i)
 			if not m.lane_undefended(AI, i):
 				await _dial("Para!", false)
 			m.attack_lane(AI, i, false)
 			refresh()
 			if _check_over():
 				return
-			await _wait(0.55)
+			await _wait(PACE["attack_after"])
 	_finish_ai_turn()
 
 
@@ -923,6 +933,90 @@ func _dial(label: String, empty_lane: bool) -> String:
 	return r
 
 
+## Prima di ogni mossa dell'avversario: la sua carta compare grande a destra, con cosa sta facendo,
+## resta un attimo leggibile e poi vola verso il recinto. Così si capisce sempre cosa è successo.
+func _reveal_ai_action(a: Dictionary) -> void:
+	if speed <= 0.0 or not is_inside_tree():
+		return
+	var c: CardInst = null
+	var caption := ""
+	var lane: int = a.get("lane", -1)
+	match a["type"]:
+		"play":
+			c = m.players[AI].hand[a["hand"]]
+			caption = "Gioca"
+		"scuoti":
+			c = m.players[AI].lanes[lane].creature
+			caption = "Scuote"
+		"hero":
+			caption = m.players[AI].hero.get("ability_name", "Abilità")
+	if lane >= 0 and lane < 4:
+		lane_views[AI][lane].highlighted = true
+		lane_views[AI][lane].queue_redraw()
+	var box := Control.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.z_index = 15
+	var h := size.y * 0.52
+	var w := h * 0.74
+	box.size = Vector2(w, h + 30)
+	var hv := hero_views[AI]
+	box.position = Vector2(hv.position.x - w - 14, size.y * 0.1)
+	var tag := Label.new()
+	tag.text = caption
+	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tag.add_theme_font_size_override("font_size", Ui.MID)
+	tag.add_theme_color_override("font_color", Art.c("giallo_2"))
+	tag.add_theme_constant_override("outline_size", 8)
+	tag.position = Vector2(0, 0)
+	tag.size = Vector2(w, 28)
+	box.add_child(tag)
+	if c:
+		var v := CardView.new()
+		v.setup(c, m)
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.position = Vector2(0, 30)
+		v.size = Vector2(w, h)
+		box.add_child(v)
+	else:
+		box.position.y = hv.position.y + hv.size.y * 0.5
+	add_child(box)
+	box.pivot_offset = box.size / 2.0
+	box.scale = Vector2(0.88, 0.88)
+	box.modulate.a = 0.0
+	var tw := box.create_tween().set_parallel(true)
+	tw.tween_property(box, "modulate:a", 1.0, 0.15)
+	tw.tween_property(box, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	Sfx.play("card_pick", 0.9)
+	await _wait(PACE["reveal"])
+	if not is_instance_valid(box):
+		return
+	var tw2 := box.create_tween().set_parallel(true)
+	var dest := box.position
+	if lane >= 0 and lane < 4:
+		dest = _lane_point(AI, lane) - box.size * 0.15
+	tw2.tween_property(box, "position", dest, 0.22).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tw2.tween_property(box, "scale", Vector2(0.3, 0.3), 0.22).set_ease(Tween.EASE_IN)
+	tw2.tween_property(box, "modulate:a", 0.0, 0.22).set_ease(Tween.EASE_IN)
+	tw2.chain().tween_callback(box.queue_free)
+	if lane >= 0 and lane < 4:
+		lane_views[AI][lane].highlighted = false
+		lane_views[AI][lane].queue_redraw()
+	await _wait(0.2)
+
+
+## Prima di ogni attacco: il recinto che attacca si illumina un attimo (si vede chi colpisce chi).
+func _attack_cue(p: int, i: int) -> void:
+	if speed <= 0.0 or not is_inside_tree():
+		return
+	var lv: LaneView = lane_views[p][i]
+	lv.highlighted = true
+	lv.queue_redraw()
+	board3d.glow(p, i, Art.c("allarme"))
+	await _wait(PACE["attack_cue"])
+	lv.highlighted = false
+	lv.queue_redraw()
+
+
 func _wait(t: float) -> void:
 	if speed > 0.0:
 		await get_tree().create_timer(t / speed).timeout
@@ -945,7 +1039,7 @@ func _flash(t: String) -> void:
 		_banner_tw.set_parallel(true)
 		_banner_tw.tween_property(banner, "modulate:a", 1.0, 0.16)
 		_banner_tw.tween_property(banner, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		_banner_tw.chain().tween_interval(0.9 / speed)
+		_banner_tw.chain().tween_interval(PACE["banner"] / speed)
 		_banner_tw.chain().tween_property(banner, "modulate:a", 0.0, 0.25 / speed)
 
 

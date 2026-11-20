@@ -11,6 +11,7 @@ var meno_movimento := false   ## accessibilità: niente scosse dello schermo né
 var musica := true
 var effetti := true
 var vibrazione := true
+var veloce := false   ## "Animazioni rapide": la partita scorre più in fretta
 var vittorie := 0
 var sconfitte := 0
 var hero := "nonna"
@@ -29,6 +30,7 @@ static func load_or_new() -> Profile:
 			p.musica = bool(d.get("musica", true))
 			p.effetti = bool(d.get("effetti", true))
 			p.vibrazione = bool(d.get("vibrazione", true))
+			p.veloce = bool(d.get("veloce", false))
 			p.vittorie = int(d.get("vittorie", 0))
 			p.sconfitte = int(d.get("sconfitte", 0))
 			p.hero = String(d.get("hero", "nonna"))
@@ -43,6 +45,6 @@ func save() -> void:
 		return
 	f.store_string(JSON.stringify({
 		"fagioli": fagioli, "tonno": tonno, "mirino_automatico": mirino_automatico, "meno_movimento": meno_movimento,
-		"musica": musica, "effetti": effetti, "vibrazione": vibrazione,
+		"musica": musica, "effetti": effetti, "vibrazione": vibrazione, "veloce": veloce,
 		"vittorie": vittorie, "sconfitte": sconfitte, "hero": hero, "bands": bands,
 	}, "\t"))

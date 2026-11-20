@@ -298,6 +298,9 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
   (in `game/assets/audio/`), suonati da `ui/sfx.gd` (`Sfx.play`, `Sfx.music`, `Sfx.buzz`, bus Musica/Effetti con limitatore);
   impostazioni Musica, Effetti sonori, Vibrazione nella rotellina della home (salvate nel profilo). Mancano i versi degli animali.
 - ✅ **Prima prova su iPhone reale** (2026-11-20): esportata, compilata e installata da terminale (§6.3).
+  Correzioni dopo la prova: vignettatura su tutto lo schermo (non solo nei margini sicuri), rotellina disegnata (⚙ manca
+  nei font iOS: niente simboli speciali nei testi), ritmo più lento (`MatchScreen.PACE`), carta dell'avversario mostrata
+  prima di ogni sua mossa (`_reveal_ai_action`), recinto che si illumina prima di ogni attacco, opzione "Animazioni rapide".
 - ❌ Non ancora fatto: trascinamento delle carte (D-010), tutorial, set di lancio (~90 carte),
   costruzione libera del mazzo, campagna, casse/collezione, Supabase, build su iPhone reale, Android.
 

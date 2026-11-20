@@ -1,6 +1,6 @@
 # Partita
 
-**Status:** in progress · **Updated:** 2026-11-20 · [GDD](../../GDD.md) · [Implementation](implementation.md) · [Testing](testing.md)
+**Status:** implemented · **Updated:** 2026-11-20 · [GDD](../../GDD.md) · [Implementation](implementation.md) · [Testing](testing.md)
 
 Due sopravvissuti si sfidano con le loro bande su 4 recinti a testa, uno di fronte all'altro. A ogni turno spendi il Caos per giocare carte e scuotere creature, poi le tue creature attaccano il recinto di fronte con il mirino Geiger. Le regole sono quelle del genere a corsie, come le abbiamo studiate ([analisi](../../analisi-meccaniche-card-wars.md)); i numeri sono nostri (D-001, D-005). Serve il pilastro 3: tattica nei recinti, abilità nel mirino.
 
@@ -50,3 +50,4 @@ Due sopravvissuti si sfidano con le loro bande su 4 recinti a testa, uno di fron
 ## History
 - 2026-11-20: designed.
 - 2026-11-20: in progress, motore M1 in `game/core/`.
+- 2026-11-20: implemented, compresa la regola 13 (rialzarsi).

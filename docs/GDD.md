@@ -1,6 +1,6 @@
 # Fattoria Nucleare — Game Design Document
 
-**Version:** 0.3 · **Updated:** 2026-11-20 · [Features](#feature-index) · [Decisions](#decisions) · [Change log](#change-log)
+**Version:** 0.4 · **Updated:** 2026-11-20 · [Features](#feature-index) · [Decisions](#decisions) · [Change log](#change-log)
 
 ## Summary
 Gioco di carte a turni per telefono. Ogni giocatore schiera animali e ortaggi mutanti in **4 recinti** davanti a quelli avversari.
@@ -38,14 +38,14 @@ pesca → spendi Caos (gioca carte, scuoti creature) → attacca col mirino → 
 
 | Feature | Status | Scope | Summary | Docs |
 |---|---|---|---|---|
-| Partita | in progress | MVP | Regole del turno, Caos, recinti, Scuotere, combattimento col mirino Geiger, vittoria | [design](features/partita/design.md) |
+| Partita | implemented | MVP | Regole del turno, Caos, recinti, Scuotere, combattimento col mirino Geiger, vittoria | [design](features/partita/design.md) |
 | Carte e bande | designed | MVP | 5 bande + Cratere, sopravvissuti, formato delle carte, bilanciamento, set di lancio | [design](features/carte-e-bande/design.md) |
-| Schermo di gioco | designed | MVP | Layout orizzontale per iPhone, gesti, feedback, accessibilità | [design](features/schermo-di-gioco/design.md) |
-| IA avversaria | idea | MVP | Valuta ogni mossa col punteggio del tavolo e sceglie la migliore | — |
+| Schermo di gioco | implemented | MVP | Layout orizzontale per iPhone, gesti, mirino, fine partita (grafica provvisoria) | [design](features/schermo-di-gioco/design.md) |
+| IA avversaria | implemented | MVP | Valuta ogni mossa col punteggio del tavolo e sceglie la migliore | [design](features/ia-avversaria/design.md) |
 | Costruzione mazzo | idea | MVP | Mazzo di carte + 4 zone, limiti di copie e dimensione | — |
 | Campagna | idea | MVP | Mappa della fattoria, una banda per zona, stelle con condizioni | — |
 | Collezione e casse | idea | later | Casse del rifornimento a pesi, livelli delle carte, scatolette come valuta | — |
-| Profilo e salvataggi | idea | MVP | Account anonimo Supabase, salvataggio cloud, dati delle carte scaricati | — |
+| Profilo e salvataggi | idea | MVP | Oggi: profilo locale (scatolette, statistiche). Da fare: account anonimo Supabase, salvataggio cloud, dati delle carte scaricati | — |
 | Versione Android | idea | later | Stesso progetto Godot, adattamento a schermi e tasto indietro | — |
 | Sfide asincrone | idea | later | Combatti il mazzo salvato di un altro giocatore guidato dall'IA, trofei | — |
 | Eventi a tempo | idea | later | Zone aperte certi giorni, sfidante casuale, regali giornalieri | — |
@@ -81,6 +81,8 @@ pesca → spendi Caos (gioca carte, scuoti creature) → attacca col mirino → 
 | D-007 | 2026-11-20 | Le abilità delle carte usano le famiglie di effetti del genere (catalogo delle 239), tradotte nel tema; ogni carta resta originale | Inventare effetti nuovi; copiare le carte una per una | Richiesta dell'utente: stesse regole e stesse abilità; i mattoni del genere si usano, le carte specifiche no (D-001) | carte-e-bande |
 | D-008 | 2026-11-20 | Build iOS sul Mac dell'utente con Xcode; GitHub Actions macOS come alternativa | Solo CI | L'utente ha un Mac | M2, M5 |
 | D-009 | 2026-11-20 | 6 sopravvissuti al lancio, espandibili | Copiare la rosa dell'originale | La rosa originale non è nell'APK (sta sul server) e resta comunque fuori da D-001 | carte-e-bande |
+| D-010 | 2026-11-20 | Giocare una carta toccandola e poi toccando il recinto | Trascinare (come nel design) | Più semplice e affidabile da far funzionare subito; il trascinamento si aggiunge sopra in seguito | schermo-di-gioco |
+| D-011 | 2026-11-20 | Identificativo dell'app provvisorio `it.fattorianucleare.gioco` | — | Serve per esportare; l'utente lo cambia col suo dominio o team Apple prima di pubblicare | export |
 
 ## Open questions
 - **Assumptions to confirm:** tutti i numeri segnati `[ASSUMPTION]` nelle note delle feature; l'abbinamento banda→stile di gioco; i 6 sopravvissuti come rosa di lancio.
@@ -89,5 +91,6 @@ pesca → spendi Caos (gioca carte, scuoti creature) → attacca col mirino → 
 
 ## Change log
 **0.1 (2026-11-20):** prima stesura; partita, carte e bande, schermo di gioco progettati; D-001…D-005.
+**0.4 (2026-11-20):** gioco giocabile: menu, partita orizzontale con mirino, fine partita, rialzarsi, profilo locale, preset di esportazione iOS/Android; [IA avversaria](features/ia-avversaria/design.md) documentata; D-010, D-011.
 **0.3 (2026-11-20):** M1: motore delle regole, IA e test in `game/` ([partita](features/partita/implementation.md)).
 **0.2 (2026-11-20):** schermo solo orizzontale ([schermo di gioco](features/schermo-di-gioco/design.md)); D-006…D-009.

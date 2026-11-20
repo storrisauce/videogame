@@ -20,4 +20,4 @@ Comando: `godot --headless --path game --script res://tests/test_runner.gd` (esc
 - [x] Mano massima 7: la pescata in più va persa. *(› test_hand_limit)*
 - [x] Abilità del sopravvissuto con ricarica. *(› test_hero_cooldown)*
 - [x] Una partita IA contro IA finisce con un vincitore prima del limite di turni. *(› test_full_game)*
-- [ ] Rialzarsi con 1 scatoletta di tonno — non implementato.
+- [x] Rialzarsi una volta per partita: Pazienza al massimo, mano e Letamaio nel mazzo, ripesca 5, le carte in campo restano. *(› test_resurrect)*

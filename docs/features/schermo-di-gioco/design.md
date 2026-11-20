@@ -1,6 +1,6 @@
 # Schermo di gioco
 
-**Status:** designed · **Updated:** 2026-11-20 · [GDD](../../GDD.md)
+**Status:** implemented · **Updated:** 2026-11-20 · [GDD](../../GDD.md) · [Implementation](implementation.md) · [Testing](testing.md)
 
 La partita si gioca **solo in orizzontale**, con due pollici, prima su iPhone e poi su Android (D-006). Tutto il tavolo sta in uno schermo senza scorrere: l'avversario in alto, tu in basso, i sopravvissuti ai lati, la mano che spunta dal bordo inferiore. Serve il pilastro 2: una partita in una pausa caffè.
 
@@ -45,3 +45,4 @@ La partita si gioca **solo in orizzontale**, con due pollici, prima su iPhone e 
 ## History
 - 2026-11-20: designed in verticale.
 - 2026-11-20: passato a solo orizzontale (D-006).
+- 2026-11-20: implemented con grafica provvisoria; carte giocate a tocco invece che a trascinamento (D-010).

@@ -21,7 +21,7 @@ Motore delle regole in GDScript puro, senza nodi, così gira da terminale, nei t
 - **Persistence:** nessuna.
 
 ## Deviations from design
-- Regola 13 (rialzarsi con 1 scatoletta di tonno) non ancora implementata.
+- Regola 13: il motore gestisce il rialzarsi (`can_resurrect`/`resurrect`); il costo in tonno lo paga il profilo nella schermata.
 - I recinti si fronteggiano con lo stesso indice (0 contro 0); l'ordine di attacco è sempre dal recinto 0 al 3.
 - La ricarica del sopravvissuto parte da 0: l'abilità è pronta dal primo turno [ASSUMPTION].
 - Famiglie implementate: solo quelle usate dal set di prova (14 di creature/eventi, 3 di strutture, 6 di sopravvissuti).

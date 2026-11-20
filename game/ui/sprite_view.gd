@@ -6,6 +6,8 @@ var tex: Texture2D
 var terrain := "erba"
 var scale_px := Art.SCALE
 var flip := false
+var art_id := ""      ## se impostato: usa l'illustrazione 3D (o la figura) di questa carta/sopravvissuto
+var art_hero := false
 var _last := -1
 
 
@@ -34,6 +36,8 @@ func _draw() -> void:
 	var win := r.grow(-5)
 	if terrain != "":
 		Art.draw_terrain(self, terrain, win)
-	if tex:
+	if art_id != "":
+		Art.draw_art(self, art_id, art_hero, win.grow_individual(0, 0, 0, -4), 0, flip)
+	elif tex:
 		Art.draw_frame(self, tex, Art.frame_now(tex), win.grow_individual(0, 0, 0, -4), scale_px, flip)
 	draw_rect(win, Art.c("legno_1"), false, 1.0)

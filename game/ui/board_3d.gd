@@ -24,7 +24,6 @@ var structure_sprites := [[null, null, null, null], [null, null, null, null]]
 var _shown := [[null, null, null, null], [null, null, null, null]]      ## CardInst mostrata per recinto (creatura)
 var _shown_s := [[null, null, null, null], [null, null, null, null]]    ## struttura
 var _zones := [[], []]
-var _ground: Array = [[], []]
 var _trauma := 0.0
 var _cam_rest := Transform3D()
 var _t := 0.0
@@ -45,151 +44,321 @@ func _init() -> void:
 
 
 # --- Costruzione ---------------------------------------------------------------
+## Stile (strada A): low-poly cartoon con ombre a gradini (shaders/toon.gdshader) e contorno nero
+## (shaders/outline.gdshader). Il tabellone è un vassoio di legno sul tavolo di lamiera di un bunker, con oggetti
+## di scena intorno. Bloom leggero solo sulle cose radioattive (emissione > 1).
+
+const SURF := 0.22          ## altezza della superficie dei recinti
+const TOON := preload("res://shaders/toon.gdshader")
+const OUTLINE := preload("res://shaders/outline.gdshader")
+const TERRAIN := {
+	"porcile": ["legno_4", "legno_3"], "pollaio": ["pelle_3", "arancio_4"], "stagno": ["acqua_4", "acqua_6"],
+	"patate": ["legno_3", "legno_5"], "discarica": ["ferro_3", "ferro_2"], "cratere": ["viola_1", "radio_1"], "erba": ["verde_4", "verde_3"]}
+
+var _cells := [[], []]      ## Node3D con terreno e decorazioni di ogni recinto
+var _rng := RandomNumberGenerator.new()
+
 
 func _build_world() -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Art.c("verde_3")
+	env.background_color = Art.c("notte")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.85, 0.88, 1.0)
-	env.ambient_light_energy = 0.55
+	env.ambient_light_color = Color(0.62, 0.66, 0.85)
+	env.ambient_light_energy = 0.6
 	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+	env.glow_enabled = true
+	env.glow_hdr_threshold = 1.05
+	env.glow_intensity = 0.7
+	env.glow_bloom = 0.0
 	var we := WorldEnvironment.new()
 	we.environment = env
 	world.add_child(we)
 	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-58, -35, 0)
-	sun.light_energy = 0.9
+	sun.rotation_degrees = Vector3(-55, -32, 0)
+	sun.light_energy = 1.25
+	sun.light_color = Color(1.0, 0.96, 0.88)
 	sun.shadow_enabled = true
+	sun.directional_shadow_max_distance = 40.0
 	world.add_child(sun)
-	# telecamera dietro la tua fila, inclinata di circa 52 gradi
-	cam.fov = 44.0
+	cam.fov = 40.0
 	cam.look_at_from_position(CAM_TARGET + CAM_DIR * 10.0, CAM_TARGET, Vector3.UP)
 	world.add_child(cam)
 	vp.size_changed.connect(_fit_camera)
-	_cam_rest = cam.transform
-	cam.current = true
+	_rng.seed = 7
 
 	var bw := COL_W * 4.0
 	var bd := ROW_D * 2.0 + MID
-	# prato tutto intorno (sotto l'altopiano)
-	_plane(Vector3(0, -1.6, 0), Vector2(60, 60), Art.terrain_tex("erba"), 2.0)
-	# altopiano: fianchi di terra e labbro d'erba
-	_box(Vector3(0, -0.8, 0), Vector3(bw + 0.5, 1.6, bd + 0.5), Art.c("legno_4"))
-	_box(Vector3(0, -0.06, 0), Vector3(bw + 0.62, 0.12, bd + 0.62), Art.c("verde_3"))
-	for k in 6:   # strati di roccia sul fronte della scogliera
-		_box(Vector3(-bw / 2.0 + 0.6 + k * (bw - 1.2) / 5.0, -0.7 - (k % 2) * 0.35, bd / 2.0 + 0.26), Vector3(0.9, 0.12, 0.02), Art.c("legno_3"))
-	# erba sopra l'altopiano (bordo attorno ai recinti)
-	_plane(Vector3(0, 0.001, 0), Vector2(bw + 0.6, bd + 0.6), Art.terrain_tex("erba"), 2.0)
-	# sentiero di terra
-	_plane(Vector3(0, 0.004, 0), Vector2(bw, MID), Art.terrain_tex("pollaio"), 2.0)
-	# recinti: un piano per terreno, cambiato in refresh() secondo le zone
+	# tavolo di lamiera del bunker, con bulloni sul bordo e una macchia di ruggine
+	_box(Vector3(0, -0.35, 0), Vector3(bw + 9.0, 0.5, bd + 7.0), Art.c("ferro_2"), 0.0)
+	for k in 9:
+		for side in [-1.0, 1.0]:
+			_ball(Vector3(-bw / 2.0 - 4.2 + k * (bw + 8.4) / 8.0, -0.08, side * (bd / 2.0 + 3.3)), 0.09, Art.c("ferro_4"), false)
+	_disc(Vector3(bw / 2.0 + 2.3, -0.09, 2.2), 1.1, Art.c("ruggine_2"), 0.02)
+	_disc(Vector3(-bw / 2.0 - 2.6, -0.09, -2.0), 0.8, Art.c("ruggine_1"), 0.02)
+	# vassoio di legno del tabellone
+	_box(Vector3(0, 0.0, 0), Vector3(bw + 0.7, 0.36, bd + 0.7), Art.c("legno_5"))
+	_box(Vector3(0, SURF - 0.06, 0), Vector3(bw + 0.1, 0.1, bd + 0.1), Art.c("legno_3"), 0.0)
+	# sentiero di terra tra i due schieramenti
+	_box(Vector3(0, SURF - 0.03, 0), Vector3(bw, 0.06, MID), Art.c("legno_8"), 0.0)
+	# recinti: terreno e decorazioni (rifatti in refresh() secondo la zona)
 	for p in 2:
 		for i in 4:
-			var c := cell_center(p, i)
-			var mi := _plane(Vector3(c.x, 0.006, c.z), Vector2(COL_W - 0.12, ROW_D - 0.1), Art.terrain_tex("erba"), 2.0)
-			_ground[p].append(mi)
-	# steccati tra i recinti e ai bordi
+			var n := Node3D.new()
+			n.position = cell_center(p, i)
+			world.add_child(n)
+			_cells[p].append(n)
+	# steccati bassi tra le corsie e sui bordi: bordi netti
 	for i in range(5):
 		var x := -bw / 2.0 + i * COL_W
 		for zr in [[-bd / 2.0, -MID / 2.0], [MID / 2.0, bd / 2.0]]:
 			_fence(x, zr[0], zr[1])
-	# siepe in fondo
-	var hx := -bw / 2.0 - 0.3
-	var k2 := 0
-	while hx <= bw / 2.0 + 0.3:
-		var r := 0.42 + 0.08 * float(k2 % 3)
-		_ball(Vector3(hx, r * 0.7, -bd / 2.0 - 0.45), r, Art.c("verde_2"))
-		hx += 0.55
-		k2 += 1
-	# qualche albero ai lati, per la profondità
-	for side in [-1.0, 1.0]:
-		for z in [-2.6, 0.2, 2.8]:
-			_tree(Vector3(side * (bw / 2.0 + 1.5 + absf(z) * 0.15), -1.6, z))
-	# figure dei recinti
-	for p in 2:
-		for i in 4:
-			creature_sprites[p][i] = _sprite()
-			structure_sprites[p][i] = _sprite()
+	# oggetti di scena sul tavolo
+	_props(bw, bd)
 
 
-func _mat(color: Color, tex: Texture2D = null, uv := Vector2.ONE, shaded := false) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = color
+
+## Materiale cartoon: colore pieno (o texture a palette), emissione per il bagliore.
+func _toon(color: Color, tex: Texture2D = null, glow := 0.0) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = TOON
+	m.set_shader_parameter("albedo", color)
 	if tex:
-		m.albedo_texture = tex
-		m.uv1_scale = Vector3(uv.x, uv.y, 1)
-		m.texture_repeat = true
-	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL if shaded else BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.set_shader_parameter("albedo_tex", tex)
+		m.set_shader_parameter("use_tex", true)
+	if glow > 0.0:
+		m.set_shader_parameter("emission", color)
+		m.set_shader_parameter("emission_energy", glow)
 	return m
 
 
-## Piano orizzontale con un terreno ripetuto: `tile` = unità del mondo per una piastrella da 32 px.
-func _plane(pos: Vector3, sz: Vector2, tex: Texture2D, tile: float) -> MeshInstance3D:
-	var pm := PlaneMesh.new()
-	pm.size = sz
+func _outlined(m: ShaderMaterial, width := 0.035) -> ShaderMaterial:
+	var o := ShaderMaterial.new()
+	o.shader = OUTLINE
+	o.set_shader_parameter("width", width)
+	m.next_pass = o
+	return m
+
+
+func _mesh(mesh: Mesh, pos: Vector3, color: Color, outline := 0.035, glow := 0.0, parent: Node3D = null) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
-	mi.mesh = pm
+	mi.mesh = mesh
 	mi.position = pos
-	mi.material_override = _mat(Color.WHITE, tex, sz / tile)
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	world.add_child(mi)
+	var m := _toon(color, null, glow)
+	mi.material_override = _outlined(m, outline) if outline > 0.0 else m
+	(parent if parent else world).add_child(mi)
 	return mi
 
 
-func _box(pos: Vector3, sz: Vector3, color: Color, shaded := false) -> MeshInstance3D:
+func _box(pos: Vector3, sz: Vector3, color: Color, outline := 0.035, parent: Node3D = null) -> MeshInstance3D:
 	var bm := BoxMesh.new()
 	bm.size = sz
-	var mi := MeshInstance3D.new()
-	mi.mesh = bm
-	mi.position = pos
-	mi.material_override = _mat(color, null, Vector2.ONE, shaded)
-	world.add_child(mi)
-	return mi
+	return _mesh(bm, pos, color, outline, 0.0, parent)
 
 
-func _ball(pos: Vector3, r: float, color: Color) -> void:
+func _ball(pos: Vector3, r: float, color: Color, outline := true, parent: Node3D = null, glow := 0.0) -> MeshInstance3D:
 	var sm := SphereMesh.new()
 	sm.radius = r
-	sm.height = r * 1.6
-	sm.radial_segments = 10
-	sm.rings = 5
-	var mi := MeshInstance3D.new()
-	mi.mesh = sm
-	mi.position = pos
-	mi.material_override = _mat(color, null, Vector2.ONE, true)
-	world.add_child(mi)
+	sm.height = r * 2.0
+	sm.radial_segments = 8
+	sm.rings = 4
+	return _mesh(sm, pos, color, 0.03 if outline else 0.0, glow, parent)
+
+
+func _disc(pos: Vector3, r: float, color: Color, h := 0.04, parent: Node3D = null, glow := 0.0) -> MeshInstance3D:
+	var cm := CylinderMesh.new()
+	cm.top_radius = r
+	cm.bottom_radius = r
+	cm.height = h
+	cm.radial_segments = 9
+	return _mesh(cm, pos, color, 0.0, glow, parent)
+
+
+func _cyl(pos: Vector3, r: float, h: float, color: Color, parent: Node3D = null, outline := 0.03) -> MeshInstance3D:
+	var cm := CylinderMesh.new()
+	cm.top_radius = r
+	cm.bottom_radius = r
+	cm.height = h
+	cm.radial_segments = 8
+	return _mesh(cm, pos, color, outline, 0.0, parent)
 
 
 func _fence(x: float, z0: float, z1: float) -> void:
 	var len := z1 - z0
-	_box(Vector3(x, 0.32, (z0 + z1) / 2.0), Vector3(0.1, 0.1, len), Art.c("legno_6"), true)
-	_box(Vector3(x, 0.16, (z0 + z1) / 2.0), Vector3(0.08, 0.08, len), Art.c("legno_5"), true)
-	var z := z0 + 0.1
+	_box(Vector3(x, SURF + 0.2, (z0 + z1) / 2.0), Vector3(0.09, 0.08, len), Art.c("legno_6"), 0.025)
+	var z := z0 + 0.12
 	while z <= z1 + 0.01:
-		_box(Vector3(x, 0.22, z), Vector3(0.16, 0.44, 0.16), Art.c("legno_5"), true)
-		z += 1.0
+		_box(Vector3(x, SURF + 0.13, z), Vector3(0.13, 0.3, 0.13), Art.c("legno_5"), 0.025)
+		z += 0.9
 
 
-func _tree(pos: Vector3) -> void:
-	_box(pos + Vector3(0, 0.6, 0), Vector3(0.3, 1.2, 0.3), Art.c("legno_3"), true)
-	_ball(pos + Vector3(0, 1.75, 0), 0.95, Art.c("verde_2"))
-	_ball(pos + Vector3(-0.2, 2.15, 0.15), 0.6, Art.c("verde_3"))
+## Importa un modello Kenney (CC0) e gli dà il materiale cartoon con la sua texture a palette.
+func _model(path: String, pos: Vector3, s := 1.0, rot := 0.0, glow_tint := Color(0, 0, 0, 0)) -> Node3D:
+	var scene: PackedScene = load(path)
+	if scene == null:
+		return null
+	var n: Node3D = scene.instantiate()
+	n.position = pos
+	n.scale = Vector3.ONE * s
+	n.rotation.y = rot
+	world.add_child(n)
+	for mi: MeshInstance3D in n.find_children("*", "MeshInstance3D", true, false):
+		for si in mi.mesh.get_surface_count():
+			var orig := mi.mesh.surface_get_material(si) as BaseMaterial3D
+			var tex: Texture2D = orig.albedo_texture if orig else null
+			var col: Color = orig.albedo_color if orig else Color.WHITE
+			mi.set_surface_override_material(si, _outlined(_toon(col, tex), 0.02 / s))
+	return n
 
 
-func _sprite() -> Sprite3D:
-	var s := Sprite3D.new()
-	s.pixel_size = PX
-	s.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	s.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	s.shaded = false
-	s.alpha_cut = SpriteBase3D.ALPHA_CUT_DISABLED
-	s.centered = true
-	s.visible = false
-	s.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	world.add_child(s)
-	return s
+## Oggetti di scena: scatolette, radio, maschera antigas, nano da giardino, barile, lampada.
+func _props(bw: float, bd: float) -> void:
+	var L := -bw / 2.0 - 1.4
+	var R := bw / 2.0 + 1.4
+	# scatolette di fagioli (Kenney Food Kit) e una che brilla
+	_model("res://assets/models/props/can.glb", Vector3(L - 0.4, -0.1, 1.6), 1.6, 0.4)
+	_model("res://assets/models/props/can-open.glb", Vector3(L + 0.5, -0.1, 2.3), 1.6, -0.7)
+	_model("res://assets/models/props/can-small.glb", Vector3(R + 0.6, -0.1, 2.6), 1.7, 0.3)
+	_model("res://assets/models/props/soda-can.glb", Vector3(R - 0.2, -0.1, -2.9), 1.5, 1.1)
+	_disc(Vector3(L + 0.5, 0.02, 2.3), 0.22, Art.c("radio_1"), 0.05, null, 2.2)
+	# barile radioattivo e cassa degli attrezzi (Kenney Survival Kit)
+	var barrel := _model("res://assets/models/survival/barrel.glb", Vector3(R + 0.9, -0.1, -0.6), 1.5, 0.2)
+	_disc(Vector3(R + 0.9, 1.05, -0.6), 0.45, Art.c("radio_1"), 0.04, null, 2.5)
+	_model("res://assets/models/survival/chest.glb", Vector3(L - 0.6, -0.1, -2.4), 1.4, 0.5)
+	# radio a transistor
+	var radio := Node3D.new()
+	radio.position = Vector3(R + 0.4, -0.1, 1.0)
+	radio.rotation.y = -0.4
+	world.add_child(radio)
+	_box(Vector3(0, 0.45, 0), Vector3(1.3, 0.8, 0.5), Art.c("rosso_2"), 0.04, radio)
+	_box(Vector3(-0.25, 0.48, 0.26), Vector3(0.62, 0.5, 0.04), Art.c("legno_9"), 0.02, radio)
+	_cyl(Vector3(0.38, 0.5, 0.27), 0.18, 0.06, Art.c("ferro_5"), radio).rotation.x = PI / 2.0
+	_cyl(Vector3(0.45, 1.25, -0.1), 0.025, 1.0, Art.c("ferro_4"), radio, 0.015).rotation.z = 0.35
+	# maschera antigas
+	var mask := Node3D.new()
+	mask.position = Vector3(L + 0.2, -0.1, 0.0)
+	mask.rotation = Vector3(-1.1, 0.5, 0)
+	world.add_child(mask)
+	_ball(Vector3(0, 0.35, 0), 0.5, Art.c("verde_1"), true, mask)
+	for sx in [-0.22, 0.22]:
+		_cyl(Vector3(sx, 0.55, 0.38), 0.16, 0.08, Art.c("acqua_5"), mask).rotation.x = PI / 2.0
+	_cyl(Vector3(0, 0.2, 0.5), 0.17, 0.3, Art.c("ferro_2"), mask).rotation.x = PI / 2.0
+	# nano da giardino
+	var gnome := Node3D.new()
+	gnome.position = Vector3(L - 0.1, -0.1, -1.0)
+	world.add_child(gnome)
+	_cyl(Vector3(0, 0.35, 0), 0.32, 0.6, Art.c("acqua_3"), gnome)
+	_ball(Vector3(0, 0.82, 0), 0.26, Art.c("pelle_4"), true, gnome)
+	_ball(Vector3(0, 0.7, 0.15), 0.2, Art.c("bianco"), true, gnome)
+	var hat := CylinderMesh.new()
+	hat.top_radius = 0.0
+	hat.bottom_radius = 0.3
+	hat.height = 0.6
+	hat.radial_segments = 8
+	_mesh(hat, Vector3(0, 1.25, 0), Art.c("rosso_2"), 0.03, 0.0, gnome)
+	# lampada da bunker che illumina il tavolo
+	var lamp := OmniLight3D.new()
+	lamp.position = Vector3(0, 6.0, -2.0)
+	lamp.light_color = Art.c("giallo_2")
+	lamp.light_energy = 0.6
+	lamp.omni_range = 14.0
+	world.add_child(lamp)
+
+
+## Terreno e decorazioni di un recinto, ben distinti per banda.
+func _build_cell(p: int, i: int, band: String) -> void:
+	var n: Node3D = _cells[p][i]
+	for c in n.get_children():
+		c.queue_free()
+	var cols: Array = TERRAIN.get(band, TERRAIN["erba"])
+	var base := Art.c(cols[0])
+	var acc := Art.c(cols[1])
+	var w := COL_W - 0.14
+	var d := ROW_D - 0.12
+	_box(Vector3(0, SURF - 0.02, 0), Vector3(w, 0.08, d), base, 0.0, n)
+	_rng.seed = hash(band) + p * 31 + i * 7
+	match band:
+		"porcile":   # fango con pozzanghere
+			for k in 3:
+				_disc(Vector3(_rng.randf_range(-0.6, 0.6), SURF + 0.03, _rng.randf_range(-1.1, 1.1)), _rng.randf_range(0.22, 0.38), acc, 0.03, n)
+		"pollaio":   # paglia sparsa
+			for k in 10:
+				var b := _box(Vector3(_rng.randf_range(-0.8, 0.8), SURF + 0.04, _rng.randf_range(-1.2, 1.2)), Vector3(0.36, 0.04, 0.06), acc, 0.0, n)
+				b.rotation.y = _rng.randf_range(0, PI)
+		"stagno":    # acqua con ninfee
+			for k in 3:
+				_disc(Vector3(_rng.randf_range(-0.6, 0.6), SURF + 0.04, _rng.randf_range(-1.1, 1.1)), 0.2, Art.c("verde_4"), 0.03, n)
+			_disc(Vector3(0, SURF + 0.025, 0), 0.6, acc, 0.01, n)
+		"patate":    # solchi con germogli
+			for k in 3:
+				var zz := -0.9 + k * 0.9
+				_box(Vector3(0, SURF + 0.06, zz), Vector3(w - 0.2, 0.12, 0.3), acc, 0.0, n)
+				for q in 3:
+					_ball(Vector3(-0.55 + q * 0.55, SURF + 0.16, zz), 0.07, Art.c("verde_4"), false, n)
+		"discarica": # rottami e un copertone
+			for k in 4:
+				var b := _box(Vector3(_rng.randf_range(-0.7, 0.7), SURF + 0.05, _rng.randf_range(-1.1, 1.1)), Vector3(0.25, 0.08, 0.15), Art.c("ruggine_2") if k % 2 == 0 else acc, 0.02, n)
+				b.rotation.y = _rng.randf_range(0, PI)
+			var tire := TorusMesh.new()
+			tire.inner_radius = 0.12
+			tire.outer_radius = 0.24
+			tire.rings = 10
+			tire.ring_segments = 6
+			_mesh(tire, Vector3(0.55, SURF + 0.06, 1.05), Art.c("notte"), 0.0, 0.0, n)
+		"cratere":   # terra viola con crepe che brillano
+			for k in 3:
+				var b := _box(Vector3(_rng.randf_range(-0.6, 0.6), SURF + 0.03, _rng.randf_range(-1.1, 1.1)), Vector3(0.5, 0.02, 0.05), acc, 0.0, n)
+				b.rotation.y = _rng.randf_range(0, PI)
+				(b.material_override as ShaderMaterial).set_shader_parameter("emission", acc)
+				(b.material_override as ShaderMaterial).set_shader_parameter("emission_energy", 2.4)
+
+
+const MODEL_SCALE := COL_W / 2.0 * 0.92   ## 1 unità del kit = mezzo recinto
+
+
+## Attore di un recinto: un Node3D con dentro il modello 3D della carta (models/), o la vecchia figura pixel art
+## se il modello non esiste ancora. Le animazioni muovono e schiacciano l'attore, non il modello.
+func _actor(id: String, p: int, creature: bool) -> Node3D:
+	var a := Node3D.new()
+	a.rotation.y = 0.0 if p == 0 else PI * 0.0
+	var model := Models.build(id)
+	var sc := MODEL_SCALE * (1.0 if creature else 0.85)
+	if model:
+		model.scale = Vector3.ONE * sc
+		if p == 1:
+			model.rotation.y = -model.rotation.y   # l'avversario si gira dall'altra parte, verso il centro
+		a.add_child(model)
+		a.set_meta("height", Models.height(model) * sc)
+	else:
+		var tex := Art.card_tex(id)
+		if tex:
+			var s := Sprite3D.new()
+			s.texture = tex
+			s.hframes = maxi(1, tex.get_width() / tex.get_height())
+			s.pixel_size = PX * (1.0 if creature else STRUCT_SCALE)
+			s.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			s.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+			s.shaded = false
+			s.flip_h = p == 1
+			s.position.y = tex.get_height() * s.pixel_size / 2.0
+			a.add_child(s)
+			a.set_meta("height", tex.get_height() * s.pixel_size * 0.82)
+	world.add_child(a)
+	return a
+
+
+## Lampo bianco / scurito su tutte le mesh dell'attore (parametri per singolo oggetto dello shader cartoon).
+func _set_param(a: Node3D, param: String, v: float) -> void:
+	if a == null or not is_instance_valid(a):
+		return
+	for g: GeometryInstance3D in a.find_children("*", "GeometryInstance3D", true, false):
+		if g is Sprite3D:
+			if param == "flash":
+				(g as Sprite3D).modulate = Color.WHITE.lerp(Color(4, 4, 4), v)
+			elif param == "dim":
+				(g as Sprite3D).modulate = Color.WHITE.lerp(Color(0.7, 0.7, 0.8), v)
+		else:
+			g.set_instance_shader_parameter(param, v)
 
 
 ## Avvicina la telecamera finché il tavolo (siepe e scogliera comprese) riempie lo schermo senza uscire.
@@ -243,11 +412,11 @@ func cell_center(p: int, i: int) -> Vector3:
 
 
 func _creature_pos(p: int, i: int) -> Vector3:
-	return cell_center(p, i) + Vector3(-0.3, 0, 0.15 if p == 0 else -0.15)
+	return cell_center(p, i) + Vector3(-0.2, SURF, 0.2 if p == 0 else -0.2)
 
 
 func _structure_pos(p: int, i: int) -> Vector3:
-	return cell_center(p, i) + Vector3(0.62, 0, 0.6 if p == 0 else -0.6)
+	return cell_center(p, i) + Vector3(0.5, SURF, 0.85 if p == 0 else -0.85)
 
 
 ## Punto dello schermo (coordinate di questo controllo) di un punto del mondo.
@@ -262,22 +431,18 @@ func cell_poly(p: int, i: int) -> PackedVector2Array:
 	var c := cell_center(p, i)
 	var hx := COL_W / 2.0 - 0.05
 	var hz := ROW_D / 2.0 - 0.05
+	c.y = SURF
 	return PackedVector2Array([project(c + Vector3(-hx, 0, -hz)), project(c + Vector3(hx, 0, -hz)),
 		project(c + Vector3(hx, 0, hz)), project(c + Vector3(-hx, 0, hz))])
 
 
 ## Punto sopra la testa della creatura (per ATK e Vita), in coordinate di questo controllo.
 func head_point(p: int, i: int) -> Vector2:
-	var s: Sprite3D = creature_sprites[p][i]
-	var h := 1.0
-	if s and s.texture:
-		h = _visible_height(s.texture) * PX + 0.15
+	var a: Node3D = creature_sprites[p][i]
+	var h := 0.9
+	if a and is_instance_valid(a):
+		h = float(a.get_meta("height", 0.9)) + 0.15
 	return project(_creature_pos(p, i) + Vector3(0, h, 0))
-
-
-func _visible_height(t: Texture2D) -> float:
-	# altezza utile dello sprite: quasi tutti hanno aria in alto, quindi ~80% del fotogramma
-	return t.get_height() * 0.82
 
 
 # --- Stato del tavolo ------------------------------------------------------------
@@ -291,121 +456,122 @@ func refresh(m: Match) -> void:
 				if _zones[p].size() <= i:
 					_zones[p].resize(4)
 				_zones[p][i] = l.zone
-				var mi: MeshInstance3D = _ground[p][i]
-				(mi.material_override as StandardMaterial3D).albedo_texture = Art.terrain_tex(l.zone)
+				_build_cell(p, i, l.zone)
 			_sync(p, i, l.creature, true)
 			_sync(p, i, l.structure, false)
 
 
 func _sync(p: int, i: int, c: CardInst, creature: bool) -> void:
 	var shown: Array = _shown if creature else _shown_s
-	var spr: Sprite3D = creature_sprites[p][i] if creature else structure_sprites[p][i]
+	var arr: Array = creature_sprites if creature else structure_sprites
 	if shown[p][i] == c:
 		if c and creature:
-			spr.modulate = Color(0.75, 0.75, 0.85) if c.helpless else Color.WHITE
+			_set_param(arr[p][i], "dim", 1.0 if c.helpless else 0.0)
 		return
 	var old: CardInst = shown[p][i]
 	shown[p][i] = c
-	if old != null:
-		_die(spr, p, creature)
-		spr = _sprite()
-		if creature:
-			creature_sprites[p][i] = spr
-		else:
-			structure_sprites[p][i] = spr
+	if old != null and arr[p][i]:
+		_die(arr[p][i])
+		arr[p][i] = null
 	if c == null:
 		return
-	var tex := Art.card_tex(c.def.get("id", ""))
-	if tex == null:
-		return
-	spr.texture = tex
-	spr.hframes = maxi(1, tex.get_width() / tex.get_height())
-	spr.flip_h = p == 1
-	var sc := 1.0 if creature else STRUCT_SCALE
-	spr.pixel_size = PX * sc
-	var base := (_creature_pos(p, i) if creature else _structure_pos(p, i)) + Vector3(0, tex.get_height() * PX * sc / 2.0, 0)
-	spr.set_meta("rest", base)
-	spr.set_meta("phase", i + p * 2)
-	spr.visible = true
-	_arrive(spr, base)
+	var a := _actor(String(c.def.get("id", "")), p, creature)
+	var rest := _creature_pos(p, i) if creature else _structure_pos(p, i)
+	a.set_meta("rest", rest)
+	a.set_meta("phase", float(i) * 1.7 + p * 0.9)
+	arr[p][i] = a
+	_arrive(a, rest)
 
 
-## Arrivo: cade dall'alto con un piccolo rimbalzo e uno schiacciamento quando tocca terra.
-func _arrive(spr: Sprite3D, rest: Vector3) -> void:
+## Arrivo: cade dall'alto, schiaccia toccando terra e si rimette in forma, con una nuvola di polvere.
+func _arrive(a: Node3D, rest: Vector3) -> void:
 	if reduce_motion or not is_inside_tree():
-		spr.position = rest
-		spr.modulate.a = 1.0
+		a.position = rest
 		return
-	spr.position = rest + Vector3(0, 2.2, 0)
-	spr.modulate.a = 0.0
-	spr.scale = Vector3(0.9, 1.15, 1)
+	a.position = rest + Vector3(0, 2.4, 0)
+	a.scale = Vector3(0.85, 1.2, 0.85)
 	var tw := create_tween()
-	tw.set_parallel(true)
-	tw.tween_property(spr, "position", rest, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_property(spr, "modulate:a", 1.0, 0.12)
-	tw.chain().tween_property(spr, "scale", Vector3(1.22, 0.8, 1), 0.06)
-	tw.chain().tween_property(spr, "scale", Vector3.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_puff(rest - Vector3(0, spr.texture.get_height() * spr.pixel_size / 2.0, 0), Art.c("legno_8"), 8, 0.28)
+	tw.tween_property(a, "position", rest, 0.26).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(a, "scale", Vector3(1.3, 0.72, 1.3), 0.06)
+	tw.tween_property(a, "scale", Vector3.ONE, 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_callback(func(): _puff(rest + Vector3(0, 0.05, 0), Art.c("legno_8"), 12, 0.35)).set_delay(0.0)
 
 
-## Morte: un attimo bianco, si schiaccia e sparisce in una nuvoletta.
-func _die(spr: Sprite3D, p: int, creature: bool) -> void:
+## Morte: lampo bianco, si schiaccia e sparisce in una nuvoletta radioattiva.
+func _die(a: Node3D) -> void:
+	if a == null or not is_instance_valid(a):
+		return
 	if not is_inside_tree() or reduce_motion:
-		spr.queue_free()
+		a.queue_free()
 		return
 	var tw := create_tween()
 	tw.tween_interval(0.18)
-	tw.tween_property(spr, "modulate", Color(4, 4, 4, 1), 0.05)
-	tw.tween_property(spr, "scale", Vector3(1.35, 0.25, 1), 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.parallel().tween_property(spr, "modulate:a", 0.0, 0.18)
-	tw.tween_callback(func(): _puff(spr.position, Art.c("ferro_5"), 14, 0.45))
-	tw.tween_callback(spr.queue_free)
+	tw.tween_method(func(v: float): _set_param(a, "flash", v), 0.0, 1.0, 0.06)
+	tw.tween_property(a, "scale", Vector3(1.4, 0.15, 1.4), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_callback(func(): _puff(a.position + Vector3(0, 0.2, 0), Art.c("radio_2"), 18, 0.5))
+	tw.tween_callback(a.queue_free)
 
 
-## Attacco: la creatura scatta in avanti verso il recinto di fronte e torna indietro.
+## Attacco: la creatura carica, scatta in avanti verso il recinto di fronte e torna indietro.
 func attack(p: int, i: int, hit_target: bool, crit: bool) -> void:
-	var spr: Sprite3D = creature_sprites[p][i]
-	if spr == null or not spr.visible or not is_inside_tree():
+	var a: Node3D = creature_sprites[p][i]
+	if a == null or not is_instance_valid(a) or not is_inside_tree():
 		return
-	var rest: Vector3 = spr.get_meta("rest", spr.position)
-	var dir := Vector3(0, 0, -1.0 if p == 0 else 1.0)
 	if reduce_motion:
-		hit(1 - p, i, crit)
+		hit(1 - p, i, crit) if hit_target else shake(0.3)
 		return
+	var rest: Vector3 = a.get_meta("rest", a.position)
+	var dir := Vector3(0, 0, -1.0 if p == 0 else 1.0)
 	var tw := create_tween()
-	tw.tween_property(spr, "position", rest - dir * 0.25, 0.08).set_ease(Tween.EASE_OUT)   # carica
-	tw.tween_property(spr, "position", rest + dir * (1.4 if hit_target else 2.2), 0.11).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_callback(func(): hit(1 - p, i, crit) if hit_target else shake(0.35 if not crit else 0.8))
-	tw.tween_property(spr, "position", rest, 0.24).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(a, "position", rest - dir * 0.3, 0.09).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(a, "scale", Vector3(1.15, 0.85, 1.15), 0.09)
+	tw.tween_property(a, "position", rest + dir * (ROW_D * 0.75 if hit_target else ROW_D * 1.1), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(a, "scale", Vector3(0.9, 1.12, 0.9), 0.12)
+	tw.tween_callback(func(): hit(1 - p, i, crit) if hit_target else shake(0.45 if not crit else 0.85))
+	tw.tween_property(a, "position", rest, 0.26).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(a, "scale", Vector3.ONE, 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
-## Colpo subito: lampo bianco, piccolo tremolio, polvere. Con la Botta Atomica anche la telecamera trema.
+## Colpo subito: lampo bianco, tremolio, scintille. Con la Botta Atomica trema anche la telecamera
+## e le scintille sono verdi radioattive.
 func hit(p: int, i: int, crit: bool) -> void:
-	var spr: Sprite3D = creature_sprites[p][i]
-	shake(0.85 if crit else 0.32)
-	if spr == null or not spr.visible:
+	shake(0.85 if crit else 0.35)
+	var a: Node3D = creature_sprites[p][i]
+	if a == null or not is_instance_valid(a):
 		return
-	var rest: Vector3 = spr.get_meta("rest", spr.position)
+	var rest: Vector3 = a.get_meta("rest", a.position)
 	var tw := create_tween()
-	tw.tween_property(spr, "modulate", Color(4, 4, 4, 1), 0.04)
-	tw.tween_property(spr, "modulate", Color.WHITE, 0.12)
+	tw.tween_method(func(v: float): _set_param(a, "flash", v), 1.0, 0.0, 0.18)
 	var tw2 := create_tween()
 	for k in 4:
-		tw2.tween_property(spr, "position", rest + Vector3(0.09 * (1 if k % 2 == 0 else -1), 0, 0), 0.035)
-	tw2.tween_property(spr, "position", rest, 0.05)
-	_puff(rest, Art.c("radio_2") if crit else Art.c("bianco"), 10 if crit else 6, 0.3)
+		tw2.tween_property(a, "position", rest + Vector3(0.1 * (1 if k % 2 == 0 else -1), 0, 0), 0.035)
+	tw2.tween_property(a, "position", rest, 0.05)
+	_puff(rest + Vector3(0, float(a.get_meta("height", 0.8)) * 0.6, 0), Art.c("radio_2") if crit else Art.c("bianco"), 16 if crit else 8, 0.35)
 
 
-## Scossa: la creatura si schiaccia e si allunga (Scuotere).
+## Scuotere: la creatura si schiaccia e si allunga, con una nuvola di Caos verde.
 func wiggle(p: int, i: int) -> void:
-	var spr: Sprite3D = creature_sprites[p][i]
-	if spr == null or not spr.visible or reduce_motion:
+	var a: Node3D = creature_sprites[p][i]
+	if a == null or not is_instance_valid(a) or reduce_motion:
 		return
 	var tw := create_tween()
-	tw.tween_property(spr, "scale", Vector3(1.2, 0.85, 1), 0.07)
-	tw.tween_property(spr, "scale", Vector3(0.88, 1.15, 1), 0.08)
-	tw.tween_property(spr, "scale", Vector3.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_puff(spr.position, Art.c("radio_1"), 8, 0.35)
+	tw.tween_property(a, "scale", Vector3(1.25, 0.8, 1.25), 0.07)
+	tw.tween_property(a, "scale", Vector3(0.85, 1.2, 0.85), 0.08)
+	tw.tween_property(a, "scale", Vector3.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_puff(a.position + Vector3(0, 0.3, 0), Art.c("radio_1"), 14, 0.45)
+
+
+## Effetto positivo (cura, +DEF, +ATK): la creatura si gonfia un attimo e manda scintille del colore dell'effetto.
+func glow(p: int, i: int, color: Color) -> void:
+	var a: Node3D = creature_sprites[p][i]
+	if a == null or not is_instance_valid(a) or reduce_motion:
+		return
+	var tw := create_tween()
+	tw.tween_method(func(v: float): _set_param(a, "flash", v), 0.0, 0.45, 0.08)
+	tw.parallel().tween_property(a, "scale", Vector3(1.12, 1.12, 1.12), 0.1).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_method(func(v: float): _set_param(a, "flash", v), 0.45, 0.0, 0.2)
+	tw.parallel().tween_property(a, "scale", Vector3.ONE, 0.2)
+	_puff(a.position + Vector3(0, float(a.get_meta("height", 0.8)) * 0.7, 0), color, 12, 0.5)
 
 
 ## Scossa della telecamera a "trauma": i colpi si sommano e si smorzano (forza = trauma²).
@@ -420,14 +586,23 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	# fotogrammi dell'animazione di riposo
-	var f := int(Time.get_ticks_msec() / 1000.0 * Art.FPS)
+	# riposo: le figure pixel cambiano fotogramma, i modelli 3D "respirano" (sempre un po' vivi)
+	var tsec := Time.get_ticks_msec() / 1000.0
+	var f := int(tsec * Art.FPS)
 	for arr in [creature_sprites, structure_sprites]:
 		for p in 2:
 			for i in 4:
-				var s: Sprite3D = arr[p][i]
-				if s and s.visible and s.hframes > 1:
-					s.frame = (f + int(s.get_meta("phase", 0))) % s.hframes
+				var a: Node3D = arr[p][i]
+				if a == null or not is_instance_valid(a) or a.get_child_count() == 0:
+					continue
+				var c := a.get_child(0)
+				if c is Sprite3D:
+					var s3 := c as Sprite3D
+					if s3.hframes > 1:
+						s3.frame = (f + int(a.get_meta("phase", 0.0))) % s3.hframes
+				elif not reduce_motion and arr == creature_sprites:
+					var ph: float = a.get_meta("phase", 0.0)
+					(c as Node3D).scale = Vector3.ONE * MODEL_SCALE * Vector3(1.0 + 0.02 * sin(tsec * 2.6 + ph), 1.0 - 0.025 * sin(tsec * 2.6 + ph), 1.0)
 	if _trauma > 0.0:
 		_trauma = maxf(_trauma - 1.6 * delta, 0.0)
 		_t += delta * 30.0

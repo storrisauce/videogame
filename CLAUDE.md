@@ -128,7 +128,7 @@ Riassumi lo stato in 3 righe e proponi le opzioni di §9 ("Prossimi passi"), con
 | Percorso | Cosa contiene |
 |---|---|
 | `CLAUDE.md` | questa memoria |
-| `docs/GDD.md` | il gioco in una pagina: pilastri, ciclo, **indice delle funzionalità con stati**, tappe M1–M5, **decisioni D-001…D-015**, domande aperte, storico |
+| `docs/GDD.md` | il gioco in una pagina: pilastri, ciclo, **indice delle funzionalità con stati**, tappe M1–M5, **decisioni D-001…D-016**, domande aperte, storico |
 | `docs/features/partita/` | regole e numeri della partita (`design.md`), codice (`implementation.md`), test (`testing.md`) |
 | `docs/features/carte-e-bande/design.md` | bande, sopravvissuti, formato delle carte, budget statistiche, carte d'esempio |
 | `docs/features/schermo-di-gioco/` | layout orizzontale iPhone, gesti, misure; implementazione e test |
@@ -149,6 +149,9 @@ Riassumi lo stato in 3 righe e proponi le opzioni di §9 ("Prossimi passi"), con
 | `art/palette/`, `art/sprites/`, `art/tools/pixel.py` | palette (.json/.gpl/.hex), sprite in testo (.pxl), strumento render/controllo |
 | `game/assets/cards/`, `game/assets/heroes/`, `game/assets/board/` | sprite delle carte e dei sopravvissuti, terreni (PNG generati da `art/gen/`) |
 | `game/ui/art.gd`, `board_view.gd`, `sprite_view.gd`, `terrain_bg.gd` | disegno in pixel art: colori per nome, fotogrammi, terreni, consolle, ritratti |
+| `game/models/` (`kit.gd`, `models.gd`, `recipes_*.gd`), `game/shaders/` | modelli 3D cartoon delle carte e degli eroi; shader toon e contorno |
+| `game/ui/ui_kit.gd`, `stat_chip.gd` | linguaggio dell'interfaccia cartoon; contatori con icona |
+| `game/assets/models/` (Kenney CC0), `game/assets/fonts/` (OFL), `game/assets/art3d/` | oggetti di scena e ortaggi, font con licenze, foto dei modelli per le carte |
 | `game/ui/board_3d.gd`, `fx_layer.gd`, `juice.gd` | tavolo 3D con animazioni, effetti 2D (numeri, carte che volano), risposte al tocco |
 | `art/reference/` | pacchetto di riferimento, **solo in locale** (licenza: niente ridistribuzione) |
 | `art/blender/nano_da_giardino_sacro.py` | vecchia prova con Blender (non più la strada principale) |
@@ -219,7 +222,7 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
 ## 7. Stato (2026-11-20)
 - ✅ **Analisi** del gioco originale dall'APK: regole, formule, IA, meta, 239 famiglie di abilità.
 - ✅ **GDD 0.4** + note: `partita` (implemented), `schermo-di-gioco` (implemented, grafica provvisoria), `ia-avversaria`
-  (implemented), `carte-e-bande` (designed). Decisioni D-001…D-015.
+  (implemented), `carte-e-bande` (designed). Decisioni D-001…D-016.
 - ✅ **Gioco giocabile** su computer (e pronto per l'esportazione):
   - menu: sopravvissuto, 2 bande per il mazzo, mirino automatico, statistiche e scatolette;
   - partita contro l'IA in orizzontale: tocca una carta e poi un recinto per giocarla; tocca una tua creatura per **Scuoterla**;
@@ -236,6 +239,15 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
 - ✅ **Grafica pixel art in tutto il gioco** (D-013, D-014): 31 carte e 6 sopravvissuti animati (4 fotogrammi), terreni delle
   bande, tavolo-altopiano con disposizione "da console" (consolle laterali, vassoio della mano, Fine turno grande), menu con
   ritratto, mirino a contatore Geiger, tema dei bottoni in legno.
+- ✅ **Strada A, cartoon 3D** (D-016, proposta approvata https://claude.ai/artifact/XEnCiiNFvFC85sW1pHutUc): interfaccia
+  cartoon (`ui/ui_kit.gd`: Lilita One/Nunito con contorno, pannelli con bulloni, gemme, icone), carte nuove (costo, tipo,
+  illustrazione, nome mai tagliato, abilità quando ingrandita, attacco/vita nelle icone, cornice del terreno), eroi negli angoli,
+  contatori con icona, "Fine turno" che pulsa, mano a ventaglio, registro come banner; tabellone toon (vassoio di legno sul
+  tavolo di lamiera di un bunker, terreni low-poly per banda, oggetti di scena Kenney CC0, bagliore solo radioattivo);
+  creature e sopravvissuti 3D da `game/models/` (kit + ricette per gruppo); illustrazioni delle carte = foto dei modelli
+  (`godot --path game --script res://tools/render_models.gd -- <cartella> --bake` → `assets/art3d/`); **effetti delle
+  abilità**: confronto del tavolo prima/dopo ogni Scuotere/eroe/evento/struttura → raggio verde dalla fonte ai bersagli e
+  numeri (danno, cura, ±DEF, ±ATK, Caos, carte).
 - ✅ **Tavolo 3D e animazioni** (D-015): `game/ui/board_3d.gd` (altopiano 3D, Sprite3D pixel art, telecamera che si adatta,
   arrivi/attacchi/colpi/morti, scossa a trauma), `fx_layer.gd` (numeri di danno, carta che vola), `juice.gd` (pressione dei
   pulsanti, entrate sfalsate), menu rifatto, scheda carta compatta, opzione "Meno movimento". Controllo animazioni:
@@ -298,11 +310,11 @@ Aggiornala ogni volta che si installa, si scarica o si scarta qualcosa. "Usata" 
 | Sunnyside World (danieldiggle.itch.io/sunnyside) | uso commerciale e modifiche sì; **niente ridistribuzione, niente addestramento AI** | solo riferimento di stile per la pixel art (D-013) | in `art/reference/`, ignorato da git |
 | ENDESGA 32 | palette pubblica | base della palette di 63 colori | usata |
 | Cainos Pixel Art Top Down | commerciale sì, ridistribuzione no | valutato | non usato |
-| Kenney Pixel UI Pack / UI Pack / UI Pack Adventure / Fantasy UI Borders (kenney.nl) | CC0 | cornici, bottoni, pannelli 9-slice, icone come base dell'interfaccia | **proposta, in attesa di ok** |
-| Kenney Survival Kit, Nature Kit, Food Kit (3D, glTF) | CC0 | oggetti di scena attorno al tavolo, alberi, rocce, ortaggi | **proposta, in attesa di ok** |
-| Quaternius LowPoly Animated Animals (cow, pig, horse...; FBX/OBJ/Blend) | CC0 | animali 3D da mutare in Blender | **proposta**; manca la gallina, va convertito in GLB |
-| Vertexcat Farm Animals Set (anatra, gallina, mucca, maiale, pecora; FBX + .blend) | CC0 | animali 3D low-poly a colori sui vertici | **proposta** |
-| Lilita One (Google Fonts) | SIL OFL 1.1 | font cartoon grosso con contorno, con accenti | **proposta** |
+| Kenney UI Pack (opengameart.org/content/ui-pack) | CC0 | scaricato; le cornici sono disegnate in codice nella palette (il pacchetto non ha contorni) | in `art/vendor/`, non usato nel gioco |
+| Kenney Survival Kit, Food Kit, Nature Kit (glTF; mirror opengameart.org) | CC0 | scatolette, barile, cassa (tavolo del bunker); carota, barbabietola, zucca... (`Kit.food`) | **usati**: copie in `game/assets/models/` con licenza; archivi in `art/vendor/` (ignorati da git) |
+| Quaternius Farm Animals (opengameart.org; FBX/OBJ/Blend) | CC0 | scaricato come riserva; le creature sono procedurali per coerenza di stile | non usato |
+| Vertexcat Farm Animals Set | CC0 | solo su itch.io (download non automatizzabile) | non scaricato |
+| Lilita One, Nunito (github.com/google/fonts) | SIL OFL 1.1 | titoli/numeri/bottoni; testi delle abilità | **usati**: `game/assets/fonts/` con i file OFL |
 
 ### 11.4 Strumenti nostri
 `art/tools/pixel.py` (render .pxl → PNG, `check` palette, `stats`, `compare`, `preview`), `art/tools/shapes.py` (forme per gli sprite),

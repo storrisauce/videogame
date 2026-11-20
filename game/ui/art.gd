@@ -35,6 +35,31 @@ static func hero_tex(id: String) -> Texture2D:
 	return _load("res://assets/heroes/%s.png" % id)
 
 
+## Illustrazione 3D (foto del modello, assets/art3d/<id>.png, creata da tools/render_models.gd --bake).
+static func art3d(id: String) -> Texture2D:
+	return _load("res://assets/art3d/%s.png" % id)
+
+
+## Disegna l'illustrazione di una carta o di un sopravvissuto dentro `area`: la foto 3D se esiste
+## (adattata e appoggiata in basso, filtro lineare), altrimenti la vecchia figura pixel art animata.
+static func draw_art(ci: CanvasItem, id: String, hero: bool, area: Rect2, offset := 0, flip := false) -> void:
+	var t3 := art3d(id)
+	if t3:
+		var k := minf(area.size.x / t3.get_width(), area.size.y / t3.get_height()) * 1.08
+		var sz := Vector2(t3.get_width(), t3.get_height()) * k
+		var dst := Rect2(Vector2(area.position.x + (area.size.x - sz.x) / 2.0, area.end.y - sz.y), sz)
+		if flip:
+			ci.draw_set_transform(Vector2(2.0 * dst.position.x + dst.size.x, 0), 0.0, Vector2(-1, 1))
+		ci.draw_texture_rect(t3, dst, false)
+		if flip:
+			ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		return
+	var tex := hero_tex(id) if hero else card_tex(id)
+	if tex:
+		var sc := clampi(int(minf(area.size.x / 30.0, area.size.y / 26.0)), 1, 4)
+		draw_frame(ci, tex, frame_now(tex, offset), area.grow_individual(0, 0, 0, -2), sc, flip)
+
+
 static func terrain_tex(band: String) -> Texture2D:
 	return _load("res://assets/board/%s.png" % band)
 

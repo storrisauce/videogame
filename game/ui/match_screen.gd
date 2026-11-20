@@ -43,6 +43,7 @@ var opp_hand := StatChip.new("hand", "Mano")
 var opp_deck := StatChip.new("deck", "Mazzo")
 var opp_caos := StatChip.new("caos", "Caos")
 var _log_tw: Tween
+var _snap: Dictionary = {}       ## stato del tavolo all'ultimo aggiornamento (per mostrare cosa cambia un'abilità)
 var log_label := Label.new()
 var end_button := Button.new()
 var menu_button := Button.new()
@@ -390,6 +391,7 @@ func refresh() -> void:
 	board.queue_redraw()
 	end_button.disabled = state != "play"
 	_end_pulse(state == "play" and GreedyAI.choose(m, HUMAN).is_empty())
+	_snap = _snapshot()
 
 
 func _playable_anywhere(c: CardInst) -> bool:
@@ -399,6 +401,91 @@ func _playable_anywhere(c: CardInst) -> bool:
 		if m.can_play(HUMAN, c, i):
 			return true
 	return false
+
+
+# --- Effetti delle abilità ------------------------------------------------------
+## Ogni abilità (Scuotere, eroe, evento, struttura) mostra cosa ha cambiato davvero: si confronta il tavolo prima
+## (ultimo refresh) e dopo. Un raggio verde va dalla fonte a ogni bersaglio, poi compaiono i numeri:
+## danno rosso, cura verde, +DEF azzurro, ±ATK arancio, Caos e carte pescate. Funziona per tutte le famiglie.
+
+func _snapshot() -> Dictionary:
+	var s := {}
+	if m == null:
+		return s
+	for p in 2:
+		var ps := m.players[p]
+		s["hp%d" % p] = ps.hp
+		s["caos%d" % p] = ps.caos
+		s["hand%d" % p] = ps.hand.size()
+		for i in 4:
+			var c := ps.lanes[i].creature
+			if c:
+				s["c%d_%d" % [p, i]] = [c.get_instance_id(), m.atk_of(c), m.def_of(c), m.health_of(c)]
+	return s
+
+
+func _lane_point(p: int, i: int) -> Vector2:
+	return board3d.position + board3d.head_point(p, i)
+
+
+func _hero_point(p: int) -> Vector2:
+	var hv := hero_views[p]
+	return hv.position + hv.size * Vector2(0.5, 0.3)
+
+
+func _ability_fx(p: int, src: Vector2, card_name: String) -> void:
+	if speed <= 0.0 or not is_inside_tree() or _snap.is_empty():
+		return
+	var after := _snapshot()
+	var before := _snap
+	_snap = after
+	var hits: Array = []   # [punto, testo, colore, grande, controllo da scuotere, lane]
+	for q in 2:
+		for i in 4:
+			var k := "c%d_%d" % [q, i]
+			var b: Array = before.get(k, [])
+			var a: Array = after.get(k, [])
+			if b.is_empty() or a.is_empty() or b[0] != a[0]:
+				continue
+			var at := _lane_point(q, i)
+			if a[3] < b[3]:
+				hits.append([at, "-%d" % (b[3] - a[3]), Art.c("rosso_3"), true, null, [q, i]])
+			elif a[3] > b[3] and a[2] == b[2]:
+				hits.append([at, "+%d" % (a[3] - b[3]), Art.c("verde_4"), false, null, [q, i]])
+			if a[2] != b[2]:
+				hits.append([at + Vector2(0, -22), "%+d DEF" % (a[2] - b[2]), Art.c("acqua_5"), false, null, [q, i]])
+			if a[1] != b[1]:
+				hits.append([at + Vector2(0, -44), "%+d ATK" % (a[1] - b[1]), Art.c("arancio_4"), false, null, [q, i]])
+		var dh: int = after.get("hp%d" % q, 0) - before.get("hp%d" % q, 0)
+		if dh != 0:
+			hits.append([_hero_point(q), "%+d" % dh, Art.c("rosso_3") if dh < 0 else Art.c("verde_4"), dh < 0, hero_views[q], null])
+		var dc: int = after.get("caos%d" % q, 0) - before.get("caos%d" % q, 0)
+		if dc != 0 and not (q == p and dc < 0):   # il costo pagato non è un effetto
+			var chip := my_caos if q == HUMAN else opp_caos
+			hits.append([chip.position + chip.size / 2.0, "%+d Caos" % dc, Art.c("radio_2"), false, null, null])
+		var dd: int = after.get("hand%d" % q, 0) - before.get("hand%d" % q, 0)
+		if dd > 0 and q == p:
+			var chip2 := my_deck if q == HUMAN else opp_hand
+			hits.append([chip2.position + chip2.size / 2.0, "+%d carte" % dd, Art.c("legno_9"), false, null, null])
+	_play_ability_fx(src, hits)
+
+
+func _play_ability_fx(src: Vector2, hits: Array) -> void:
+	var t := 0.0
+	for h in hits:
+		t = maxf(t, fx.beam(src, h[0], Art.c("radio_2")))
+	if t > 0.0:
+		await get_tree().create_timer(t).timeout
+	for h in hits:
+		fx.pop_number(h[1], h[0], h[2], h[3])
+		if h[4]:
+			fx.shake_control(h[4], 7.0 if h[3] else 4.0)
+		if h[5] is Array:
+			var lane: Array = h[5]
+			if h[2] == Art.c("rosso_3"):
+				board3d.hit(lane[0], lane[1], false)
+			else:
+				board3d.glow(lane[0], lane[1], h[2])
 
 
 ## Il numero compare quando il colpo arriva (lo scatto in avanti dura ~0,2 s).
@@ -447,14 +534,20 @@ func _on_event(kind: String, d: Dictionary) -> void:
 	match kind:
 		"play":
 			_log("%s: %s" % [who, db.card(d["card"]).get("name", "?")])
+			var ctype: String = db.card(d["card"]).get("type", "")
+			if ctype != "creature":
+				var src := _lane_point(d["player"], d["lane"]) if d["lane"] >= 0 else board3d.project(Vector3(0, 0.6, 0))
+				_ability_fx(d["player"], src, db.card(d["card"]).get("name", ""))
 		"scuoti":
 			_log("%s scuote %s" % [who, db.card(d["card"]).get("name", "?")])
 			board3d.wiggle(d["player"], d["lane"])
+			_ability_fx(d["player"], _lane_point(d["player"], d["lane"]), db.card(d["card"]).get("name", ""))
 		"hero":
 			_log("%s: %s!" % [who, m.players[d["player"]].hero["ability_name"]])
 			var hv := hero_views[d["player"]]
 			if speed > 0.0:
 				fx.pop_number(m.players[d["player"]].hero["ability_name"], hv.position + Vector2(hv.size.x / 2.0, hv.size.y * 0.35), Art.c("giallo_2"))
+			_ability_fx(d["player"], hv.position + hv.size * Vector2(0.5, 0.3), "")
 		"attack":
 			_log("%s colpisce %s: -%d%s" % [db.card(d["card"])["name"], db.card(d["target"])["name"], d["damage"], " BOTTA ATOMICA!" if d["crit"] else ""])
 			board3d.attack(d["player"], d["lane"], true, d["crit"])

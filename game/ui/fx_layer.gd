@@ -69,3 +69,40 @@ func shake_control(c: Control, strength := 6.0) -> void:
 		var d := strength * (1.0 - k / 5.0)
 		tw.tween_property(c, "position", rest + Vector2(d if k % 2 == 0 else -d, 0), 0.03)
 	tw.tween_property(c, "position", rest, 0.04)
+
+
+## Raggio di energia radioattiva da `a` a `b` (coordinate di questo livello): cresce in 160 ms, poi svanisce.
+## Contorno scuro + nucleo verde chiaro, nello stile cartoon. Ritorna la durata della corsa.
+func beam(a: Vector2, b: Vector2, color: Color) -> float:
+	if reduce_motion or not is_inside_tree():
+		return 0.0
+	var outer := Line2D.new()
+	outer.width = 11.0
+	outer.default_color = Art.c("inchiostro")
+	outer.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	outer.end_cap_mode = Line2D.LINE_CAP_ROUND
+	var inner := Line2D.new()
+	inner.width = 6.0
+	inner.default_color = color
+	inner.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	inner.end_cap_mode = Line2D.LINE_CAP_ROUND
+	for l: Line2D in [outer, inner]:
+		l.points = PackedVector2Array([a, a])
+		add_child(l)
+	# un piccolo arco: il raggio "salta" invece di andare dritto
+	var mid := (a + b) / 2.0 + Vector2(0, -minf(60.0, a.distance_to(b) * 0.25))
+	var tw := create_tween()
+	tw.tween_method(func(t: float):
+		var pts := PackedVector2Array()
+		var n := 10
+		for k in n + 1:
+			var u := t * k / n
+			pts.append(a.lerp(mid, u).lerp(mid.lerp(b, u), u))
+		outer.points = pts
+		inner.points = pts, 0.0, 1.0, 0.16).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(0.08)
+	tw.tween_property(outer, "modulate:a", 0.0, 0.18)
+	tw.parallel().tween_property(inner, "modulate:a", 0.0, 0.18)
+	tw.tween_callback(outer.queue_free)
+	tw.tween_callback(inner.queue_free)
+	return 0.16

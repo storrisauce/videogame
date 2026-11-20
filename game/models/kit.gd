@@ -1,0 +1,175 @@
+class_name Kit
+extends RefCounted
+## Kit di forme cartoon low-poly per creature, strutture e sopravvissuti (strada A, D-016).
+## Tutto con ombre a gradini (shaders/toon.gdshader) e contorno nero (shaders/outline.gdshader).
+## Convenzioni (rispettale in tutte le ricette, così le taglie restano vere):
+## - 1 unità = mezzo recinto. La creatura poggia su y = 0, guarda verso +Z (verso la telecamera / chi gioca),
+##   leggermente girata a sinistra (rotazione y di circa -0,35) se la ricetta non dice altro.
+## - Altezze: taglia S ~0,7–0,9 · M ~1,0–1,3 · L ~1,5–2,0 · persone ~1,2 (la Nonna 1,3, il Veterinario 1,4).
+## - Forme tozze: corpo grande e tondo, testa grande, zampe corte, occhi grandi (bianco + pupilla nera).
+## - Colori dalla palette (Art.c), 3–5 colori per modello; il verde radio (radio_1/radio_2) solo per le mutazioni,
+##   con glow > 1 per il bagliore.
+
+const TOON := preload("res://shaders/toon.gdshader")
+const OUTLINE := preload("res://shaders/outline.gdshader")
+const OUT_W := 0.028
+
+static var _mats: Dictionary = {}
+
+
+## Materiale cartoon (condiviso per colore). `glow` > 1 accende il bagliore (bloom).
+static func mat(color: Color, glow := 0.0, outline := true) -> ShaderMaterial:
+	var key := "%s|%.2f|%s" % [color.to_html(), glow, outline]
+	if _mats.has(key):
+		return _mats[key]
+	var m := ShaderMaterial.new()
+	m.shader = TOON
+	m.set_shader_parameter("albedo", color)
+	if glow > 0.0:
+		m.set_shader_parameter("emission", color)
+		m.set_shader_parameter("emission_energy", glow)
+	if outline:
+		var o := ShaderMaterial.new()
+		o.shader = OUTLINE
+		o.set_shader_parameter("width", OUT_W)
+		m.next_pass = o
+	_mats[key] = m
+	return m
+
+
+static func _add(parent: Node3D, mesh: Mesh, pos: Vector3, color: Color, scl := Vector3.ONE, rot := Vector3.ZERO, glow := 0.0, outline := true) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.position = pos
+	mi.scale = scl
+	mi.rotation = rot
+	mi.material_override = mat(color, glow, outline)
+	parent.add_child(mi)
+	return mi
+
+
+## Ellissoide (corpo, testa, guance): `size` = diametri x, y, z.
+static func blob(parent: Node3D, pos: Vector3, size: Vector3, color: Color, rot := Vector3.ZERO, glow := 0.0) -> MeshInstance3D:
+	var sm := SphereMesh.new()
+	sm.radius = 0.5
+	sm.height = 1.0
+	sm.radial_segments = 10
+	sm.rings = 6
+	return _add(parent, sm, pos, color, size, rot, glow)
+
+
+static func box(parent: Node3D, pos: Vector3, size: Vector3, color: Color, rot := Vector3.ZERO, glow := 0.0) -> MeshInstance3D:
+	var bm := BoxMesh.new()
+	bm.size = Vector3.ONE
+	return _add(parent, bm, pos, color, size, rot, glow)
+
+
+## Cilindro (zampe, colli, tubi): asse lungo y.
+static func cyl(parent: Node3D, pos: Vector3, radius: float, height: float, color: Color, rot := Vector3.ZERO, top := -1.0) -> MeshInstance3D:
+	var cm := CylinderMesh.new()
+	cm.top_radius = radius if top < 0.0 else top
+	cm.bottom_radius = radius
+	cm.height = height
+	cm.radial_segments = 8
+	cm.rings = 1
+	return _add(parent, cm, pos, color, Vector3.ONE, rot)
+
+
+## Cono (becchi, orecchie, cappelli, corna): punta verso +y prima della rotazione.
+static func cone(parent: Node3D, pos: Vector3, radius: float, height: float, color: Color, rot := Vector3.ZERO) -> MeshInstance3D:
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.0
+	cm.bottom_radius = radius
+	cm.height = height
+	cm.radial_segments = 8
+	cm.rings = 1
+	return _add(parent, cm, pos, color, Vector3.ONE, rot)
+
+
+static func torus(parent: Node3D, pos: Vector3, inner: float, outer: float, color: Color, rot := Vector3.ZERO) -> MeshInstance3D:
+	var tm := TorusMesh.new()
+	tm.inner_radius = inner
+	tm.outer_radius = outer
+	tm.rings = 12
+	tm.ring_segments = 6
+	return _add(parent, tm, pos, color, Vector3.ONE, rot)
+
+
+## Occhio cartoon: bianco + pupilla nera che guarda nella direzione `look` (in locale). `r` = raggio del bianco.
+static func eye(parent: Node3D, pos: Vector3, r: float, look := Vector3(0, 0, 1), mutant := false) -> Node3D:
+	var e := Node3D.new()
+	e.position = pos
+	parent.add_child(e)
+	var sm := SphereMesh.new()
+	sm.radius = r
+	sm.height = r * 2.0
+	sm.radial_segments = 10
+	sm.rings = 6
+	_add(e, sm, Vector3.ZERO, Art.c("bianco"), Vector3.ONE, Vector3.ZERO, 0.0, true)
+	var pm := SphereMesh.new()
+	pm.radius = r * 0.55
+	pm.height = r * 1.1
+	pm.radial_segments = 8
+	pm.rings = 4
+	var pc := Art.c("radio_1") if mutant else Art.c("inchiostro")
+	_add(e, pm, look.normalized() * r * 0.62, pc, Vector3.ONE, Vector3.ZERO, 2.2 if mutant else 0.0, false)
+	return e
+
+
+## Due occhi simmetrici sulla faccia (centro `pos`, distanza `gap`).
+static func eyes(parent: Node3D, pos: Vector3, gap: float, r: float, look := Vector3(0, 0, 1)) -> void:
+	eye(parent, pos + Vector3(-gap / 2.0, 0, 0), r, look)
+	eye(parent, pos + Vector3(gap / 2.0, 0, 0), r, look)
+
+
+## Quattro zampe tozze sotto un corpo largo `w` e lungo `l` (asse z), alte `h`.
+static func legs4(parent: Node3D, w: float, l: float, h: float, color: Color, r := 0.07) -> void:
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]:
+			cyl(parent, Vector3(sx * w * 0.3, h / 2.0, sz * l * 0.3), r, h, color)
+
+
+## Due zampette (uccelli, persone).
+static func legs2(parent: Node3D, gap: float, h: float, color: Color, r := 0.04) -> void:
+	for sx in [-1.0, 1.0]:
+		cyl(parent, Vector3(sx * gap / 2.0, h / 2.0, 0), r, h, color)
+
+
+## Macchia radioattiva che brilla (mutazione), appoggiata sulla superficie in `pos`.
+static func radio_spot(parent: Node3D, pos: Vector3, r := 0.08) -> void:
+	blob(parent, pos, Vector3(r * 2.0, r * 1.2, r * 2.0), Art.c("radio_1"), Vector3.ZERO, 2.6)
+
+
+## Modello del Food Kit di Kenney (CC0) con materiali cartoon: carrot, beet, radish, pumpkin, onion, eggplant...
+static func food(parent: Node3D, name: String, pos: Vector3, s := 1.0, rot := Vector3.ZERO) -> Node3D:
+	var scene: PackedScene = load("res://assets/models/food/%s.glb" % name)
+	if scene == null:
+		return null
+	var n: Node3D = scene.instantiate()
+	n.position = pos
+	n.scale = Vector3.ONE * s
+	n.rotation = rot
+	parent.add_child(n)
+	for mi: MeshInstance3D in n.find_children("*", "MeshInstance3D", true, false):
+		for si in mi.mesh.get_surface_count():
+			var orig := mi.mesh.surface_get_material(si) as BaseMaterial3D
+			var m := ShaderMaterial.new()
+			m.shader = TOON
+			m.set_shader_parameter("albedo", orig.albedo_color if orig else Color.WHITE)
+			if orig and orig.albedo_texture:
+				m.set_shader_parameter("albedo_tex", orig.albedo_texture)
+				m.set_shader_parameter("use_tex", true)
+			var o := ShaderMaterial.new()
+			o.shader = OUTLINE
+			o.set_shader_parameter("width", OUT_W / maxf(s, 0.01))
+			m.next_pass = o
+			mi.set_surface_override_material(si, m)
+	return n
+
+
+## Radice di un modello: un Node3D con nome, già girato di tre quarti verso sinistra.
+static func root(id: String, turn := -0.35) -> Node3D:
+	var n := Node3D.new()
+	n.name = id
+	n.rotation.y = turn
+	return n

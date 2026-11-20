@@ -75,10 +75,7 @@ func _draw() -> void:
 	var sky: Array = BAND_SKY.get(band, ["verde_5", "verde_3"])
 	draw_rect(art, Art.c(sky[0]))
 	draw_rect(Rect2(art.position.x, art.position.y + art.size.y * 0.62, art.size.x, art.size.y * 0.38), Art.c(sky[1]))
-	var tex := _art()
-	if tex:
-		var sc := clampi(int(minf(art.size.x / 30.0, art.size.y / 26.0)), 1, 4)
-		Art.draw_frame(self, tex, Art.frame_now(tex, _anim_offset()), art.grow_individual(0, 0, 0, -2), sc)
+	Art.draw_art(self, String(card.def.get("id", "")), false, art, _anim_offset())
 	draw_rect(art, Ui.ink(), false, 3.0)
 	# tipo (in alto a destra)
 	var tipo: String = {"creature": "Creatura", "structure": "Struttura", "event": "Evento"}.get(card.type(), "")
@@ -98,11 +95,16 @@ func _draw() -> void:
 	if card.type() == "creature":
 		var atk := match_ref.atk_of(card) if match_ref and match_ref.lane_of(card) >= 0 else card.base_atk()
 		var hp := match_ref.health_of(card) if match_ref and match_ref.lane_of(card) >= 0 else card.base_def()
-		var y := size.y - pad - stats_h / 2.0
-		Ui.sword(self, Vector2(pad + 12, y), 22)
-		Ui.text(self, Vector2(pad + 22, y + 8), str(atk), Ui.MID, Art.c("bianco"))
-		Ui.heart(self, Vector2(size.x - pad - 12, y), 22, Art.c("verde_4"))
-		Ui.text(self, Vector2(size.x - pad - 60, y + 8), str(hp), Ui.MID, Art.c("bianco"), HORIZONTAL_ALIGNMENT_RIGHT, 36)
+		var y := size.y - pad - stats_h / 2.0 + 1
+		# attacco: tondo rosso con la lama dietro e il numero dentro; vita: cuore verde con il numero dentro
+		var ac := Vector2(pad + 13, y)
+		draw_circle(ac + Vector2(0, 2), 14, Ui.ink())
+		draw_circle(ac, 14, Ui.ink())
+		draw_circle(ac, 11, Art.c("rosso_2"))
+		Ui.text(self, Vector2(ac.x - 14, ac.y + 7), str(atk), Ui.MID, Art.c("bianco"), HORIZONTAL_ALIGNMENT_CENTER, 28)
+		var hc := Vector2(size.x - pad - 14, y + 1)
+		Ui.heart(self, hc, 34, Art.c("verde_4"))
+		Ui.text(self, Vector2(hc.x - 14, hc.y + 6), str(hp), Ui.MID - 2, Art.c("bianco"), HORIZONTAL_ALIGNMENT_CENTER, 28)
 	# costo (sopra a tutto, sporge dall'angolo)
 	Ui.gem(self, Vector2(13, 13), 14, str(_cost()), Ui.MID)
 	if card.level > 1:

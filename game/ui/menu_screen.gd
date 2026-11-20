@@ -220,6 +220,8 @@ func _update() -> void:
 	var h: Dictionary = db.heroes[hero_ids[hero_index]]
 	hero_name.text = h["name"]
 	hero_desc.text = Abilities.describe_hero(h)
+	hero_portrait.art_id = h["id"]
+	hero_portrait.art_hero = true
 	hero_portrait.set_texture(Art.hero_tex(h["id"]))
 	for k in 2:
 		var band: String = DeckFactory.BANDS[band_sel[k]]
@@ -236,6 +238,7 @@ func _update() -> void:
 			if c["band"] == band and c["type"] == "creature" and n < 3 and slot < views.size():
 				var sv := views[slot] as SpriteView
 				sv.terrain = band
+				sv.art_id = id
 				sv.set_texture(Art.card_tex(id))
 				n += 1
 				slot += 1

@@ -1,5 +1,13 @@
 # Design system grafico — Fattoria Nucleare
 
+> **Aggiornamento D-016 (strada A):** il gioco è passato al **cartoon low-poly 3D** con ombre a gradini e contorno nero,
+> e a un'interfaccia cartoon (Lilita One + Nunito, contorni spessi, lamiera rivettata, legno). Proposta approvata:
+> https://claude.ai/artifact/XEnCiiNFvFC85sW1pHutUc. Di questo documento restano validi **palette**, **scala e taglie
+> relative**, **tocco nucleare**, **bande → colori**. La parte pixel art (griglia, contorni da 1 px, .pxl) resta solo
+> per le vecchie figure, usate dove manca ancora un modello 3D. Codice: `game/models/kit.gd` (forme e convenzioni),
+> `game/models/recipes_*.gd` (un file per gruppo), `game/shaders/toon.gdshader` e `outline.gdshader`,
+> `game/ui/ui_kit.gd` (font, pannelli, gemme, icone), `game/tools/render_models.gd` (foto dei modelli, `--bake` per le carte).
+
 Regole per disegnare **qualunque cosa** del gioco (creature, persone, strutture, tavolo, interfaccia) in modo che
 sembri tutto fatto dalla stessa mano. Decisione D-013 (pixel art 2D in Godot). Ultimo aggiornamento: 2026-11-20.
 

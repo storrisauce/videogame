@@ -62,10 +62,7 @@ func _draw() -> void:
 	var win := por.grow(-9)
 	draw_rect(win, Art.c("verde_5"))
 	draw_rect(Rect2(win.position.x, win.position.y + win.size.y * 0.6, win.size.x, win.size.y * 0.4), Art.c("verde_3"))
-	var tex := Art.hero_tex(ps.hero["id"])
-	if tex:
-		var sc := clampi(int(minf(win.size.x / 30.0, win.size.y / 28.0)), 1, 4)
-		Art.draw_frame(self, tex, Art.frame_now(tex, player * 2), win.grow_individual(0, 0, 0, -2), sc, player == 1)
+	Art.draw_art(self, String(ps.hero["id"]), true, win, player * 2, player == 1)
 	draw_rect(win, Ui.ink(), false, 3.0)
 	if highlighted:
 		var hl := StyleBoxFlat.new()

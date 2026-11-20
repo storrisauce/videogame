@@ -71,6 +71,21 @@ npx -y skills add scottstts/Threejs-Awesome-Graphics-Agent-Skills -a claude-code
 `audio-design` / `godot-audio`, `save-systems` (profilo), `godot-animation`, `performance-optimization`, `level-design` (campagna).
 Nessuna skill specifica per Blender è installata: Blender si usa con script Python (vedi §6.4).
 
+### 4.2.1 Skill per grafica, texture e 3D (trovate il 2026-11-20, **non ancora installate**)
+Cercate nel catalogo https://skills.sh/ (`npx skills find …`) e verificate per installazioni e stelle GitHub.
+Installale quando si lavora sull'arte (§9, punto 4). Chiedi all'utente prima di quelle a pagamento.
+| Skill | Link | Cosa fa | Costo | Comando |
+|---|---|---|---|---|
+| **Blender pilotato da Claude** (consigliata) | https://github.com/RobLe3/cc-blender-skill (178★, ~4K installazioni) | 10 skill per Blender 5.x: modellazione, materiali e texture, luci, telecamere, rendering, animazione, esportazione, da schizzo a 3D, flusso da professionista | gratis (usa il Blender del computer) | `npx -y skills add RobLe3/cc-blender-skill -a claude-code -g -y` |
+| **Scenario** (arte AI delle creature) | https://github.com/scenario-labs/skills (3.926★) | immagini, texture, modelli 3D e animazioni con l'AI, **personaggi coerenti** tra le carte; skill per Godot (shader), Blender (animazione 2D), asset di gioco | **a pagamento**: account Scenario + chiave API | `npx -y skills add scenario-labs/skills -a claude-code -g -y` |
+| **Meshy** (modelli 3D da testo/immagine) | https://github.com/meshy-dev/meshy-3d-agent (120★, ~3,4K installazioni) | "maiale con armatura di lamiera" → modello 3D con texture, da rifinire in Blender | **a pagamento**: account Meshy | `npx -y skills add meshy-dev/meshy-3d-agent -a claude-code -g -y` |
+
+Già installate e utili per la grafica: `create-game-assets` (stile, sprite, texture, controllo qualità e licenze),
+`godot-shaders` e `shader-programming` (bagliori radioattivi, contorni, dissolvenze), `godot-3d-essentials`, `game-feel` (animazioni
+dei colpi). Le Three.js valgono solo per il 3D nel browser.
+Scartate: skill "ai-image-generation" di fonti sconosciute con numeri di installazioni non credibili; "game-art" e "3d-modeling" con poche
+decine di installazioni. Chiavi API (Scenario, Meshy): mai nel repo; sul Mac in variabili d'ambiente o nel portachiavi.
+
 Elenco completo dei nomi:
 - Gamedev (80): ai-behavior-trees-utility-ai, audio-design, bevy-ecs, camera-systems, card-game, create-game-assets, defold-core, dialogue-systems, ebitengine-game, fps-shooter, game-ai, game-docs, game-feel, game-jam, game-ui-ux, godot-2d-movement, godot-3d-essentials, godot-animation, godot-audio, godot-csharp, godot-export, godot-gdscript, godot-gdscript-headless-testing, godot-multiplayer, godot-nodes-scenes, godot-physics, godot-resources, godot-shaders, godot-signals-groups, godot-tilemap, godot-ui-control, input-systems, itch-publish, level-design, love2d-core, performance-optimization, phaser-arcade-physics, phaser-core, physics-tuning, pixijs-rendering, platformer, procedural-gen, prototype-fast, puzzle, pygame-core, roblox-* (8), roguelike, router, rpg, save-systems, shader-programming, steam-publish, survival-crafting, threejs-gltf-loading, threejs-materials-lighting, threejs-scene-setup, tower-defense, unity-* (8), unreal-* (6), visual-novel.
 - Three.js (13): threejs-animation, -asset-pipeline, -fundamentals, -geometry, -interaction, -lighting, -loaders, -materials, -performance, -postprocessing, -react-three-fiber, -shaders, -textures.
@@ -194,7 +209,7 @@ M1 regole senza grafica ✅ → **M2 vertical slice su iPhone** (gioco fatto; ma
    solo se l'utente accetta, oppure statistiche delle carte), rinforzare Veterinario, Cane e Discarica; rilanciare `simulate.gd`.
 3. **Contenuti:** scrivere il set di lancio (~15 carte per banda + 15 Cratere) seguendo il DNA tematico e il catalogo delle famiglie;
    implementare in `abilities.gd` le famiglie nuove che servono (con test).
-4. **Arte:** definire lo stile con `create-game-assets`, illustrazioni delle carte in `game/assets/cards/`, sfondo del tavolo,
+4. **Arte:** installare le skill di §4.2.1 (almeno quella di Blender), definire lo stile con `create-game-assets`, illustrazioni delle carte in `game/assets/cards/`, sfondo del tavolo,
    `CardView` che mostra le immagini.
 5. **Rifiniture dello schermo:** trascinamento delle carte, vibrazioni e scuotimento con la Botta Atomica (`game-feel`), suoni
    (`godot-audio`), tutorial alla prima partita.

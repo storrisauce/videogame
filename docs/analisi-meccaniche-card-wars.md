@@ -1,160 +1,348 @@
-# Analisi delle meccaniche dell'APK "Card Wars"
+# Analisi approfondita delle meccaniche dell'APK "Card Wars"
 
-Fonte: codice C# (Unity, compilazione Mono) estratto da `Assembly-CSharp.dll` nell'APK.
-Le tabelle dei dati (statistiche delle carte, costi, matrice dei vantaggi, ricompense) **non sono nell'APK**:
-il gioco le scarica dal server (`db_Creatures.json`, `db_Spells.json`, `db_RPS.json`, `db_Parameters.json`...).
-Quindi qui ci sono le **regole** e le **formule**, non i numeri delle singole carte.
+**Fonte:** codice C# dell'APK (Unity, compilazione Mono, `Assembly-CSharp.dll`), letto disassemblando i metodi uno per uno.
+**Limite:** le tabelle dei dati (statistiche delle singole carte, costi, matrice delle fazioni, parametri globali, ricompense)
+**non sono nell'APK**. Il gioco le scarica dal server all'avvio (`db_Creatures.json`, `db_Spells.json`, `db_RPS.json`,
+`db_Parameters.json`, ecc.). Qui ci sono quindi le **regole, le formule e la struttura**, non i numeri delle singole carte.
 
-I termini originali sono tra parentesi solo come riferimento: per un gioco nostro vanno cambiati nomi, tema e grafica.
+I nomi originali compaiono tra parentesi o in `codice` solo come riferimento. Per un gioco nostro vanno cambiati nomi, tema e grafica.
+
+Documento collegato: [`catalogo-abilita-card-wars.md`](catalogo-abilita-card-wars.md), con tutte le 239 abilità una per una.
+
+**Legenda della certezza:** ✅ letto direttamente nel codice · ⚠️ dedotto dal codice, con margine d'interpretazione · ❓ dipende da dati del server.
 
 ---
 
-## 1. Il tavolo
+## 1. Il tavolo ✅
 
-| Elemento | Valore (dal codice) |
+| Elemento | Valore |
 |---|---|
-| Giocatori | 2 (tu contro IA o contro un altro giocatore) |
-| Corsie per giocatore | **4**, una di fronte all'altra |
-| Tipi di terreno | **5** (Corn, Plains, Swamp, Cotton, Sand) |
+| Giocatori | 2 |
+| Corsie per giocatore | **4**, ognuna di fronte a una corsia avversaria |
+| Tipi di terreno | **5** (`Corn`, `Plains`, `Swamp`, `Cotton`, `Sand`) |
 | Carte pescate all'inizio | **5** |
-| Mano massima | **7** carte (oltre non peschi) |
-| Oggetti per corsia | **2**: una creatura + un edificio |
+| Mano massima | **7** (con la mano piena la pescata va persa) |
+| Oggetti per corsia | **2**: una creatura davanti e un edificio dietro |
 | Mazzi salvabili | 5 |
 
-Ogni corsia ha: un terreno, un indice, le corsie adiacenti, la corsia avversaria di fronte,
-e degli stati speciali (disabilitata, abilità bloccate, costo delle abilità modificato, "cancello di rarità" che vieta carte troppo rare).
+**Proprietà di ogni corsia:** terreno, indice (0–3), corsie adiacenti, corsia avversaria di fronte, più quattro stati:
+- **disabilitata**: non ci si può giocare;
+- **abilità bloccate**;
+- **modificatore del costo delle abilità**, che vale per le creature in quella corsia;
+- **cancello di rarità**: vieta carte più rare di una soglia (lo crea un edificio).
 
-## 2. Tipi di carta
+Le corsie esterne (0 e 3) hanno una sola corsia adiacente.
 
-- **Creatura**: ha ATK (attacco) e DEF (difesa = punti vita), un costo, una fazione, una rarità e spesso un'**abilità attivabile** (Floop) con un suo costo.
-- **Edificio**: si mette dietro la creatura nella corsia e dà effetti passivi o a evento (quando una creatura entra, muore, vince, viene attivata...).
+## 2. Le carte ✅
+
+### 2.1 Dati di una carta
+Ogni carta ha: ID, nome, tipo, **fazione**, **rarità**, qualità, **costo**, **costo dell'abilità**, ATK base, DEF base,
+due parametri d'effetto (`Val1`, `Val2`), prezzo di vendita, possibilità di fusione e il nome dello script che ne implementa l'effetto.
+
+### 2.2 Il livello moltiplica tutto ✅
+Ogni copia di una carta ha un **livello**, che **moltiplica linearmente** le statistiche:
+```
+ATK = livello × ATK base
+DEF = livello × DEF base
+Val1 = livello × Val1 base       (stessa cosa per Val2)
+Prezzo di vendita = livello × prezzo base
+```
+Una carta di livello 3 ha quindi il triplo di attacco, difesa e potenza dell'effetto.
+Il livello **non cresce con l'uso**: viene fissato quando ottieni la carta (dal livello del drop della missione o della ricompensa).
+
+### 2.3 Tipi
+- **Creatura**: ATK, DEF e quasi sempre un'abilità attivabile.
+- **Edificio**: va dietro la creatura e dà effetti continui o legati a eventi.
 - **Incantesimo**: effetto immediato, poi va negli scarti.
-- **Leader / Eroe**: non è nel mazzo. Ha i punti vita del giocatore, un'abilità con tempo di ricarica e parametri propri per il minigioco di combattimento.
-- (Esiste anche un tipo "Dweeb" usato per lo stato di sconfitta, con la proposta di resuscitare pagando gemme.)
+- **Leader**: fuori dal mazzo. Ha i punti vita del giocatore e un'abilità con ricarica, implementata come un incantesimo gratuito.
+- (Il tipo `Dweeb` corrisponde alla schermata di sconfitta, con l'offerta di resuscitare.)
 
-**Fazioni** = i 5 terreni + "Universale".
+**Fazioni:** i 5 terreni più `Universal`, che si gioca su qualsiasi terreno.
 
-## 3. Struttura della partita
+### 2.4 Il mazzo
+Il mazzo contiene le carte **più i terreni** da disporre sulle corsie. Controlli di validità:
+- numero minimo di carte (`Min_Cards_In_Deck`) ❓;
+- numero massimo di carte = **dipende dal livello del leader** (`DeckMaxSize`) ❓;
+- massimo di copie della stessa carta (`Max_Duplicates_In_Deck`) ❓.
 
-1. **Chi inizia**: una freccia gira a caso (fasi `ArrowSpinStart/End`).
-2. **Terreni**: ogni giocatore dispone i 4 terreni del proprio mazzo sulle 4 corsie (il mazzo contiene sia le carte che i terreni).
-3. **Turni**, ognuno diviso in:
-   - **Inizio turno**: si azzerano i contatori del turno; le carte in campo perdono gli stati temporanei (protetta, inerme, già attivata, appena evocata); si attivano gli effetti di inizio turno e quelli persistenti dell'avversario; **peschi 1 carta**.
-   - **Preparazione** (Setup): giochi carte e usi abilità spendendo **punti azione**. Se non hai punti o mosse legali si passa oltre (con un avviso se ti restano mosse).
-   - **Combattimento** (Battle): ogni tua creatura attacca la corsia di fronte, una corsia alla volta, con il minigioco a tempo.
-   - **Il primo giocatore salta il combattimento nel suo primo turno.**
-4. Si alternano finché un leader arriva a 0 punti vita.
+## 3. Struttura della partita ✅
 
-## 4. Punti azione (Magic Points)
-
-- Si parte da `Starting_Magic_Points` (valore dal server).
-- Alla fine di ogni giro completo i punti azione **aumentano di 1**, fino a `Max_Magic_Points`.
-- I punti del turno = valore del giro + punti bonus (dati da carte o abilità), poi i bonus si azzerano.
-- Costanti del codice: valore di un punto azione = 1, valore di una carta = 3 (usato dall'IA per valutare le mosse).
-
-## 5. Regole per giocare una carta
-
-Una carta si può giocare in una corsia solo se:
-1. in questo momento ti è permesso giocare quel tipo di carta (alcuni effetti bloccano creature, edifici o incantesimi);
-2. per creature ed edifici: la corsia non è disabilitata e la rarità della carta non supera il "cancello di rarità" della corsia;
-3. **la fazione della carta corrisponde al terreno della corsia** (le carte Universali vanno ovunque);
-4. hai abbastanza punti azione: **costo = costo base − sconti attivi** (minimo 0).
-
-Se la corsia ha già una creatura (o un edificio) puoi **sostituirla** con la nuova carta.
-
-## 6. Abilità attivabili (Floop)
-
-- **Costo** = costo base dell'abilità + modificatore del giocatore + modificatore della corsia. Alcuni effetti impongono un costo fisso. Minimo 0.
-- Di solito una volta per turno (stato `Flooped`). Si azzera a inizio turno.
-- Una creatura può essere "bloccata" e non poter usare l'abilità.
-- Gli edifici possono reagire quando una creatura usa l'abilità (es. +ATK o +DEF a ogni attivazione).
-
-## 7. Combattimento
-
-### Il minigioco a tempo (anello)
-- Un indicatore gira su un anello. Tocchi lo schermo per fermarlo.
-- Sull'anello ci sono una **zona colpo** e una **zona critico**, posizionate a caso a ogni attacco.
-- Risultato: **Critico** (dentro la zona critico), **Colpo** (dentro la zona colpo), **Mancato** (fuori, o se il tempo scade).
-- La dimensione delle zone dipende da: leader (valori diversi per attacco e difesa), modificatori della missione e carte che allargano le zone.
-- La velocità di rotazione è casuale fra un minimo e un massimo del leader, moltiplicata per un fattore della missione.
-- Quando attacchi c'è scritto "tocca per attaccare", quando attacca l'avversario "tocca per bloccare": il minigioco serve anche in difesa, con zone di difesa proprie.
-- Se la corsia avversaria è vuota, la zona colpo si allarga.
-
-### Formula del danno a una creatura
 ```
-danno = ATK + ATK × Fattore[fazione attaccante][fazione difensore]   (minimo 0)
-se Critico e stai attaccando tu:  danno = danno × moltiplicatore critico del leader
-danno ricevuto = (danno − riduzione danni) × fattore danni del difensore   (minimo 0)
-```
-- C'è quindi una **matrice di vantaggi fra fazioni** stile carta-forbice-sasso (tabella `db_RPS.json`, sul server).
-- La creatura muore quando i danni accumulati raggiungono la DEF.
-- Se l'attaccante vince e nella sua corsia c'è un edificio, scatta l'effetto "alla vittoria" dell'edificio.
-
-### Danno diretto al leader
-- Se di fronte **non c'è una creatura** (o è "inerme"), l'attaccante colpisce il leader avversario: **danno = ATK − penalità ATK attive**.
-- Anche qui un Critico moltiplica il danno.
-- Una creatura "protetta" non viene colpita, e una che "non può attaccare" salta il turno.
-
-### Statistiche effettive di una creatura
-```
-ATK = (ATK base + modificatori) × fattore ATK      (minimo 0)
-DEF = (DEF base + modificatori) × fattore DEF
-Vita = DEF − danni subiti                          (minimo 0)
+Freccia che sceglie chi inizia
+  → Disposizione dei terreni
+  → [Turno del giocatore che inizia] Preparazione → Combattimento
+  → [Turno dell'altro]               Preparazione → Combattimento
+  → ... finché un leader va a 0 PV
 ```
 
-## 8. Leader
+### 3.1 Inizio turno
+1. Si azzerano i contatori del turno: incantesimi lanciati, creature evocate e rimosse.
+2. Ogni carta in campo perde gli stati temporanei: *spostata*, *abilità già usata*, *inerme*, *protetta*, *appena evocata*, *usata*.
+3. Scattano gli effetti "a inizio turno" delle tue carte e quelli persistenti dell'avversario.
+4. **Peschi 1 carta.** Se il mazzo è vuoto si passa alla fase "carte finite" (§9).
 
-- **Punti vita = PV base + 5 × livello** (`HP_PER_LEVEL = 5`).
-- Esperienza e livello. Il livello aumenta anche la **dimensione massima del mazzo**.
-- Abilità speciale con **tempo di ricarica** in turni (es. ridurre costi, pescare, curare, bonus a una fazione).
-- Parametri propri del minigioco: zone colpo/critico in attacco e difesa, velocità, moltiplicatore critico.
+### 3.2 Preparazione
+Giochi carte, attivi abilità e usi l'abilità del leader finché hai punti azione.
+Se non hai punti, o non hai mosse legali, la fase finisce da sola. Se ti restano mosse e provi a passare, ricevi un avviso.
 
-## 9. Fine del mazzo
+### 3.3 Combattimento
+Le tue creature attaccano **una corsia alla volta, da sinistra a destra** dal punto di vista di chi attacca (§6).
+**Nel suo primo turno il giocatore che inizia salta il combattimento.**
 
-Se il mazzo è vuoto a inizio turno appare un avviso e il leader **perde punti vita** (sembra pari al livello del leader), poi il mazzo viene **rimescolato**.
+### 3.4 Fine turno
+- Bonus e sconti del turno si azzerano: punti bonus, sconti sui costi, modifiche al costo delle abilità, costo fisso delle abilità, penalità all'ATK.
+- La **ricarica del leader scende di 1**.
+- I punti azione crescono (§4).
 
-## 10. Vittoria e sconfitta
+## 4. Punti azione ✅
 
-- Vince chi porta a 0 i punti vita del leader avversario.
-- Se perdi puoi **resuscitare pagando gemme** e continuare.
-- Ricompense: esperienza e monete (casuali fra un minimo e un massimo della missione), carte da forzieri con probabilità a pesi.
+```
+All'inizio:         punti del giro = Starting_Magic_Points                     ❓
+A ogni giro:        punti del giro = min(punti del giro + 1, Max_Magic_Points)  ❓
+Punti del turno:    punti del giro + punti bonus guadagnati nel turno prima
+```
+- Il "giro" cresce quando finisce il turno di chi ha iniziato, quindi entrambi i giocatori salgono allo stesso ritmo.
+- I punti **non si accumulano**: a ogni turno vengono reimpostati.
+- Alcune abilità danno **punti bonus per il turno successivo** (`AddBonusPoints`), altre punti immediati.
 
-## 11. Catalogo delle abilità (239 tipi di effetto)
+## 5. Giocare carte e abilità ✅
 
-**Creature (140)**, le famiglie principali:
-- Bonus ATK/DEF: a sé, alle adiacenti, a tutte, alla stessa fazione, in base a terreni, carte in mano, corsie vuote o numero di attivazioni.
-- Malus all'avversario: −ATK o −DEF al bersaglio, a tutti, alla fazione; scambia o pareggia gli ATK.
-- Danno: al bersaglio, all'avversario di fronte, alle adiacenti, a tutti, al leader; in base a scarti, terreni diversi, rarità.
-- Cure: a sé, adiacenti, bersaglio, tutti, leader.
-- Controllo: proteggi, rendi inerme, blocca abilità o evocazioni, rimanda in mano, resetta.
-- Economia: pesca carte, guadagna punti azione, sacrifica per punti, riprendi dagli scarti, rimescola la mano.
-- Modifica dell'anello: allarga zona colpo, critico o difesa.
+### 5.1 Una carta è giocabile in una corsia se...
+1. in questo momento ti è permesso giocare quel tipo di carta (alcuni incantesimi bloccano all'avversario creature, edifici o incantesimi);
+2. *(creature ed edifici)* la corsia **non è disabilitata** e la **rarità** della carta non supera il cancello di rarità della corsia;
+3. la **fazione** della carta è uguale al **terreno** della corsia, oppure la carta è Universale;
+4. **punti azione ≥ costo**, dove `costo = max(0, costo base − sconti)`.
 
-**Edifici (26)**: bonus ATK/DEF continui, danno o cura quando una creatura entra o muore, cura a inizio turno, riduzione o moltiplicazione dei danni, abilità più economiche, cancello di rarità, rimanda in mano sacrificando.
+Se la corsia è già occupata puoi **sostituire** la carta: la vecchia va negli scarti.
 
-**Incantesimi (73)**: attacca una creatura (anche solo di una certa fazione), distruggi edifici, distruggi in base alla rarità, disabilita una corsia, blocca un tipo di carta all'avversario, trasforma (Polymorph), danno doppio, ruba vita, scambia ATK/DEF, sposta edifici, riduci costi, rimanda in mano, scarta, pesca.
+### 5.2 Abilità attivabili delle creature
+Si possono attivare se:
+- non sono già state usate in questo turno (una volta per turno);
+- non sono disabilitate né bloccate da un effetto avversario;
+- hai abbastanza punti azione;
+- la condizione specifica dell'abilità è soddisfatta (per esempio esiste un bersaglio valido, o c'è una creatura adiacente).
 
-## 12. Intelligenza artificiale
+```
+costo abilità = max(0, costo base + modificatore del giocatore + modificatore della corsia)
+se un effetto ha imposto un costo fisso (≥ 0), vale quello
+```
+Le modifiche di ATK e DEF date dalle abilità sono **permanenti** finché la creatura resta in campo, e si sommano tra loro.
 
-L'IA valuta ogni carta in mano su ogni corsia e ogni abilità disponibile, dà un punteggio al tavolo risultante
-(ATK, DEF e corsie vuote, con pesi `WEIGHT_SCALE` e `DEF_FACTOR`) e sceglie la mossa migliore.
-Ha funzioni per scegliere il bersaglio migliore da attaccare, curare, indebolire, sacrificare.
+## 6. Combattimento in dettaglio ✅
 
-## 13. Meta-gioco (fuori dalla partita)
+### 6.1 Ordine
+Per ogni corsia, da sinistra a destra secondo chi attacca:
+- corsia senza creatura attaccante → si salta;
+- creatura con **ATK 0** → non attacca;
+- creatura che **non può attaccare** (effetto avversario), o bersaglio **protetto** → nessun danno.
 
-- **Collezione e mazzi**: inventario con limite, carte minime e massimo di copie per mazzo, dimensione massima legata al livello del leader, minimo di creature.
-- **Fusione**: ricette che combinano carte in carte nuove.
-- **Forzieri a pesi** (gacha): normale, oro, ossidiana, eventi; con chiavi.
-- **Mappa delle missioni** a regioni: ogni missione costa stamina, ha un mazzo avversario, condizioni per le stelle (turni, PV persi, fazioni usate, abilità usate...) e drop.
-- **Stamina** che si ricarica col tempo.
-- **Missioni secondarie ed eventi a tempo**, dungeon a rotazione, tornei.
-- **Regali giornalieri** e calendario di accesso.
-- **Multigiocatore** con trofei, serie di vittorie e classifica.
-- Valute: monete e gemme.
+### 6.2 L'anello a tempo
+- Sull'anello, un giro completo vale 1. Il leader definisce due ampiezze, *colpo* `H` e *critico* `C`, separate per attacco e difesa, più i modificatori della missione.
+- Carte in campo possono allargarle: `H = H × (1 + modificatore)`, e lo stesso per C.
+- Se `H + C > 1`, allora `H = 1 − C`.
+- **Attacco contro una corsia vuota:** `H = 1 − C`, cioè tutto l'anello tranne il critico è "colpo". In pratica non si sbaglia.
+- Posizione: `inizio colpo = casuale(0, 1 − H − C)`; la zona critico parte **subito dopo** la zona colpo.
+- Tempo per un giro = `casuale(min, max)` del leader × fattore della missione. L'indicatore gira un numero limitato di volte, poi il tempo scade = **Mancato**.
+- Mentre aspetta il tocco il gioco è in pausa (`timeScale = 0`).
+- **Combattimento automatico** (opzione del giocatore): in attacco dà sempre "Colpo", in difesa sempre "Mancato". Niente critici.
+- L'anello lo gioca **sempre e solo il giocatore umano**, in attacco e in difesa. L'IA non fa il minigioco.
+
+### 6.3 Danno a una creatura
+```
+base     = ATK attaccante
+danno    = max(0, base + base × Fattore[fazione attaccante][fazione difensore])
+se Critico e il turno è tuo:    danno = danno × moltiplicatore critico del leader
+ricevuto = max(0, (danno − riduzione danni) × fattore danni del difensore)
+danni accumulati += ricevuto
+```
+- `Fattore` è la **matrice dei vantaggi fra fazioni** (`db_RPS.json` ❓): un valore positivo dà un bonus, uno negativo un malus.
+- Se il difensore arriva a 0 vita e nella corsia dell'**attaccante** c'è un edificio, scatta l'effetto "alla vittoria" dell'edificio.
+- La creatura che attacca **non subisce contrattacco**: in questo scontro solo il difensore riceve danni.
+
+### 6.4 Danno al leader
+Se di fronte non c'è una creatura, oppure è **inerme**:
+```
+danno al leader = ATK attaccante − penalità ATK del giocatore che attacca
+se Critico: × moltiplicatore critico
+```
+I PV del leader restano fra un minimo e un massimo (`MinHealth`/`MaxHealth`), che alcuni effetti possono cambiare.
+
+### 6.5 La difesa nell'anello non cambia il danno ⚠️
+Il codice mostra "tocca per bloccare" e usa zone di difesa proprie, ma **nessuna formula di danno legge il risultato della difesa**:
+- il bonus del critico si applica solo nel tuo turno di attacco;
+- se l'avversario attacca una tua corsia vuota, l'anello non compare nemmeno e il danno è pieno.
+
+In questa versione la difesa sembra quindi **solo scenica**. Per un nostro gioco conviene dargli un effetto vero (per esempio Colpo = −25% danno, Critico = −50%).
+
+### 6.6 Statistiche effettive
+```
+ATK  = max(0, (ATK di livello + modificatori ATK) × fattore ATK)
+DEF  = (DEF di livello + modificatori DEF) × fattore DEF
+Vita = max(0, DEF − danni accumulati)
+Cura: danni accumulati −= arrotonda(valore × fattore cure), senza scendere sotto 0
+```
+- Non esiste "vita oltre il massimo": una cura toglie solo danni già subiti.
+- Per alzare la vita oltre la DEF iniziale bisogna aumentare la **DEF**.
+
+## 7. Edifici ✅
+
+Gli edifici reagiscono a questi eventi:
+- **entra in gioco / esce di gioco** → aure continue di ATK o DEF, che si tolgono quando l'edificio sparisce;
+- **una creatura usa l'abilità** → +ATK, +DEF o punti azione;
+- **una creatura muore** → danno o cura al leader, rimanda carte in mano;
+- **la creatura vince uno scontro** → cura;
+- **inizio turno** → cura della creatura o delle creature.
+
+Costanti trovate: un edificio dimezza i danni ricevuti (×0,5), un altro raddoppia le cure (×2).
+
+## 8. Leader ✅
+
+| Aspetto | Regola |
+|---|---|
+| Punti vita | `PV base + 5 × livello` |
+| Livello | ricavato dall'esperienza secondo una tabella del leader (`LvUpScheme` ❓), con un'esperienza massima |
+| Esperienza | quella della missione, assegnata a ogni vittoria |
+| Effetti del livello | più PV, **mazzo più grande**, costo della ricerca PvP |
+| Abilità | lanciata come incantesimo gratuito; poi la ricarica riparte da `Cooldown` e scende di 1 a ogni fine turno |
+| Minigioco | zone colpo e critico (attacco e difesa), velocità min/max, moltiplicatore critico |
+| Specializzazione | campi `forFaction` / `forLandscape` / `forCardType` per abilità legate a una fazione, un terreno o un tipo |
+
+Le abilità dei leader sono incantesimi con il suffisso `Leader`: bonus ATK o DEF a tutti o a una fazione, cure, pesca,
+punti azione, sconti per fazione o per tipo, recupero dagli scarti, edifici rimandati in mano, blocchi con distruzione di edifici.
+
+## 9. Mazzo finito ✅
+
+**Giocatore umano.** Se a inizio turno il mazzo è vuoto, appare un avviso e **il tuo leader perde PV pari al proprio livello**.
+Gli scarti **non** tornano nel mazzo: la penalità si ripete **a ogni turno** finché la partita non finisce (un "dissanguamento").
+
+**IA.** Se la missione lo permette (`AIReshuffle`), l'IA invece **rimescola**: la mano va negli scarti, gli scarti tornano nel mazzo,
+il mazzo viene mescolato e l'IA pesca 5 carte. Non perde PV.
+
+## 10. Fine partita ✅
+
+- Perde chi arriva a 0 PV.
+- In caso di sconfitta puoi **resuscitare pagando 1 gemma**:
+  - PV del leader al massimo;
+  - la mano va negli scarti, gli scarti tornano nel mazzo, il mazzo viene mescolato e peschi 5 carte;
+  - le carte in campo restano dove sono, e tieni carte e monete raccolte.
+- **Vittoria:**
+  - esperienza al leader (quella della missione);
+  - monete: un valore casuale fra minimo e massimo della missione, più quelle raccolte;
+  - gemme raccolte;
+  - carte raccolte, ognuna al proprio livello di drop;
+  - alla prima vittoria in una missione: eventualmente un **nuovo leader** e **+1 alla stamina massima**.
+
+## 11. Intelligenza artificiale ✅
+
+L'IA è **greedy a una mossa**: a ogni azione prova tutte le mosse, valuta il tavolo che ne risulta e sceglie la migliore.
+Se nessuna mossa migliora il tavolo, passa.
+
+### Valutazione del tavolo
+```
+Punteggio(giocatore) = Σ punteggio delle 4 corsie
+                     + PV "al sicuro"
+                     + punti azione × 1
+                     + carte in mano × 3
+
+Corsia con una mia creatura:
+   nessun nemico di fronte → ATK + Vita
+   nemico di fronte        → ATK + max(0, Vita − ATK del nemico)
+Corsia vuota con un nemico di fronte → −ATK del nemico
+
+PV al sicuro = max(0, PV − Σ ATK delle creature nemiche senza nessuno davanti)
+
+Valore finale = Punteggio(IA) − Punteggio(avversario)
+```
+- Gioca carte **solo in corsie vuote**: non sostituisce mai una creatura.
+- Per bersagli, cure e sacrifici usa funzioni dedicate: "miglior candidato da attaccare / curare / indebolire / sacrificare".
+- Costanti: `WEIGHT_SCALE = 100`, `DEF_FACTOR = 2`.
+
+## 12. Catalogo delle abilità (239) ✅
+
+Elenco completo, con il momento in cui scatta ogni effetto: [`catalogo-abilita-card-wars.md`](catalogo-abilita-card-wars.md). In sintesi:
+
+- **140 abilità di creatura**: tutte si attivano pagando punti azione.
+  - Bonus: ATK/DEF a sé, alle adiacenti, a tutte, alla fazione; in base a terreni, carte, corsie vuote, attivazioni del turno o della partita.
+  - Malus: −ATK/−DEF a bersaglio, di fronte o a tutti; ATK pareggiato; vita dell'avversario convertita.
+  - Danno: di fronte, bersaglio, adiacenti, tutti, leader; scalato su scarti, terreni diversi, rarità, edifici, danni subiti nel turno prima.
+  - Cure: a sé, adiacenti, bersaglio, tutti, leader.
+  - Controllo: proteggi, rendi inerme, impedisci l'attacco, blocca abilità o evocazioni, rimanda in mano, distruggi un edificio, resetta.
+  - Economia: pesca, punti azione, sacrifica per punti o carte, recupera dagli scarti, rimescola la mano.
+  - Anello: allarga la zona colpo, critico o difesa.
+- **26 edifici**: vedi §7.
+- **73 incantesimi e abilità dei leader**: attacco a una creatura (generico o per fazione), danno doppio, distruzione per rarità,
+  disabilita corsia, blocca un tipo di carta, trasforma, scambia ATK/DEF, dimezza ATK o DEF (×0,5),
+  ×1,5 a una fazione, sposta edifici, sconti, recupero, rimanda in mano, scarta, pesca, ruba PV.
+
+## 13. Meta-gioco ✅
+
+### 13.1 Collezione
+- Inventario con limite (aumentabile); vendita delle carte (prezzo × livello).
+- **Fusione**: ricetta = ingredienti (carta × quantità) + costo in monete + missione che la sblocca → carta nuova.
+
+### 13.2 Forzieri (gacha)
+- Più **colonne di pesi** (normale, oro, ossidiana, eventi). Ogni oggetto ha un peso in ciascuna colonna.
+- Uno **schema** a calendario decide quali colonne sono attive e il costo in monete o gemme.
+- **I leader già posseduti sono esclusi** dall'estrazione (niente leader doppi).
+- "Party": eventi a tempo che cambiano i pesi.
+- **Chiavi** (`KeyRing`) per forzieri speciali con carte dedicate.
+
+### 13.3 Campagna
+- Mappa a **regioni** che si sbloccano.
+- Ogni missione ha: mazzo e leader avversario con il suo livello, **costo in stamina**, esperienza e monete min/max, profilo di drop, numero massimo di drop, drop fissi.
+- La missione può imporre **leader o mazzo** al giocatore e modificare l'anello (zone, velocità).
+- **Stelle / condizioni** della missione, combinabili:
+
+  | Condizione | Significato |
+  |---|---|
+  | `AllowedTypes` | solo certi tipi di carta |
+  | `AllowedFactions` | solo certe fazioni |
+  | `MaxTurns` | vincere entro N turni |
+  | `MinCreaturesDefeated` | sconfiggere almeno N creature |
+  | `MaxActionPointsPerCard` | nessuna carta oltre un certo costo |
+  | `MaxActionPointsTotal` | spesa totale massima |
+  | `MaxHPLost` | perdere al massimo N PV |
+  | `MaxNumCreaturesLost` | perdere al massimo N creature |
+  | `MinLandscapesUsed` | usare almeno N terreni diversi |
+  | `MaxDeckCost` | costo massimo del mazzo |
+  | `MaxFloopsUsed` | massimo di abilità attivate |
+
+### 13.4 Stamina
+- Si consuma per entrare nelle missioni e si ricarica col tempo (`Stamina_Restoration_Rate` ❓).
+- Massimo aumentabile con le prime vittorie nelle missioni.
+
+### 13.5 Modalità ed eventi
+- **Dungeon**: missioni disponibili solo **in certi giorni della settimana** o in periodi; si può entrare pagando gemme.
+- **Sfidante casuale** (`ElFisto`): dopo un certo numero di battaglie compare con una probabilità; ha round crescenti e ricompense per round.
+- **Missioni secondarie ed eventi a tempo**: oggetti da raccogliere nelle battaglie, ricompense, missioni da cui dipendono.
+- **Regali giornalieri** (estratti a pesi) e **calendario** di accesso, con giorni persi recuperabili a pagamento.
+- **Codici promozionali**.
+
+### 13.6 Multigiocatore (asincrono)
+- Il mazzo, i terreni e il leader del giocatore vengono salvati sul server. Gli altri ci giocano contro, **controllati dall'IA**.
+- Ricerca dell'avversario a pagamento (monete o gemme, in base al livello del leader).
+- Ogni sfida ha una **posta in trofei** per vittoria e sconfitta, una scadenza, **serie di vittorie** e un bonus per la serie.
+- **Tornei** con classifica, data di fine e premi per posizione.
+
+### 13.7 Valute
+- **Monete**: dalle partite; servono per fusioni, forzieri e ricerche PvP.
+- **Gemme**: valuta premium; servono per forzieri, resurrezioni, dungeon e recuperi.
 
 ---
 
-## Cosa manca e come recuperarlo
+## 14. Note per progettare un gioco originale ispirato a queste meccaniche
 
-- **Numeri delle carte** (ATK, DEF, costi), **matrice delle fazioni**, parametri globali: sono sul server, non nell'APK.
-- **Effetto preciso della difesa nel minigioco**: il codice prevede zone di difesa, ma non sono riuscito a ricostruire esattamente come riducono il danno.
+Cose che funzionano e conviene tenere:
+- corsie con terreni e carte legate al terreno: costringono a scegliere il mazzo e la disposizione;
+- punti azione crescenti e non accumulabili;
+- abilità attivabili una volta per turno;
+- l'anello a tempo come momento di abilità del giocatore.
+
+Punti deboli dell'originale da sistemare:
+1. **Difesa solo scenica** (§6.5): darle un effetto vero.
+2. **IA a una mossa che non sostituisce mai le creature**: si batte facilmente. Si può aggiungere una seconda mossa di previsione e la sostituzione.
+3. **Mazzo finito con regole diverse**: l'umano perde PV a ogni turno, mentre l'IA può rimescolare gratis. Meglio una regola uguale per tutti.
+4. **Livello come moltiplicatore lineare**: le carte di livello alto schiacciano tutto. Meglio una crescita più dolce (per esempio +20% a livello).
+5. **Nessun contrattacco**: valutare se il difensore debba rispondere, per rendere il combattimento più tattico.
+
+Numeri da inventare da zero, perché non sono nell'APK: statistiche e costi delle carte, matrice delle fazioni, punti azione iniziali e massimi, PV base dei leader, curve di esperienza, pesi dei forzieri.

@@ -6,6 +6,8 @@
   python3 art/tools/pixel.py check                                        # i PNG di game/assets rispettano la palette?
   python3 art/tools/pixel.py palette                                      # rigenera .gpl, .hex e campionario
   python3 art/tools/pixel.py preview in.png out.png [scala] [sfondo]      # ingrandimento netto per guardarlo
+  python3 art/tools/pixel.py compare out.png a.png b.png ...              # primi fotogrammi affiancati, ×6, su erba
+  python3 art/tools/pixel.py stats a.png b.png ...                        # colori, % radio, misure del corpo
 
 Formato .pxl (testo, una riga = una fila di pixel):
   name: rana_a_due_teste
@@ -234,6 +236,9 @@ def export_palette(data, colors):
                 for x in range(cell):
                     rows[pad + ri * (cell + pad) + y][pad + ci * (cell + pad) + x] = c
     write_png(base + "_campionario.png", W, H, rows)
+    # copia per il gioco: i colori dell'interfaccia vengono da qui (game/ui/art.gd)
+    import shutil
+    shutil.copy(PALETTE_PATH, os.path.join(ROOT, "game", "data", "palette.json"))
     print("ok  palette: %d colori -> .gpl .hex _campionario.png" % len(names))
 
 
@@ -249,6 +254,54 @@ def preview(src, dst, scale=8, bg="#c8c8c8"):
         out += [line] * scale
     write_png(dst, w * scale, h * scale, out)
     print("ok  anteprima %s" % dst)
+
+
+def compare(dst, srcs, scale=6, bg="#63c74d"):
+    """Affianca il primo fotogramma di più strisce (anche di misure diverse), appoggiati in basso."""
+    frames = []
+    for p in srcs:
+        w, h, rows = read_png(p)
+        fw = h if w % h == 0 else w
+        frames.append([r[:fw] for r in rows])
+    H = max(len(f) for f in frames)
+    W = sum(len(f[0]) for f in frames) + 4 * (len(frames) + 1)
+    b = _hex(bg) + (255,)
+    canvas = [[b] * W for _ in range(H + 8)]
+    x = 4
+    for f in frames:
+        top = H + 4 - len(f)
+        for y, row in enumerate(f):
+            for i, px in enumerate(row):
+                if px[3]:
+                    a = px[3] / 255
+                    canvas[top + y][x + i] = tuple(int(px[k] * a + b[k] * (1 - a)) for k in range(3)) + (255,)
+        x += len(f[0]) + 4
+    out = [[px for px in row for _ in range(scale)] for row in canvas for _ in range(scale)]
+    write_png(dst, W * scale, (H + 8) * scale, out)
+    print("ok  confronto %s" % dst)
+
+
+def stats(paths, colors):
+    names = {v: k for k, v in colors.items()}
+    for p in paths:
+        w, h, rows = read_png(p)
+        fw = h if w % h == 0 else w
+        used, radio, xs, ys = set(), 0, [], []
+        body = 0
+        for y, row in enumerate(rows):
+            for x, px in enumerate(row[:fw]):
+                if px[3] == 0:
+                    continue
+                n = names.get(px, "?")
+                used.add(n)
+                if px[3] == 255:
+                    body += 1
+                    xs.append(x)
+                    ys.append(y)
+                    radio += n.startswith("radio")
+        bw = (max(xs) - min(xs) + 1) if xs else 0
+        bh = (max(ys) - min(ys) + 1) if ys else 0
+        print("%-40s fotogramma %dx%d  corpo %dx%d  colori %d  radio %.1f%%" % (os.path.relpath(p, ROOT), fw, h, bw, bh, len(used - {"ombra"}), 100.0 * radio / max(body, 1)))
 
 
 def main(argv):
@@ -267,6 +320,10 @@ def main(argv):
         sys.exit(0 if check(paths, colors) else 1)
     elif cmd == "palette":
         export_palette(data, colors)
+    elif cmd == "compare":
+        compare(argv[2], argv[3:])
+    elif cmd == "stats":
+        stats(argv[2:], colors)
     elif cmd == "preview":
         preview(argv[2], argv[3], int(argv[4]) if len(argv) > 4 else 8, argv[5] if len(argv) > 5 else "#c8c8c8")
     else:

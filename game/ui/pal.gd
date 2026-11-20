@@ -1,23 +1,23 @@
 class_name Pal
 extends RefCounted
-## Colori e nomi provvisori (palette del DNA tematico). Si sostituiranno con l'arte vera.
+## Colori dell'interfaccia (dalla palette del gioco, docs/art/design-system.md) e nomi delle bande.
 
-const BG := Color(0.16, 0.14, 0.08)
-const TABLE := Color(0.27, 0.2, 0.11)
-const TEXT := Color(0.97, 0.95, 0.85)
-const DARK := Color(0.08, 0.06, 0.04)
-const GREEN := Color(0.35, 0.95, 0.2)
-const RED := Color(0.95, 0.2, 0.12)
-const YELLOW := Color(1.0, 0.78, 0.05)
-const HILITE := Color(0.4, 1.0, 0.25)
+const BG := Color("#262b44")        # notte
+const TABLE := Color("#5a3737")     # legno_1
+const TEXT := Color("#ffffff")      # bianco
+const DARK := Color("#181425")      # inchiostro
+const GREEN := Color("#a3e048")     # radio_1
+const RED := Color("#e43b44")       # rosso_2
+const YELLOW := Color("#fee761")    # giallo_2
+const HILITE := Color("#d4f25e")    # radio_2
 
 const BAND_COLOR := {
-	"porcile": Color(0.86, 0.46, 0.56),
-	"pollaio": Color(0.95, 0.75, 0.15),
-	"stagno": Color(0.2, 0.62, 0.56),
-	"patate": Color(0.58, 0.38, 0.7),
-	"discarica": Color(0.72, 0.38, 0.16),
-	"cratere": Color(0.36, 0.86, 0.22),
+	"porcile": Color("#e17276"),    # rosa_3
+	"pollaio": Color("#feae34"),    # arancio_4
+	"stagno": Color("#32b8e8"),     # acqua_5
+	"patate": Color("#90bf5d"),     # verde_5
+	"discarica": Color("#8b9bb4"),  # ferro_4
+	"cratere": Color("#b76baa"),    # viola_4
 }
 
 const BAND_NAME := {

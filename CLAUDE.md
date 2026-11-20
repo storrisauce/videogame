@@ -128,7 +128,7 @@ Riassumi lo stato in 3 righe e proponi le opzioni di §9 ("Prossimi passi"), con
 | Percorso | Cosa contiene |
 |---|---|
 | `CLAUDE.md` | questa memoria |
-| `docs/GDD.md` | il gioco in una pagina: pilastri, ciclo, **indice delle funzionalità con stati**, tappe M1–M5, **decisioni D-001…D-013**, domande aperte, storico |
+| `docs/GDD.md` | il gioco in una pagina: pilastri, ciclo, **indice delle funzionalità con stati**, tappe M1–M5, **decisioni D-001…D-014**, domande aperte, storico |
 | `docs/features/partita/` | regole e numeri della partita (`design.md`), codice (`implementation.md`), test (`testing.md`) |
 | `docs/features/carte-e-bande/design.md` | bande, sopravvissuti, formato delle carte, budget statistiche, carte d'esempio |
 | `docs/features/schermo-di-gioco/` | layout orizzontale iPhone, gesti, misure; implementazione e test |
@@ -147,7 +147,8 @@ Riassumi lo stato in 3 righe e proponi le opzioni di §9 ("Prossimi passi"), con
 | `game/export_presets.cfg` | preset **iOS** e **Android** minimi (includono `data/*.json`); Godot li completa all'apertura |
 | `docs/art/design-system.md` | **regole grafiche**: palette, scala, contorni, luce, ombre, animazione, bande, tavolo, interfaccia |
 | `art/palette/`, `art/sprites/`, `art/tools/pixel.py` | palette (.json/.gpl/.hex), sprite in testo (.pxl), strumento render/controllo |
-| `game/assets/cards/` | sprite delle carte (PNG a strisce generati dai .pxl) |
+| `game/assets/cards/`, `game/assets/heroes/`, `game/assets/board/` | sprite delle carte e dei sopravvissuti, terreni (PNG generati da `art/gen/`) |
+| `game/ui/art.gd`, `board_view.gd`, `sprite_view.gd`, `terrain_bg.gd` | disegno in pixel art: colori per nome, fotogrammi, terreni, tavolo, ritratti |
 | `art/reference/` | pacchetto di riferimento, **solo in locale** (licenza: niente ridistribuzione) |
 | `art/blender/nano_da_giardino_sacro.py` | vecchia prova con Blender (non più la strada principale) |
 
@@ -217,7 +218,7 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
 ## 7. Stato (2026-11-20)
 - ✅ **Analisi** del gioco originale dall'APK: regole, formule, IA, meta, 239 famiglie di abilità.
 - ✅ **GDD 0.4** + note: `partita` (implemented), `schermo-di-gioco` (implemented, grafica provvisoria), `ia-avversaria`
-  (implemented), `carte-e-bande` (designed). Decisioni D-001…D-013.
+  (implemented), `carte-e-bande` (designed). Decisioni D-001…D-014.
 - ✅ **Gioco giocabile** su computer (e pronto per l'esportazione):
   - menu: sopravvissuto, 2 bande per il mazzo, mirino automatico, statistiche e scatolette;
   - partita contro l'IA in orizzontale: tocca una carta e poi un recinto per giocarla; tocca una tua creatura per **Scuoterla**;
@@ -231,7 +232,11 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
 - ✅ **Taratura 1** (D-012, accettata dall'utente): +1 Caos al secondo giocatore nel primo turno, sopravvissuti e
   carte ritoccati. 2000 partite: chi inizia **61%** (prima 65%); sopravvissuti 45–56%; bande 46–53% (Patate la più debole).
   Il simulatore accetta varianti senza toccare i JSON, es. `-- 1000 7 0.25 "caos_bonus_secondo=2;hero.nonna.v1=3;card.ratto_accumulatore.atk=2"`.
-- ❌ Non ancora fatto: arte e audio veri, vibrazioni, trascinamento delle carte (D-010), tutorial, set di lancio (~90 carte),
+- ✅ **Grafica pixel art in tutto il gioco** (D-013, D-014): 31 carte e 6 sopravvissuti animati (4 fotogrammi), terreni delle
+  bande, tavolo-altopiano con disposizione "da console" (consolle laterali, vassoio della mano, Fine turno grande), menu con
+  ritratto, mirino a contatore Geiger, tema dei bottoni in legno. Prospettiva leggera pronta ma spenta (`BoardView.PERSPECTIVE`):
+  l'utente vuole prima finire tutto in 2D, poi si valuta il 3D.
+- ❌ Non ancora fatto: audio, vibrazioni, trascinamento delle carte (D-010), tutorial, set di lancio (~90 carte),
   costruzione libera del mazzo, campagna, casse/collezione, Supabase, build su iPhone reale, Android.
 
 ## 8. Tappe (dal GDD)
@@ -245,9 +250,11 @@ M1 regole senza grafica ✅ → **M2 vertical slice su iPhone** (gioco fatto; ma
    Rinforzare un po' Patate e Cane. Rifare la taratura quando arriva il set di lancio.
 3. **Contenuti:** scrivere il set di lancio (~15 carte per banda + 15 Cratere) seguendo il DNA tematico e il catalogo delle famiglie;
    implementare in `abilities.gd` le famiglie nuove che servono (con test).
-4. **Arte in pixel art 2D (D-013), in corso:** design system e palette fatti; prima prova `rana_a_due_teste` da far
-   approvare all'utente. Poi: gli sprite delle 31 carte e dei 6 sopravvissuti, `CardView` che mostra le immagini
-   (con animazione idle), tavolo con i recinti, carattere pixel con accenti. Aseprite e Pixel Plugin facoltativi (§6.4).
+4. **Arte, rifiniture 2D:** carattere pixel con accenti (serve scaricarne uno libero, chiedere), animazioni di attacco,
+   colpito e morte, numeri di danno, effetti (fumo, scintille), schermata di fine partita illustrata. Poi, se l'utente vuole,
+   la prospettiva (`BoardView.PERSPECTIVE = true`, sprite ×3 vicino e ×2 lontano) o un vero 2.5D.
+   Per disegnare: `art/gen/*.py` con `art/tools/shapes.py` (ellipse, blob, polygon, grid, tidy, outline), poi
+   `python3 art/tools/pixel.py check`, `stats`, `compare`.
 5. **Rifiniture dello schermo:** trascinamento delle carte, vibrazioni e scuotimento con la Botta Atomica (`game-feel`), suoni
    (`godot-audio`), tutorial alla prima partita.
 6. **Meta e Supabase (M4):** costruzione del mazzo, campagna, profilo sul server, dati delle carte scaricati.

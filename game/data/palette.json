@@ -1,0 +1,18 @@
+{
+  "_doc": "Palette unica del gioco (63 colori). Base: ENDESGA 32 (palette pubblica) + 24 toni ricavati dal pacchetto di riferimento + 2 toni 'radio' per le radiazioni + 4 rosa per i maiali. Regole d'uso: docs/art/design-system.md. Ogni PNG in game/assets deve usare solo questi colori (controllo: python3 art/tools/pixel.py check).",
+  "shadow": {"color": "notte", "alpha": 74},
+  "ramps": {
+    "neutri":   {"inchiostro": "#181425", "notte": "#262b44", "ferro_1": "#3a4466", "ferro_2": "#5a6988", "ferro_3": "#74849e", "ferro_4": "#8b9bb4", "ferro_5": "#c0cbdc", "ferro_6": "#dee3eb", "bianco": "#ffffff"},
+    "legno":    {"legno_0": "#3e2731", "legno_1": "#5a3737", "legno_2": "#623530", "legno_3": "#733e39", "legno_4": "#945542", "legno_5": "#ae694e", "legno_6": "#b27760", "legno_7": "#c58a63", "legno_8": "#d1b392", "legno_9": "#ead4aa"},
+    "ruggine":  {"ruggine_1": "#944627", "ruggine_2": "#be4a2f", "ruggine_3": "#d36349", "ruggine_4": "#d77643"},
+    "pelle":    {"pelle_1": "#b86f50", "pelle_2": "#c28569", "pelle_3": "#e4a672", "pelle_4": "#e8ad7d", "pelle_5": "#e8b796"},
+    "arancio":  {"arancio_1": "#e07317", "arancio_2": "#f77622", "arancio_3": "#ef9734", "arancio_4": "#feae34"},
+    "giallo":   {"giallo_1": "#e4d572", "giallo_2": "#fee761"},
+    "verde":    {"verde_0": "#193c3e", "verde_1": "#265c42", "verde_2": "#3e8948", "salvia": "#61904b", "verde_3": "#53a641", "verde_4": "#63c74d", "verde_5": "#90bf5d"},
+    "radio":    {"radio_1": "#a3e048", "radio_2": "#d4f25e"},
+    "acqua":    {"acqua_1": "#124e89", "acqua_2": "#1e6dd5", "acqua_3": "#008bc7", "acqua_4": "#0099db", "acqua_5": "#32b8e8", "acqua_6": "#2ce8f5"},
+    "rosso":    {"rosso_1": "#a22633", "rosso_2": "#e43b44", "rosso_3": "#ed5259", "rosso_4": "#f6757a", "allarme": "#ff0044"},
+    "rosa":     {"rosa_1": "#b74851", "rosa_2": "#ce5c63", "rosa_3": "#e17276", "rosa_4": "#ff979b"},
+    "viola":    {"prugna": "#5d3b4a", "viola_1": "#68386c", "viola_2": "#9e477e", "viola_3": "#b55088", "viola_4": "#b76baa"}
+  }
+}

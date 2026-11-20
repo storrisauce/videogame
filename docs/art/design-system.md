@@ -55,7 +55,7 @@ Regole:
 | M | 32×32 | 20–26 × 18–26 | mucca, pecora, capra, oca, cigno, tacchino |
 | Persona | 32×32 | 11–14 × 16–22 | sopravvissuti: corpo da 12×17; la Nonna 13×20; il Veterinario il più alto |
 | L | 48×48 | 26–40 × 26–40 | scrofa carrarmato, zucca lievitata, trattore, silos, bunker |
-| XL | 64×64 | > 40 | creature leggendarie e strutture grandi (es. mucca laser) |
+| XL | 64×64 | > 40 | solo cose enormi (un silos gigante, una centrale): finora nessuna. La Mucca Laser è L (48×48), corpo ~36 |
 
 Le **persone** sono "chibi": testa grande quanto il corpo (circa 1:1), occhi di 1×2 px.
 
@@ -71,7 +71,7 @@ Le **persone** sono "chibi": testa grande quanto il corpo (circa 1:1), occhi di 
 - **Persone e umanoidi**: contorno di 1 px **inchiostro** tutto intorno.
 - **Animali, piante, oggetti**: contorno **selettivo** di 1 px nel tono **più scuro della propria rampa**
   (maiale → rosa_1, rana → verde_1, pollo → rosso_1/legno_3, legno → legno_1, lamiera → ferro_1).
-  Mucca, pecora e cose bianche/grigie usano **notte**.
+  Mucca, pecora e cose bianche/grigie usano **notte** (rampa `bianco`); gli uccelli bianchi possono usare ferro_2 per un contorno più morbido, ma tutti allo stesso modo.
 - Mai nero puro, mai contorni di 2 px.
 
 ## 6. Ombra a terra
@@ -122,4 +122,10 @@ Si parte dall'animale o dall'oggetto **normale e simpatico**, poi si aggiunge **
 5. `python3 art/tools/pixel.py preview <png> <anteprima.png> 8` e **confrontalo affiancato** con gli sprite di
    riferimento della stessa taglia (in `art/reference/`, solo in locale): taglia, luce, contorno e ombra devono tornare.
 
-Sprite fatti: `rana_a_due_teste` (S, 4 fotogrammi idle) — prima prova dello stile.
+## 13. Nel gioco
+- Carte: `game/assets/cards/<id-carta>.png`; sopravvissuti: `game/assets/heroes/<id>.png`; terreni: `game/assets/board/<banda>.png`
+  (generati da `art/gen/board.py`). Il codice è in `game/ui/art.gd` (colori per nome, fotogrammi, terreni, cornici).
+- Tutto si mostra a **×2**; gli sprite grandi vengono tagliati dalla finestra della carta, mai rimpiccioliti.
+- Gli sprite guardano a sinistra; quelli dell'avversario sono specchiati.
+
+Sprite fatti: tutte le 31 carte del set di prova e i 6 sopravvissuti (generatori in `art/gen/`).

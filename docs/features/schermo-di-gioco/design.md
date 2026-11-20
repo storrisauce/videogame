@@ -6,10 +6,10 @@ La partita si gioca **solo in orizzontale**, con due pollici, prima su iPhone e 
 
 ## Rules
 1. **Layout.**
-   - Colonna sinistra: i ritratti dei due sopravvissuti, l'avversario in alto e tu in basso, ciascuno con la Pazienza; il tuo ritratto è anche il pulsante dell'abilità.
-   - Centro: la fila dei 4 recinti avversari in alto e la fila dei tuoi 4 in basso. In ogni recinto la creatura sta verso il centro del tavolo e la struttura, più piccola, dietro di lei.
-   - Colonna destra: il contatore del Caos, il pulsante "Fine turno", il mazzo e il Letamaio (con il numero di carte).
-   - Bordo inferiore: la mano a ventaglio, che spunta per metà. Toccandola sale tutta.
+   - Disposizione "da console" (D-014): a sinistra una consolle di legno con il **tuo** sopravvissuto (ritratto animato, Pazienza, abilità), mazzo e Letamaio, e in basso il contatore del **Caos** e il Menu; a destra la consolle dell'**avversario** (ritratto, Pazienza, mano, mazzo, Caos) e in basso il grande pulsante **Fine turno**.
+   - Centro: il tavolo è un altopiano di fattoria visto dall'alto (siepe in fondo, scogliera davanti, steccati tra i recinti). In fondo la fila dei 4 recinti avversari, poi un sentiero di terra, poi la fila dei tuoi 4. Ogni recinto mostra il terreno della sua banda; la creatura sta in piedi con **ATK** (tondo rosso) e **Vita** (barra verde con i numeri) sopra la testa, e la struttura dietro di lei.
+   - Bordo inferiore: la mano su un vassoio di legno, carte con lo sprite animato, costo, nome, ATK e Vita.
+   - Grafica: pixel art secondo il [design system](../../art/design-system.md). Prospettiva leggera già pronta ma spenta (`BoardView.PERSPECTIVE`): l'utente ha chiesto di finire prima tutto in 2D.
 2. **Giocare una carta:** trascina dalla mano a un recinto. I recinti validi si illuminano del colore della banda; quelli non validi si scuriscono. Se lasci la carta fuori da un recinto valido, torna in mano.
 3. **Scuotere:** tocca una tua creatura. Compare il pulsante "Scuoti (costo)". Se l'effetto chiede un bersaglio, i bersagli validi pulsano.
 4. **Vedere una carta:** tieni premuto su qualsiasi carta, in mano o in campo, per vederla ingrandita con il testo intero. Rilasci per chiudere.
@@ -23,11 +23,10 @@ La partita si gioca **solo in orizzontale**, con due pollici, prima su iPhone e 
 | Orientamento | solo orizzontale, entrambi i versi | | |
 | Schermo di riferimento | 852 × 393 (iPhone 15/16) | pt | |
 | Schermo minimo | 667 × 375 (iPhone SE) | pt | testi tagliati, carte sovrapposte |
-| Colonne laterali | circa 90 ciascuna [ASSUMPTION] | pt | |
-| Larghezza di un recinto | circa 135 [ASSUMPTION] | pt | creatura e struttura leggibili insieme? |
-| Creatura in campo | circa 80 × 108 [ASSUMPTION] | pt | si legge ATK/DEF a colpo d'occhio? |
-| Struttura in campo | circa 48 × 64 [ASSUMPTION] | pt | |
-| Mano a riposo | sporge per 56 [ASSUMPTION] | pt | copre i tuoi recinti? |
+| Colonne laterali | 100 ciascuna [ASSUMPTION] | pt | |
+| Vassoio della mano | alto 112 [ASSUMPTION] | pt | carte leggibili? |
+| Larghezza di un recinto | circa 155 (852) / 115 (667) | pt | creatura e struttura leggibili insieme? |
+| Scala degli sprite | ×2 ovunque (1 px del mondo = 2 pt) | | creature piccole leggibili su iPhone SE? |
 | Area minima di tocco | 44 × 44 | pt | tocchi sbagliati |
 | Testo minimo | 13 [ASSUMPTION] | pt | |
 
@@ -46,3 +45,4 @@ La partita si gioca **solo in orizzontale**, con due pollici, prima su iPhone e 
 - 2026-11-20: designed in verticale.
 - 2026-11-20: passato a solo orizzontale (D-006).
 - 2026-11-20: implemented con grafica provvisoria; carte giocate a tocco invece che a trascinamento (D-010).
+- 2026-11-20: grafica in pixel art (D-013) e disposizione da console con tavolo-altopiano (D-014).

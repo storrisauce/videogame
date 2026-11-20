@@ -12,14 +12,8 @@ var test_mode := false   ## test: partite istantanee giocate dall'IA anche per i
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var t := Theme.new()
-	t.default_font_size = 13
-	theme = t
-	var bg := ColorRect.new()
-	bg.color = Pal.BG
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(bg)
+	theme = _make_theme()
+	add_child(TerrainBG.new("erba", 0.35))
 	safe.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(safe)
 	db = CardDB.load_default()
@@ -28,6 +22,49 @@ func _ready() -> void:
 	_apply_safe_area()
 	get_viewport().size_changed.connect(_apply_safe_area)
 	show_menu()
+
+
+## Tema in pixel art: bottoni di legno con luce in alto, pannelli di legno scuro, testo bianco.
+func _make_theme() -> Theme:
+	var t := Theme.new()
+	t.default_font_size = 13
+	var states := {"normal": ["legno_5", "legno_7"], "hover": ["legno_6", "legno_8"], "pressed": ["legno_3", "legno_4"],
+		"disabled": ["legno_2", "legno_3"], "focus": ["legno_5", "radio_1"]}
+	for st: String in states:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Art.c(states[st][0])
+		sb.border_color = Art.c("legno_1")
+		sb.set_border_width_all(2)
+		sb.border_width_top = 2
+		sb.set_content_margin_all(4)
+		sb.shadow_size = 0
+		if st == "focus":
+			sb.draw_center = false
+			sb.border_color = Art.c("radio_1")
+		else:
+			sb.expand_margin_top = 0
+			sb.border_blend = false
+			# riga di luce in alto
+			sb.border_width_top = 3
+			sb.border_color = Art.c("legno_1")
+		t.set_stylebox(st, "Button", sb)
+		t.set_stylebox(st, "OptionButton", sb)
+	for k in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		t.set_color(k, "Button", Art.c("bianco"))
+		t.set_color(k, "OptionButton", Art.c("bianco"))
+	t.set_color("font_disabled_color", "Button", Art.c("legno_6"))
+	t.set_color("font_outline_color", "Button", Art.c("legno_1"))
+	t.set_constant("outline_size", "Button", 3)
+	t.set_color("font_outline_color", "Label", Art.c("inchiostro"))
+	t.set_constant("outline_size", "Label", 3)
+	var panel := StyleBoxFlat.new()
+	panel.bg_color = Art.c("legno_2")
+	panel.border_color = Art.c("legno_6")
+	panel.set_border_width_all(2)
+	panel.set_content_margin_all(8)
+	t.set_stylebox("panel", "PanelContainer", panel)
+	t.set_stylebox("panel", "PopupMenu", panel)
+	return t
 
 
 func _apply_safe_area() -> void:

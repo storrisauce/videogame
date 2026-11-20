@@ -30,6 +30,11 @@ func _initialize() -> void:
 		ms._on_end_turn()
 		for i in 5:
 			await process_frame
+	ms.refresh()
+	for i in 6:
+		await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(out.path_join("tavolo.png"))
 	if ms.state == "play" and not ms.m.players[0].hand.is_empty():
 		ms._on_hand_tapped(ms.hand_layer.get_child(0))
 	for i in 10:

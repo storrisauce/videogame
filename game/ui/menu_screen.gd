@@ -15,6 +15,7 @@ var play_button := Button.new()
 var hero_ids: Array = []
 
 
+var hero_portrait := SpriteView.new(null, 3)
 func setup(card_db: CardDB, prof: Profile) -> void:
 	db = card_db
 	profile = prof
@@ -22,11 +23,7 @@ func setup(card_db: CardDB, prof: Profile) -> void:
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var bg := ColorRect.new()
-	bg.color = Pal.BG
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(bg)
+	add_child(TerrainBG.new("erba", 0.35))
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
@@ -70,10 +67,16 @@ func _ready() -> void:
 	hero_opt.selected = maxi(hero_ids.find(profile.hero), 0)
 	hero_opt.item_selected.connect(func(_i): _update())
 	right.add_child(hero_opt)
+	var hero_row := HBoxContainer.new()
+	hero_row.add_theme_constant_override("separation", 8)
+	hero_portrait.custom_minimum_size = Vector2(108, 108)
+	hero_row.add_child(hero_portrait)
+	hero_desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hero_row.add_child(hero_desc)
+	right.add_child(hero_row)
 	hero_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hero_desc.add_theme_font_size_override("font_size", 11)
 	hero_desc.add_theme_color_override("font_color", Pal.TEXT)
-	right.add_child(hero_desc)
 	_label(right, "Le due bande del tuo mazzo (2 recinti ciascuna)")
 	for k in 2:
 		for b in DeckFactory.BANDS:
@@ -101,7 +104,8 @@ func _on_band(i: int, k: int) -> void:
 
 func _update() -> void:
 	var h: Dictionary = db.heroes[hero_ids[hero_opt.selected]]
-	hero_desc.text = Abilities.describe_hero(h)
+	hero_desc.text = "%s\n\n%s" % [h["name"], Abilities.describe_hero(h)]
+	hero_portrait.set_texture(Art.hero_tex(h["id"]))
 	stats.text = "Scatolette di fagioli: %d   ·   tonno: %d\nVittorie %d   ·   sconfitte %d" % [profile.fagioli, profile.tonno, profile.vittorie, profile.sconfitte]
 
 

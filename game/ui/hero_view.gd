@@ -1,6 +1,6 @@
 class_name HeroView
 extends Control
-## Ritratto provvisorio del sopravvissuto: nome, Pazienza, ricarica dell'abilità.
+## Ritratto del sopravvissuto: sprite animato, nome, Pazienza, ricarica dell'abilità.
 
 signal tapped(player: int)
 
@@ -30,17 +30,45 @@ func _draw() -> void:
 		return
 	var ps := m.players[player]
 	var r := Rect2(Vector2.ZERO, size)
-	draw_rect(r, Pal.DARK)
-	draw_rect(r.grow(-1), Pal.YELLOW.darkened(0.3) if player == 0 else Pal.RED.darkened(0.3), false, 2.0)
+	Art.draw_panel(self, r, Art.c("legno_2"), "legno_5" if player == 0 else "ruggine_2", "legno_1", 2.0)
+	# ritratto sul terreno erboso, sprite animato a scala ×2
+	var win := Rect2(5, 5, size.x - 10, size.y - 56)
+	Art.draw_terrain(self, "erba", win)
+	var tex := Art.hero_tex(ps.hero["id"])
+	if tex:
+		Art.draw_frame(self, tex, Art.frame_now(tex, player * 2), win.grow_individual(0, 0, 0, -2), Art.SCALE, player == 1)
+	draw_rect(win, Art.c("legno_1"), false, 1.0)
 	if highlighted:
-		draw_rect(r.grow(-3), Pal.HILITE, false, 3.0)
+		draw_rect(r.grow(-1), Art.c("radio_2"), false, 3.0)
 	var f := Pal.font()
-	draw_multiline_string(f, Vector2(4, 14), ps.hero["name"], HORIZONTAL_ALIGNMENT_CENTER, size.x - 8, 9, 3, Pal.TEXT)
+	var hname: String = ps.hero["name"]
+	var hs := 9
+	while hs > 6 and f.get_string_size(hname, HORIZONTAL_ALIGNMENT_LEFT, -1, hs).x > size.x - 6:
+		hs -= 1
+	if f.get_string_size(hname, HORIZONTAL_ALIGNMENT_LEFT, -1, hs).x > size.x - 6:
+		hname = " ".join(hname.split(" ").slice(0, 3))
+	draw_string(f, Vector2(0, win.end.y + 10), hname, HORIZONTAL_ALIGNMENT_CENTER, size.x, hs, Pal.TEXT)
 	# Pazienza
 	var frac := clampf(float(ps.hp) / float(ps.max_hp), 0.0, 1.0)
-	draw_string(f, Vector2(0, size.y - 40), "Pazienza %d/%d" % [ps.hp, ps.max_hp], HORIZONTAL_ALIGNMENT_CENTER, size.x, 10, Pal.TEXT)
-	var bar := Rect2(6, size.y - 34, size.x - 12, 10)
-	draw_rect(bar, Pal.RED.darkened(0.6))
-	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Pal.GREEN.darkened(0.2))
+	draw_string(f, Vector2(0, size.y - 28), "Pazienza %d/%d" % [ps.hp, ps.max_hp], HORIZONTAL_ALIGNMENT_CENTER, size.x, 10, Pal.TEXT)
+	var bar := Rect2(6, size.y - 24, size.x - 12, 7)
+	draw_rect(bar.grow(1), Art.c("legno_1"))
+	draw_rect(bar, Art.c("rosso_1"))
+	draw_rect(Rect2(bar.position, Vector2(roundf(bar.size.x * frac), bar.size.y)), Art.c("rosso_3"))
+	draw_rect(Rect2(bar.position, Vector2(roundf(bar.size.x * frac), 2)), Art.c("rosso_4"))
 	var cd := "Abilità pronta" if ps.cooldown <= 0 else "Ricarica: %d" % ps.cooldown
 	draw_string(f, Vector2(0, size.y - 8), cd, HORIZONTAL_ALIGNMENT_CENTER, size.x, 8, Pal.YELLOW if ps.cooldown <= 0 else Pal.TEXT)
+
+
+var _last_frame := -1
+
+
+func _process(_delta: float) -> void:
+	if m == null:
+		return
+	var tex := Art.hero_tex(m.players[player].hero["id"])
+	if tex:
+		var f := Art.frame_now(tex, player * 2)
+		if f != _last_frame:
+			_last_frame = f
+			queue_redraw()

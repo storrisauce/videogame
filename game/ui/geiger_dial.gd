@@ -78,17 +78,31 @@ func force(result: String) -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.55))
-	var c := size / 2.0
-	var rad := minf(size.x, size.y) * 0.32
-	draw_circle(c, rad + 8, Pal.DARK)
-	draw_arc(c, rad, 0, TAU, 64, Pal.TEXT.darkened(0.4), 10.0)
+	# contatore Geiger: cassa di ferro, quadrante di carta, zona verde radio e zona rossa d'allarme
+	draw_rect(Rect2(Vector2.ZERO, size), Color(Art.c("notte"), 0.6))
+	var c := (size / 2.0).round()
+	var rad := roundf(minf(size.x, size.y) * 0.32)
+	draw_rect(Rect2(c - Vector2(rad + 16, rad + 16), Vector2(rad + 16, rad + 16) * 2), Art.c("inchiostro"))
+	draw_rect(Rect2(c - Vector2(rad + 14, rad + 14), Vector2(rad + 14, rad + 14) * 2), Art.c("ferro_2"))
+	draw_rect(Rect2(c - Vector2(rad + 14, rad + 14), Vector2((rad + 14) * 2, 3)), Art.c("ferro_4"))
+	for k in 4:   # bulloni negli angoli
+		var b := c + Vector2(rad + 8 if k % 2 else -rad - 8, rad + 8 if k / 2 else -rad - 8)
+		draw_rect(Rect2(b - Vector2(2, 2), Vector2(4, 4)), Art.c("ferro_4"))
+		draw_rect(Rect2(b - Vector2(2, 2), Vector2(4, 1)), Art.c("ferro_5"))
+	draw_circle(c, rad + 8, Art.c("legno_1"))
+	draw_circle(c, rad + 6, Art.c("legno_9"))
+	draw_arc(c, rad, 0, TAU, 64, Art.c("legno_8"), 10.0)
 	var a0 := -PI / 2.0
-	draw_arc(c, rad, a0 + green_start * TAU, a0 + (green_start + green) * TAU, 48, Pal.GREEN, 12.0)
-	draw_arc(c, rad, a0 + (green_start + green) * TAU, a0 + (green_start + green + red) * TAU, 24, Pal.RED, 12.0)
+	draw_arc(c, rad, a0 + green_start * TAU, a0 + (green_start + green) * TAU, 48, Art.c("radio_1"), 12.0)
+	draw_arc(c, rad, a0 + (green_start + green) * TAU, a0 + (green_start + green + red) * TAU, 24, Art.c("allarme"), 12.0)
+	for k in 24:   # tacche
+		var a := a0 + k * TAU / 24.0
+		draw_line(c + Vector2(cos(a), sin(a)) * (rad - 12), c + Vector2(cos(a), sin(a)) * (rad - 8), Art.c("legno_4"), 2.0)
 	var ang := a0 + _angle_frac() * TAU
-	draw_line(c, c + Vector2(cos(ang), sin(ang)) * (rad + 6), Pal.YELLOW, 4.0)
-	draw_circle(c, 6, Pal.YELLOW)
+	draw_line(c, c + Vector2(cos(ang), sin(ang)) * (rad + 4), Art.c("inchiostro"), 4.0)
+	draw_line(c, c + Vector2(cos(ang), sin(ang)) * (rad + 4), Art.c("rosso_2"), 2.0)
+	draw_circle(c, 6, Art.c("inchiostro"))
+	draw_circle(c, 4, Art.c("ferro_4"))
 	var f := Pal.font()
-	draw_string(f, Vector2(0, c.y - rad - 18), title, HORIZONTAL_ALIGNMENT_CENTER, size.x, 14, Pal.TEXT)
-	draw_string(f, Vector2(0, c.y + rad + 30), "Tocca lo schermo per fermare la lancetta", HORIZONTAL_ALIGNMENT_CENTER, size.x, 11, Pal.YELLOW)
+	draw_string(f, Vector2(0, c.y - rad - 22), title, HORIZONTAL_ALIGNMENT_CENTER, size.x, 14, Pal.TEXT)
+	draw_string(f, Vector2(0, c.y + rad + 34), "Tocca lo schermo per fermare la lancetta", HORIZONTAL_ALIGNMENT_CENTER, size.x, 11, Pal.YELLOW)

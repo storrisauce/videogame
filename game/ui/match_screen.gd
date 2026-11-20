@@ -8,9 +8,9 @@ signal rematch
 
 const HUMAN := 0
 const AI := 1
-const SIDE := 92.0
-const MID_H := 24.0
-const HAND_H := 108.0
+const SIDE := 100.0
+const MID_H := 16.0
+const HAND_H := 112.0
 
 var db: CardDB
 var profile: Profile
@@ -31,6 +31,8 @@ var hero_views: Array[HeroView] = []
 var hand_layer := Control.new()
 var caos_label := Label.new()
 var info_label := Label.new()
+var opp_label := Label.new()
+var board := BoardView.new()
 var log_label := Label.new()
 var end_button := Button.new()
 var menu_button := Button.new()
@@ -77,11 +79,7 @@ func start_match(card_db: CardDB, prof: Profile, hero: String, bands: Array, opp
 # --- Costruzione dell'interfaccia --------------------------------------------
 
 func _build() -> void:
-	var bg := ColorRect.new()
-	bg.color = Pal.BG
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	add_child(board)
 	for p in 2:
 		for i in 4:
 			var lv := LaneView.new(p, i)
@@ -94,14 +92,16 @@ func _build() -> void:
 		add_child(hv)
 		hero_views.append(hv)
 	add_child(hand_layer)
-	for l: Label in [caos_label, info_label, log_label, banner]:
+	for l: Label in [caos_label, info_label, opp_label, log_label, banner]:
 		l.add_theme_color_override("font_color", Pal.TEXT)
 		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(l)
-	caos_label.add_theme_font_size_override("font_size", 18)
+	caos_label.add_theme_font_size_override("font_size", 16)
 	caos_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info_label.add_theme_font_size_override("font_size", 9)
 	info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	opp_label.add_theme_font_size_override("font_size", 9)
+	opp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	log_label.add_theme_font_size_override("font_size", 10)
 	log_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	log_label.clip_text = true
@@ -124,10 +124,10 @@ func _build() -> void:
 	detail.add_child(vb)
 	detail.visible = false
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.06, 0.05, 0.03, 0.96)
-	sb.border_color = Pal.YELLOW.darkened(0.3)
+	sb.bg_color = Art.c("legno_2")
+	sb.border_color = Art.c("legno_6")
 	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(6)
+	sb.set_corner_radius_all(0)
 	sb.set_content_margin_all(8)
 	detail.add_theme_stylebox_override("panel", sb)
 	over_panel.add_theme_stylebox_override("panel", sb)
@@ -158,44 +158,67 @@ func _layout() -> void:
 	var H := size.y
 	if W <= 0 or H <= 0:
 		return
-	var x0 := SIDE + 4
-	var lanes_w := W - 2 * SIDE - 8
-	var lw := lanes_w / 4.0
-	var row_h := (H - HAND_H - MID_H - 8) / 2.0
-	var y_opp := 4.0
-	var y_mid := y_opp + row_h
-	var y_me := y_mid + MID_H
-	var y_hand := y_me + row_h + 4
-	for i in 4:
-		var opp: LaneView = lane_views[AI][i]
-		opp.position = Vector2(x0 + i * lw + 2, y_opp)
-		opp.size = Vector2(lw - 4, row_h)
-		var me: LaneView = lane_views[HUMAN][i]
-		me.position = Vector2(x0 + i * lw + 2, y_me)
-		me.size = Vector2(lw - 4, row_h)
-	hero_views[AI].position = Vector2(4, y_opp)
-	hero_views[AI].size = Vector2(SIDE - 8, row_h)
-	hero_views[HUMAN].position = Vector2(4, y_me)
-	hero_views[HUMAN].size = Vector2(SIDE - 8, row_h)
-	log_label.position = Vector2(x0, y_mid + 3)
-	log_label.size = Vector2(lanes_w, MID_H - 4)
-	caos_label.position = Vector2(W - SIDE, y_opp + 4)
-	caos_label.size = Vector2(SIDE - 4, 28)
-	info_label.position = Vector2(W - SIDE, y_opp + 34)
-	info_label.size = Vector2(SIDE - 4, row_h - 34)
-	end_button.position = Vector2(W - SIDE + 4, y_me + 8)
-	end_button.size = Vector2(SIDE - 12, row_h - 16)
-	menu_button.position = Vector2(W - SIDE + 4, y_hand + HAND_H - 40)
-	menu_button.size = Vector2(SIDE - 12, 32)
-	hand_layer.position = Vector2(x0, y_hand)
-	hand_layer.size = Vector2(lanes_w, HAND_H - 6)
-	banner.position = Vector2(x0, y_mid - 14)
-	banner.size = Vector2(lanes_w, 24)
-	_detail_rect = Rect2(x0 + 10, y_opp + 4, lanes_w - 20, row_h - 8)
-	_detail_strip = Rect2(x0 + 60, y_mid - 22, lanes_w - 120, MID_H + 44)
+	# tavolo in prospettiva tra le due consolle laterali; la mano su un vassoio sotto
+	var x0 := SIDE + 6
+	var x1 := W - SIDE - 6
+	var y_hand := H - HAND_H
+	var y_far := 12.0
+	var y_near := y_hand - 18.0
+	var rows := y_near - y_far - MID_H
+	var far_h := roundf(rows * 0.45)
+	board.y_far = y_far
+	board.y_mid0 = y_far + far_h
+	board.y_mid1 = board.y_mid0 + MID_H
+	board.y_near = y_near
+	board.near_x = Vector2(x0, x1)
+	var inset := roundf((x1 - x0) * 0.09) if BoardView.PERSPECTIVE else 0.0
+	board.far_x = Vector2(x0 + inset, x1 - inset)
+	for p in 2:
+		for i in 4:
+			var lv: LaneView = lane_views[p][i]
+			var poly := board.cell_poly(p, i)
+			var bb := Rect2(poly[0], Vector2.ZERO)
+			for v in poly:
+				bb = bb.expand(v)
+			lv.position = bb.position
+			lv.size = bb.size
+			var local := PackedVector2Array()
+			for v in poly:
+				local.append(v - bb.position)
+			lv.poly = local
+			lv.sprite_scale = (3 if p == HUMAN else 2) if BoardView.PERSPECTIVE else Art.SCALE
+	# consolle: a sinistra il tuo sopravvissuto e il tuo Caos, a destra l'avversario e Fine turno
+	var col_h := y_hand - 8
+	board.panels = [Rect2(4, 4, SIDE - 4, col_h), Rect2(W - SIDE, 4, SIDE - 4, col_h)]
+	board.tray = Rect2(SIDE + 4, y_hand + 2, W - 2 * SIDE - 8, HAND_H - 4)
+	var por_h := minf(150.0, col_h - 70.0)
+	hero_views[HUMAN].position = Vector2(10, 10)
+	hero_views[HUMAN].size = Vector2(SIDE - 16, por_h)
+	hero_views[AI].position = Vector2(W - SIDE + 6, 10)
+	hero_views[AI].size = Vector2(SIDE - 16, por_h)
+	info_label.position = Vector2(8, 14 + por_h)
+	info_label.size = Vector2(SIDE - 12, col_h - por_h - 14)
+	opp_label.position = Vector2(W - SIDE + 2, 14 + por_h)
+	opp_label.size = Vector2(SIDE - 12, col_h - por_h - 14)
+	caos_label.position = Vector2(6, y_hand + 10)
+	caos_label.size = Vector2(SIDE - 8, 40)
+	menu_button.position = Vector2(12, H - 44)
+	menu_button.size = Vector2(SIDE - 24, 34)
+	end_button.position = Vector2(W - SIDE + 4, y_hand + 6)
+	end_button.size = Vector2(SIDE - 12, HAND_H - 14)
+	hand_layer.position = Vector2(SIDE + 12, y_hand + 8)
+	hand_layer.size = Vector2(W - 2 * SIDE - 24, HAND_H - 12)
+	log_label.position = Vector2(x0, board.y_mid0 + 1)
+	log_label.size = Vector2(x1 - x0, MID_H - 2)
+	banner.position = Vector2(x0, board.y_mid0 - 22)
+	banner.size = Vector2(x1 - x0, 24)
+	var lanes_w := x1 - x0
+	_detail_rect = Rect2(x0 + 10, y_far + 4, lanes_w - 20, far_h - 8)
+	_detail_strip = Rect2(x0 + 60, board.y_mid0 - 22, lanes_w - 120, MID_H + 44)
 	_place_detail()
 	over_panel.position = Vector2(W / 2 - 170, H / 2 - 80)
 	over_panel.custom_minimum_size = Vector2(340, 0)
+	board.queue_redraw()
 	_layout_hand()
 
 
@@ -258,9 +281,12 @@ func refresh() -> void:
 		hand_layer.add_child(v)
 	_layout_hand()
 	var me := m.players[HUMAN]
-	caos_label.text = "Caos %d" % me.caos
-	info_label.text = "Mazzo %d\nLetamaio %d\n\nAvversario:\nmano %d · mazzo %d\nCaos %d" % [
-		me.deck.size(), me.discard.size(), m.players[AI].hand.size(), m.players[AI].deck.size(), m.players[AI].caos]
+	caos_label.text = "Caos\n%d" % me.caos
+	info_label.text = "Mazzo %d\nLetamaio %d" % [me.deck.size(), me.discard.size()]
+	opp_label.text = "Mano %d · Mazzo %d\nCaos %d" % [m.players[AI].hand.size(), m.players[AI].deck.size(), m.players[AI].caos]
+	for p in 2:
+		board.zones[p] = m.players[p].lanes.map(func(l): return l.zone)
+	board.queue_redraw()
 	end_button.disabled = state != "play"
 	log_label.text = "  ·  ".join(PackedStringArray(log_lines.slice(maxi(0, log_lines.size() - 2))))
 

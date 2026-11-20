@@ -194,7 +194,12 @@ Icona provvisoria: `godot --headless --path game --script res://tools/make_icon.
    Per TestFlight: in Xcode *Product → Archive → Distribute App*.
 4. Prima di esportare puoi verificare i dati con: `godot --headless --path game --export-pack "iOS" ../build/test.pck`
    e `godot --headless --main-pack build/test.pck --quit-after 200` (nessun `ERROR` atteso).
-Android (più avanti): preset **Android** già presente; servono Android Studio, JDK 17, una keystore di rilascio
+**Android, APK di prova (provato il 2026-11-20):** Java `brew install openjdk@17`, SDK `brew install --cask android-commandlinetools`
+poi `sdkmanager --sdk_root=$HOME/Library/Android/sdk "platform-tools" "build-tools;35.0.0" "platforms;android-35"` (licenze accettate);
+in Godot (editor_settings) `java_sdk_path` = `/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home`; chiave di prova in
+`~/Library/Application Support/Godot/keystores/debug.keystore`. Esporta: `cd game && godot --headless --export-debug "Android" ../build/android/FattoriaNucleare.apk`
+(solo arm64, senza Gradle). Controllo: `apksigner verify` e `aapt2 dump badging` in `build-tools/35.0.0`. L'APK **non** va nel repo.
+Android (rilascio, più avanti): preset **Android** già presente; servono Android Studio, JDK 17, una keystore di rilascio
 (mai nel repo: Godot la tiene in `.godot/export_credentials.cfg`, che è ignorato da git).
 
 ### 6.4 Arte, pixel art e Blender
@@ -346,6 +351,7 @@ Aggiornala ogni volta che si installa, si scarica o si scarta qualcosa. "Usata" 
 | Blender 5.3 (Homebrew) | modelli 3D e ritocchi degli asset (togliere/aggiungere mutazioni, convertire FBX → GLB) | installato, non ancora collegato a Claude (§4.2.2) |
 | Xcode 27.2 | build iOS | presente |
 | Node 24, Python 3.14, uv | installare skill; strumenti dell'arte; MCP di Blender | presenti |
+| openjdk@17, android-commandlinetools (SDK in ~/Library/Android/sdk: platform-tools, build-tools 35.0.0, android-35) | APK Android | installati (2026-11-20) |
 | numpy, ffmpeg (con libvorbis) | generare suoni e musiche (`art/audio/gen_audio.py`) | presenti |
 | GitHub Desktop | push su GitHub (il terminale non ha il login: `gh auth login` mai completato) | in uso per i push |
 

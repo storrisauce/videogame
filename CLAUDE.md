@@ -128,7 +128,7 @@ Riassumi lo stato in 3 righe e proponi le opzioni di §9 ("Prossimi passi"), con
 | Percorso | Cosa contiene |
 |---|---|
 | `CLAUDE.md` | questa memoria |
-| `docs/GDD.md` | il gioco in una pagina: pilastri, ciclo, **indice delle funzionalità con stati**, tappe M1–M5, **decisioni D-001…D-012**, domande aperte, storico |
+| `docs/GDD.md` | il gioco in una pagina: pilastri, ciclo, **indice delle funzionalità con stati**, tappe M1–M5, **decisioni D-001…D-013**, domande aperte, storico |
 | `docs/features/partita/` | regole e numeri della partita (`design.md`), codice (`implementation.md`), test (`testing.md`) |
 | `docs/features/carte-e-bande/design.md` | bande, sopravvissuti, formato delle carte, budget statistiche, carte d'esempio |
 | `docs/features/schermo-di-gioco/` | layout orizzontale iPhone, gesti, misure; implementazione e test |
@@ -172,14 +172,22 @@ uguale nel GDD e nel suo `design.md`. Ogni numero ha una sola casa: il `design.m
 Android (più avanti): preset **Android** già presente; servono Android Studio, JDK 17, una keystore di rilascio
 (mai nel repo: Godot la tiene in `.godot/export_credentials.cfg`, che è ignorato da git).
 
-### 6.4 Blender e "texture"
+### 6.4 Arte, pixel art e Blender
 - **Cosa sono le texture:** semplicemente **immagini** (PNG) usate dal gioco: illustrazioni delle carte, sfondi, icone.
   In Godot basta metterle nella cartella del progetto: Godot le importa da solo. Oggi il gioco **non ne usa**: carte e tavolo
   sono disegnati con rettangoli e testo (grafica provvisoria).
-- **Piano per l'arte:** illustrazioni delle carte in `game/assets/cards/<id-carta>.png` (es. `mucca_laser.png`, verticale ~600×800);
-  `CardView` le mostrerà quando esistono, altrimenti resta il rettangolo. Sfondi in `game/assets/board/`. Definire prima lo stile
-  con la skill `create-game-assets`.
-- **Blender sul Mac:** gli script in `art/blender/` si lanciano così:
+- **Piano per l'arte (D-013): pixel art 2D, motore sempre Godot** (Phaser e PixiJS scartati: andrebbe riscritto tutto).
+  Sprite delle creature in `game/assets/cards/<id-carta>.png`, sfondi in `game/assets/board/`; `CardView` li mostra quando
+  esistono, altrimenti resta il rettangolo. In Godot la pixel art vuole il filtro *Nearest* e scale intere. Stile da decidere con
+  l'utente (dimensione degli sprite, palette) e da scrivere con la skill `create-game-assets`.
+- **Strumenti per la pixel art (verificati il 2026-11-20):** serve **Aseprite** (a pagamento, ~20 $, https://www.aseprite.org/;
+  non ancora installato). Poi **Pixel Plugin** (https://github.com/willibrandon/pixel-plugin, MIT, include il suo server MCP):
+  `claude plugin marketplace add willibrandon/pixel-plugin` e `claude plugin install pixel-plugin`, poi `/pixel-setup`.
+  Alternativa più attiva: **Aseprite MCP** (https://github.com/diivi/aseprite-mcp, MIT). **SpriteCook** è un servizio AI a pagamento.
+- **Tileset di Cainos** (https://cainos.itch.io/pixel-art-top-down-basic, tile 32×32): uso commerciale permesso, modifiche
+  permesse, **ridistribuzione vietata**. Il repo GitHub è **pubblico**: i file originali non vanno committati così come sono
+  (o il repo diventa privato, o restano fuori da git). Decisione dell'utente.
+- **Blender sul Mac** (non più la strada principale, D-013): gli script in `art/blender/` si lanciano così:
   `/Applications/Blender.app/Contents/MacOS/Blender --background --python art/blender/nano_da_giardino_sacro.py -- /percorso/out.png`
   (lo script usa Cycles su CPU e contorni a "guscio invertito"; sul Mac con GPU si può passare a EEVEE e provare Freestyle).
   Blender va bene per oggetti, strutture e ambienti in stile uniforme; per creature espressive serve un artista o un generatore
@@ -200,7 +208,7 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
 ## 7. Stato (2026-11-20)
 - ✅ **Analisi** del gioco originale dall'APK: regole, formule, IA, meta, 239 famiglie di abilità.
 - ✅ **GDD 0.4** + note: `partita` (implemented), `schermo-di-gioco` (implemented, grafica provvisoria), `ia-avversaria`
-  (implemented), `carte-e-bande` (designed). Decisioni D-001…D-012.
+  (implemented), `carte-e-bande` (designed). Decisioni D-001…D-013.
 - ✅ **Gioco giocabile** su computer (e pronto per l'esportazione):
   - menu: sopravvissuto, 2 bande per il mazzo, mirino automatico, statistiche e scatolette;
   - partita contro l'IA in orizzontale: tocca una carta e poi un recinto per giocarla; tocca una tua creatura per **Scuoterla**;
@@ -228,8 +236,8 @@ M1 regole senza grafica ✅ → **M2 vertical slice su iPhone** (gioco fatto; ma
    Rinforzare un po' Patate e Cane. Rifare la taratura quando arriva il set di lancio.
 3. **Contenuti:** scrivere il set di lancio (~15 carte per banda + 15 Cratere) seguendo il DNA tematico e il catalogo delle famiglie;
    implementare in `abilities.gd` le famiglie nuove che servono (con test).
-4. **Arte:** collegare Blender a Claude (§4.2.2), valutare con l'utente Scenario/Meshy (§4.2.1), definire lo stile con `create-game-assets`, illustrazioni delle carte in `game/assets/cards/`, sfondo del tavolo,
-   `CardView` che mostra le immagini.
+4. **Arte in pixel art 2D (D-013), in corso:** decidere lo stile con l'utente, installare Aseprite e Pixel Plugin (§6.4),
+   risolvere la licenza Cainos, primo sprite di prova, `CardView` che mostra le immagini, sfondo del tavolo.
 5. **Rifiniture dello schermo:** trascinamento delle carte, vibrazioni e scuotimento con la Botta Atomica (`game-feel`), suoni
    (`godot-audio`), tutorial alla prima partita.
 6. **Meta e Supabase (M4):** costruzione del mazzo, campagna, profilo sul server, dati delle carte scaricati.

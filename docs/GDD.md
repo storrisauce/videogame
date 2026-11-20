@@ -84,6 +84,7 @@ pesca → spendi Caos (gioca carte, scuoti creature) → attacca col mirino → 
 | D-010 | 2026-11-20 | Giocare una carta toccandola e poi toccando il recinto | Trascinare (come nel design) | Più semplice e affidabile da far funzionare subito; il trascinamento si aggiunge sopra in seguito | schermo-di-gioco |
 | D-011 | 2026-11-20 | Identificativo dell'app provvisorio `it.fattorianucleare.gioco` | — | Serve per esportare; l'utente lo cambia col suo dominio o team Apple prima di pubblicare | export |
 | D-012 | 2026-11-20 | Chi gioca per secondo ha +1 Caos nel suo primo turno; prima taratura di sopravvissuti e carte | Lasciare il vantaggio del primo (D-005); più Caos iniziale o più Pazienza per tutti | Nelle simulazioni chi inizia vinceva il 65%; Caos iniziale e Pazienza non lo cambiavano. Eccezione a D-005 decisa dall'utente | partita, carte-e-bande |
+| D-013 | 2026-11-20 | Grafica in **pixel art 2D**, motore sempre Godot; sprite disegnati con Aseprite (Pixel Plugin) | Passare a Phaser o PixiJS; illustrazioni da Blender | Scelta dell'utente: gioco 2D. Godot fa già il 2D ed esporta su iPhone; cambiare motore vorrebbe dire riscrivere regole, IA, schermate e test | schermo-di-gioco, carte-e-bande |
 
 ## Open questions
 - **Assumptions to confirm:** tutti i numeri segnati `[ASSUMPTION]` nelle note delle feature; l'abbinamento banda→stile di gioco; i 6 sopravvissuti come rosa di lancio.

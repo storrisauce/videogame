@@ -48,5 +48,24 @@ func _initialize() -> void:
 		await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(out.path_join("mirino.png"))
+	ms.dial.visible = false
+	# scelta del bersaglio (abilità del sopravvissuto)
+	ms.state = "play"
+	ms._deselect()
+	var targets := Abilities.hero_targets(ms.m, 0)
+	if not targets.is_empty() and targets[0] is Dictionary and targets[0].has("lane"):
+		ms._ask_target({"kind": "hero", "targets": targets})
+		for i in 10:
+			await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png(out.path_join("bersaglio.png"))
+		ms._cancel_target()
+	# fine partita
+	ms.m.winner = 0
+	ms._check_over()
+	for i in 20:
+		await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png(out.path_join("fine.png"))
 	print("screenshot salvati in ", out)
 	quit(0)

@@ -42,5 +42,5 @@ func _draw() -> void:
 			draw_rect(Rect2(r.position.x + 3, r.position.y + r.size.y * 0.65, r.size.x - 6, 3), Ui.ink())
 			draw_circle(r.get_center() + Vector2(0, -2), 4, Art.c("radio_1"))
 			Ui.text(self, Vector2(0, c.y + 8), str(value), Ui.MID, Art.c("bianco"), HORIZONTAL_ALIGNMENT_CENTER, size.x)
-	if label != "":
+	if label != "":   # di solito vuota: le icone bastano
 		Ui.text(self, Vector2(0, size.y - 3), label, 11, Art.c("legno_9"), HORIZONTAL_ALIGNMENT_CENTER, size.x, 3.0)

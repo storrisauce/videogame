@@ -78,31 +78,31 @@ func force(result: String) -> void:
 
 
 func _draw() -> void:
-	# contatore Geiger: cassa di ferro, quadrante di carta, zona verde radio e zona rossa d'allarme
-	draw_rect(Rect2(Vector2.ZERO, size), Color(Art.c("notte"), 0.6))
-	var c := (size / 2.0).round()
-	var rad := roundf(minf(size.x, size.y) * 0.32)
-	draw_rect(Rect2(c - Vector2(rad + 16, rad + 16), Vector2(rad + 16, rad + 16) * 2), Art.c("inchiostro"))
-	draw_rect(Rect2(c - Vector2(rad + 14, rad + 14), Vector2(rad + 14, rad + 14) * 2), Art.c("ferro_2"))
-	draw_rect(Rect2(c - Vector2(rad + 14, rad + 14), Vector2((rad + 14) * 2, 3)), Art.c("ferro_4"))
-	for k in 4:   # bulloni negli angoli
-		var b := c + Vector2(rad + 8 if k % 2 else -rad - 8, rad + 8 if k / 2 else -rad - 8)
-		draw_rect(Rect2(b - Vector2(2, 2), Vector2(4, 4)), Art.c("ferro_4"))
-		draw_rect(Rect2(b - Vector2(2, 2), Vector2(4, 1)), Art.c("ferro_5"))
-	draw_circle(c, rad + 8, Art.c("legno_1"))
-	draw_circle(c, rad + 6, Art.c("legno_9"))
-	draw_arc(c, rad, 0, TAU, 64, Art.c("legno_8"), 10.0)
+	# quadrante Geiger cartoon: velo scuro, ghiera nera spessa, ghiera di metallo, quadrante color carta,
+	# zona verde (colpo) e rossa (Botta Atomica), lancetta con contorno; sopra il nome, sotto "Tocca!".
+	draw_rect(Rect2(Vector2.ZERO, size), Color(Art.c("inchiostro"), 0.55))
+	var c := (size / 2.0 + Vector2(0, 6)).round()
+	var rad := roundf(minf(size.x, size.y) * 0.3)
+	draw_circle(c + Vector2(0, 6), rad + 22, Ui.ink())
+	draw_circle(c, rad + 22, Ui.ink())
+	draw_circle(c, rad + 18, Art.c("arancio_4"))
+	draw_arc(c, rad + 15, PI * 1.1, PI * 1.6, 24, Color(1, 1, 1, 0.45), 4.0)
+	draw_circle(c, rad + 8, Ui.ink())
+	draw_circle(c, rad + 5, Art.c("legno_9"))
 	var a0 := -PI / 2.0
-	draw_arc(c, rad, a0 + green_start * TAU, a0 + (green_start + green) * TAU, 48, Art.c("radio_1"), 12.0)
-	draw_arc(c, rad, a0 + (green_start + green) * TAU, a0 + (green_start + green + red) * TAU, 24, Art.c("allarme"), 12.0)
-	for k in 24:   # tacche
-		var a := a0 + k * TAU / 24.0
-		draw_line(c + Vector2(cos(a), sin(a)) * (rad - 12), c + Vector2(cos(a), sin(a)) * (rad - 8), Art.c("legno_4"), 2.0)
+	draw_arc(c, rad - 6, a0 + green_start * TAU, a0 + (green_start + green) * TAU, 48, Ui.ink(), 22.0)
+	draw_arc(c, rad - 6, a0 + green_start * TAU, a0 + (green_start + green) * TAU, 48, Art.c("radio_1"), 16.0)
+	draw_arc(c, rad - 6, a0 + (green_start + green) * TAU, a0 + (green_start + green + red) * TAU, 24, Ui.ink(), 22.0)
+	draw_arc(c, rad - 6, a0 + (green_start + green) * TAU, a0 + (green_start + green + red) * TAU, 24, Art.c("allarme"), 16.0)
+	for k in 12:   # tacche
+		var a := a0 + k * TAU / 12.0
+		draw_line(c + Vector2(cos(a), sin(a)) * (rad - 26), c + Vector2(cos(a), sin(a)) * (rad - 18), Art.c("legno_4"), 3.0)
+	BunkerSet.trefoil_2d(self, c + Vector2(0, rad * 0.38), rad * 0.16)
 	var ang := a0 + _angle_frac() * TAU
-	draw_line(c, c + Vector2(cos(ang), sin(ang)) * (rad + 4), Art.c("inchiostro"), 4.0)
-	draw_line(c, c + Vector2(cos(ang), sin(ang)) * (rad + 4), Art.c("rosso_2"), 2.0)
-	draw_circle(c, 6, Art.c("inchiostro"))
-	draw_circle(c, 4, Art.c("ferro_4"))
-	var f := Pal.font()
-	draw_string(f, Vector2(0, c.y - rad - 22), title, HORIZONTAL_ALIGNMENT_CENTER, size.x, 14, Pal.TEXT)
-	draw_string(f, Vector2(0, c.y + rad + 34), "Tocca lo schermo per fermare la lancetta", HORIZONTAL_ALIGNMENT_CENTER, size.x, 11, Pal.YELLOW)
+	var tip := c + Vector2(cos(ang), sin(ang)) * (rad - 2)
+	draw_line(c, tip, Ui.ink(), 9.0)
+	draw_line(c, tip, Art.c("rosso_2"), 5.0)
+	draw_circle(c, 11, Ui.ink())
+	draw_circle(c, 8, Art.c("ferro_4"))
+	Ui.pill(self, Vector2(size.x / 2.0, c.y - rad - 40), title, Ui.MID, Art.c("ferro_2"), Art.c("bianco"))
+	Ui.text(self, Vector2(0, c.y + rad + 58), "Tocca!", Ui.BIG, Art.c("giallo_2"), HORIZONTAL_ALIGNMENT_CENTER, size.x)

@@ -103,6 +103,16 @@ static func _green_light(world: Node3D, pos: Vector3, energy := 2.2, rng := 2.6)
 	world.add_child(l)
 
 
+## Simbolo radioattivo disegnato in 2D (quadrante del mirino, icone).
+static func trefoil_2d(ci: CanvasItem, c: Vector2, r: float, color := Color("#181425")) -> void:
+	ci.draw_circle(c, r * 0.22, color)
+	for k in 3:
+		var a := -PI / 2.0 + k * TAU / 3.0
+		var pts := PackedVector2Array([c + Vector2(cos(a - 0.5), sin(a - 0.5)) * r * 0.35, c + Vector2(cos(a - 0.5), sin(a - 0.5)) * r,
+			c + Vector2(cos(a + 0.5), sin(a + 0.5)) * r, c + Vector2(cos(a + 0.5), sin(a + 0.5)) * r * 0.35])
+		ci.draw_colored_polygon(pts, color)
+
+
 ## Simbolo radioattivo su una superficie rivolta verso +Z (locale), centro `pos`.
 static func trefoil(n: Node3D, pos: Vector3, r: float) -> void:
 	Kit.cyl(n, pos, r * 0.2, 0.03, Art.c("inchiostro"), Vector3(PI / 2.0, 0, 0))

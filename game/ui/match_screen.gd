@@ -36,12 +36,12 @@ var opp_label := Label.new()
 var board := BoardView.new()      ## consolle laterali e vassoio (2D)
 var board3d := Board3D.new()      ## il tavolo in 3D
 var fx := FxLayer.new()
-var my_deck := StatChip.new("deck", "Mazzo")
-var my_discard := StatChip.new("discard", "Letamaio")
-var my_caos := StatChip.new("caos", "Caos", true)
-var opp_hand := StatChip.new("hand", "Mano")
-var opp_deck := StatChip.new("deck", "Mazzo")
-var opp_caos := StatChip.new("caos", "Caos")
+var my_deck := StatChip.new("deck")
+var my_discard := StatChip.new("discard")
+var my_caos := StatChip.new("caos", "", true)
+var opp_hand := StatChip.new("hand")
+var opp_deck := StatChip.new("deck")
+var opp_caos := StatChip.new("caos")
 var _log_tw: Tween
 var _snap: Dictionary = {}       ## stato del tavolo all'ultimo aggiornamento (per mostrare cosa cambia un'abilità)
 var log_label := Label.new()
@@ -54,6 +54,7 @@ var banner := Label.new()
 var dial := GeigerDial.new()
 var over_panel := PanelContainer.new()
 var over_text := Label.new()
+var over_sub := Label.new()
 var over_buttons := VBoxContainer.new()
 
 
@@ -149,6 +150,16 @@ func _build() -> void:
 	Juice.press(menu_button)
 	add_child(end_button)
 	menu_button.text = "II"
+	for st in ["normal", "hover", "pressed", "focus"]:
+		var psb := StyleBoxFlat.new()
+		psb.bg_color = Art.c({"normal": "ferro_2", "hover": "ferro_3", "pressed": "ferro_1", "focus": "ferro_2"}[st])
+		psb.border_color = Art.c("inchiostro")
+		psb.set_border_width_all(3)
+		psb.set_corner_radius_all(22)
+		psb.shadow_color = Art.c("inchiostro")
+		psb.shadow_offset = Vector2(0, 0 if st == "pressed" else 3)
+		psb.shadow_size = 1
+		menu_button.add_theme_stylebox_override(st, psb)
 	menu_button.tooltip_text = "Menu"
 	menu_button.pressed.connect(func(): exit_to_menu.emit())
 	add_child(menu_button)
@@ -182,9 +193,16 @@ func _build() -> void:
 	add_child(detail)
 	# fine partita
 	var ob := VBoxContainer.new()
+	ob.add_theme_constant_override("separation", 10)
 	over_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	over_text.add_theme_font_size_override("font_size", Ui.BIG)
+	over_text.add_theme_font_size_override("font_size", 46)
+	over_text.add_theme_constant_override("outline_size", 14)
 	ob.add_child(over_text)
+	over_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	over_sub.add_theme_font_size_override("font_size", Ui.MID)
+	over_sub.add_theme_color_override("font_color", Art.c("legno_9"))
+	ob.add_child(over_sub)
+	over_buttons.add_theme_constant_override("separation", 8)
 	ob.add_child(over_buttons)
 	over_panel.add_child(ob)
 	over_panel.visible = false
@@ -192,6 +210,11 @@ func _build() -> void:
 	add_child(fx)
 	dial.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(dial)
+	# sopra a tutto (anche alla carta scelta, che sta a z 5 nella mano)
+	fx.z_index = 10
+	detail.z_index = 12
+	over_panel.z_index = 20
+	dial.z_index = 30
 	_layout()
 
 
@@ -214,7 +237,7 @@ func _layout() -> void:
 	board3d.size = Vector2(W, H)
 	# il tabellone usa tutta la larghezza: solo il fondo (stretto, in prospettiva) passa tra i due ritratti
 	board3d.focus = Rect2(4, 0, W - 8, y_hand + 16)
-	var hh := minf(hero_w + 112.0, y_hand - 6)
+	var hh := minf(hero_w + 84.0, y_hand - 6)
 	board3d.avoid = [Rect2(0, 0, hero_w + 16, hh + 52), Rect2(W - hero_w - 16, 0, hero_w + 16, hh + 52)]
 	board.y_near = 0.0
 	board.panels = []
@@ -222,7 +245,7 @@ func _layout() -> void:
 	_place_lanes()
 	_place_lanes.call_deferred()
 	# sopravvissuti negli angoli in alto
-	var hero_h := minf(hero_w + 112.0, y_hand - 6)
+	var hero_h := minf(hero_w + 84.0, y_hand - 6)
 	hero_views[HUMAN].position = Vector2(8, 6)
 	hero_views[HUMAN].size = Vector2(hero_w, hero_h)
 	hero_views[AI].position = Vector2(W - hero_w - 8, 6)
@@ -258,8 +281,8 @@ func _layout() -> void:
 	_detail_rect = Rect2(hero_w + 16, 4, W - 2 * hero_w - 32, 0)
 	_detail_strip = _detail_rect
 	_place_detail()
-	over_panel.position = Vector2(W / 2 - 190, H / 2 - 100)
-	over_panel.custom_minimum_size = Vector2(380, 0)
+	over_panel.custom_minimum_size = Vector2(320, 0)
+	over_panel.position = Vector2(W / 2 - 160, H * 0.18)
 	board.queue_redraw()
 	_layout_hand()
 
@@ -585,13 +608,13 @@ func _on_hand_tapped(v: CardView) -> void:
 	selected_hand = idx
 	var c := v.card
 	if c.type() == "event":
-		var buttons := []
+		# la carta ingrandita dice già tutto: qui solo l'azione
 		if m.can_play(HUMAN, c, -1):
-			buttons.append(["Gioca (%d Caos)" % m.cost_of(HUMAN, c), _play_event.bind(idx)])
-		_show_detail(_card_text(c), buttons)
+			_show_detail("", [["Gioca", _play_event.bind(idx)]])
+		else:
+			detail.visible = false
 	else:
-		_show_detail(_card_text(c), [])
-		_flash("Scegli un recinto illuminato")
+		detail.visible = false   # i recinti illuminati bastano: niente scritte in più
 	refresh()
 
 
@@ -623,7 +646,7 @@ func _on_lane_tapped(p: int, i: int) -> void:
 		buttons.append(["Scuoti (%d Caos)" % l.creature.scuoti_cost(), _scuoti.bind(i)])
 	var text := _card_text(shown)
 	if l.creature and l.structure:
-		text += "\nDietro: %s — %s" % [l.structure.def["name"], Abilities.describe(l.structure.def, l.structure.level)]
+		text += "\n%s: %s" % [l.structure.def["name"], Abilities.describe(l.structure.def, l.structure.level)]
 	selected_hand = -1
 	_show_detail(text, buttons)
 	refresh()
@@ -637,7 +660,7 @@ func _on_hero_tapped(p: int) -> void:
 	if p == HUMAN and m.can_use_hero(HUMAN):
 		buttons.append(["Usa abilità", _use_hero])
 	selected_hand = -1
-	_show_detail("%s, %s\n%s" % [h["name"], h.get("epithet", ""), Abilities.describe_hero(h)], buttons)
+	_show_detail("%s: %s" % [h["name"], Abilities.describe_hero(h)], buttons)
 	refresh()
 
 
@@ -682,7 +705,7 @@ func _play_event(idx: int) -> void:
 func _ask_target(p: Dictionary) -> void:
 	pending = p
 	state = "target"
-	_show_detail("Scegli un bersaglio (bordo rosso).", [["Annulla", _cancel_target]])
+	_show_detail("Scegli il bersaglio", [["Annulla", _cancel_target]])
 	refresh()
 
 
@@ -718,6 +741,7 @@ func _deselect() -> void:
 
 func _show_detail(text: String, buttons: Array) -> void:
 	detail_text.text = text
+	detail_text.visible = text != ""
 	for b in detail_buttons.get_children():
 		detail_buttons.remove_child(b)
 		b.queue_free()
@@ -760,13 +784,8 @@ func _show_card_detail(c: CardInst) -> void:
 
 
 func _card_text(c: CardInst) -> String:
-	var d := c.def
-	var head := "%s  (%s %s, costo %d" % [d["name"], Pal.TYPE_NAME.get(c.type(), "").to_lower(), Pal.BAND_NAME.get(c.band(), "").split(" ")[0], c.cost()]
-	if c.type() == "creature":
-		head += ", attacco %d, vita %d)" % [m.atk_of(c), m.def_of(c)] if m.lane_of(c) >= 0 else ", attacco %d, vita %d)" % [c.base_atk(), c.base_def()]
-	else:
-		head += ")"
-	return "%s\n%s  «%s»" % [head, Abilities.describe(d, c.level), d.get("flavor", "")]
+	# breve: nome e abilità. Costo, attacco e vita si vedono già sulla carta e sul tavolo.
+	return "%s: %s" % [c.def["name"], Abilities.describe(c.def, c.level)]
 
 
 # --- Turni --------------------------------------------------------------------
@@ -801,14 +820,14 @@ func _on_end_turn() -> void:
 			if not m.attack_needs_dial(HUMAN, i):
 				continue
 			var att := m.players[HUMAN].lanes[i].creature
-			var res := await _dial("Attacca con %s!" % att.def["name"], m.lane_undefended(HUMAN, i))
+			var res := await _dial(att.def["name"], m.lane_undefended(HUMAN, i))
 			m.attack_lane(HUMAN, i, res == "botta")
 			refresh()
 			if _check_over():
 				return
 			await _wait(0.55)
 	else:
-		_flash("Primo turno: niente attacchi")
+		_flash("Primo turno: niente attacco")
 		await _wait(0.6)
 	m.end_turn(HUMAN)
 	refresh()
@@ -836,7 +855,7 @@ func _ai_turn() -> void:
 				continue
 			# Il quadrante compare anche in difesa ma non cambia il danno (D-005, come nel genere).
 			if not m.lane_undefended(AI, i):
-				await _dial("Tocca per parare!", false)
+				await _dial("Para!", false)
 			m.attack_lane(AI, i, false)
 			refresh()
 			if _check_over():
@@ -856,6 +875,7 @@ func _finish_ai_turn() -> void:
 func _dial(label: String, empty_lane: bool) -> String:
 	if speed <= 0.0 or (profile and profile.mirino_automatico) or autoplay_human:
 		return "colpo"
+	detail.visible = false
 	dial.start(rng, label, empty_lane, float(db.rule("ring_green")), float(db.rule("ring_red")),
 		float(db.rule("ring_spin_min")), float(db.rule("ring_spin_max")), float(db.rule("ring_turns")))
 	var r: String = await dial.finished
@@ -901,27 +921,51 @@ func _check_over() -> bool:
 		b.queue_free()
 	if m.winner == HUMAN:
 		var reward := db.rule_i("reward_win_fagioli")
-		over_text.text = "HAI VINTO!\n+%d scatolette di fagioli" % reward
+		over_text.text = "Hai vinto!"
+		over_text.add_theme_color_override("font_color", Art.c("radio_1"))
+		over_sub.text = "+%d scatolette di fagioli" % reward
 		if profile:
 			profile.fagioli += reward
 			profile.vittorie += 1
 			profile.save()
 	else:
-		over_text.text = "HAI PERSO.\nLa tua Pazienza è finita."
+		over_text.text = "Hai perso"
+		over_text.add_theme_color_override("font_color", Art.c("rosso_3"))
+		over_sub.text = "Pazienza finita"
 		if m.can_resurrect(HUMAN) and profile and profile.tonno > 0:
-			_add_over_button("Rialzati (1 scatoletta di tonno, ne hai %d)" % profile.tonno, _resurrect)
-	_add_over_button("Rivincita", _end_and.bind("rematch"))
-	_add_over_button("Torna al menu", _end_and.bind("menu"))
+			_add_over_button("Rialzati (1 tonno)", _resurrect, true)
+	_add_over_button("Rivincita", _end_and.bind("rematch"), m.winner == HUMAN or not (m.can_resurrect(HUMAN) and profile and profile.tonno > 0))
+	_add_over_button("Menu", _end_and.bind("menu"))
 	over_panel.visible = true
+	if speed > 0.0 and is_inside_tree():
+		over_panel.pivot_offset = over_panel.size / 2.0
+		over_panel.scale = Vector2(0.9, 0.9)
+		over_panel.modulate.a = 0.0
+		var tw := create_tween().set_parallel(true)
+		tw.tween_property(over_panel, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(over_panel, "modulate:a", 1.0, 0.18)
 	refresh()
 	return true
 
 
-func _add_over_button(t: String, cb: Callable) -> void:
+func _add_over_button(t: String, cb: Callable, primary := false) -> void:
 	var b := Button.new()
 	b.text = t
-	b.custom_minimum_size = Vector2(0, 40)
+	b.custom_minimum_size = Vector2(0, 54 if primary else 44)
 	b.pressed.connect(cb)
+	if primary:
+		b.add_theme_font_size_override("font_size", Ui.MID + 2)
+		for st in ["normal", "hover", "pressed", "focus"]:
+			var sb := StyleBoxFlat.new()
+			sb.bg_color = Art.c({"normal": "radio_1", "hover": "radio_2", "pressed": "verde_4", "focus": "radio_1"}[st])
+			sb.border_color = Art.c("inchiostro")
+			sb.set_border_width_all(4)
+			sb.set_corner_radius_all(16)
+			sb.shadow_color = Art.c("inchiostro")
+			sb.shadow_offset = Vector2(0, 0 if st == "pressed" else 5)
+			sb.shadow_size = 1
+			b.add_theme_stylebox_override(st, sb)
+	Juice.press(b)
 	over_buttons.add_child(b)
 
 

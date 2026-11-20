@@ -69,35 +69,30 @@ func _draw() -> void:
 		_draw_stats(head)
 
 
-## ATK in un tondo rosso e barra della Vita con i numeri, sopra la testa della creatura.
+## Attacco e vita sopra la testa della creatura: due gettoni come sulle carte (tondo rosso, cuore verde).
+## Il cuore diventa arancione quando la creatura è ferita. Gli stati (scossa, inerme, protetta) sono piccole icone.
 func _draw_stats(at: Vector2) -> void:
-	var f := Pal.font()
 	var atk := m.atk_of(creature)
 	var hp := m.health_of(creature)
 	var mx := maxi(m.def_of(creature), 1)
-	var w := 46.0
-	var o := (at - Vector2(w / 2.0 + 6.0, 10.0)).round()
-	var bar := Rect2(o.x + 14, o.y + 6, w, 7)
-	draw_rect(bar.grow(1), Art.c("legno_1"))
-	draw_rect(bar, Art.c("verde_1"))
-	var frac := clampf(float(hp) / float(mx), 0.0, 1.0)
-	draw_rect(Rect2(bar.position, Vector2(roundf(bar.size.x * frac), bar.size.y)), Art.c("verde_4"))
-	draw_rect(Rect2(bar.position, Vector2(roundf(bar.size.x * frac), 2)), Art.c("verde_5"))
-	draw_string_outline(f, Vector2(bar.position.x, bar.position.y - 1), "%d/%d" % [hp, mx], HORIZONTAL_ALIGNMENT_CENTER, bar.size.x, 10, 3, Art.c("inchiostro"))
-	draw_string(f, Vector2(bar.position.x, bar.position.y - 1), "%d/%d" % [hp, mx], HORIZONTAL_ALIGNMENT_CENTER, bar.size.x, 10, Art.c("bianco"))
-	var cc := Vector2(o.x + 8, o.y + 9)
-	draw_circle(cc, 9, Art.c("rosso_1"))
-	draw_circle(cc, 8, Art.c("rosso_2"))
-	draw_circle(cc + Vector2(-2, -3), 2.5, Art.c("rosso_4"))
-	draw_string_outline(f, Vector2(cc.x - 9, cc.y + 4), str(atk), HORIZONTAL_ALIGNMENT_CENTER, 18, 12, 3, Art.c("rosso_1"))
-	draw_string(f, Vector2(cc.x - 9, cc.y + 4), str(atk), HORIZONTAL_ALIGNMENT_CENTER, 18, 12, Art.c("bianco"))
-	var flags := []
+	var r := 13.0
+	var ac := (at + Vector2(-r - 2, 0)).round()
+	draw_circle(ac + Vector2(0, 2), r, Ui.ink())
+	draw_circle(ac, r, Ui.ink())
+	draw_circle(ac, r - 3, Art.c("rosso_2"))
+	draw_circle(ac + Vector2(-4, -4), 3, Color(1, 1, 1, 0.35))
+	Ui.text(self, Vector2(ac.x - r, ac.y + 6), str(atk), Ui.SMALL + 3, Art.c("bianco"), HORIZONTAL_ALIGNMENT_CENTER, r * 2.0, 3.0)
+	var hc := (at + Vector2(r + 2, 0)).round()
+	Ui.heart(self, hc + Vector2(0, 1), r * 2.5, Art.c("verde_4") if hp >= mx else Art.c("arancio_3"))
+	Ui.text(self, Vector2(hc.x - r, hc.y + 6), str(hp), Ui.SMALL + 3, Art.c("bianco"), HORIZONTAL_ALIGNMENT_CENTER, r * 2.0, 3.0)
+	var icons := []
 	if creature.scossa:
-		flags.append("scossa")
+		icons.append(["radio_1", "✓"])
 	if creature.helpless:
-		flags.append("inerme")
+		icons.append(["ferro_2", "z"])
 	if creature.protected:
-		flags.append("protetta")
-	if not flags.is_empty():
-		draw_string_outline(f, Vector2(o.x, bar.end.y + 11), ", ".join(flags), HORIZONTAL_ALIGNMENT_CENTER, w + 20, 9, 3, Art.c("inchiostro"))
-		draw_string(f, Vector2(o.x, bar.end.y + 11), ", ".join(flags), HORIZONTAL_ALIGNMENT_CENTER, w + 20, 9, Art.c("giallo_2"))
+		icons.append(["acqua_4", "+"])
+	for k in icons.size():
+		var c := at + Vector2(-8 + k * 16, -r - 8)
+		draw_circle(c, 7, Ui.ink())
+		draw_circle(c, 5, Art.c(icons[k][0]))

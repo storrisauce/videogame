@@ -93,11 +93,17 @@ func _draw() -> void:
 		fill.bg_color = Art.c("rosso_3")
 		fill.set_corner_radius_all(3)
 		draw_style_box(fill, Rect2(bar.position + Vector2(3, 3), Vector2((bar.size.x - 6) * frac, bar.size.y - 6)))
-	# badge dell'abilità
-	var by := bar.end.y + 14
+	# abilità: un tondo sull'angolo del ritratto (verde che pulsa con "!" se pronta, grigio con i turni se no)
+	var bc := Vector2(por.end.x - 10, por.position.y + 10)
 	if ps.cooldown <= 0:
 		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * 5.0)
-		var c := Art.c("radio_1").lerp(Art.c("radio_2"), pulse)
-		Ui.pill(self, Vector2(w / 2.0, by), "Abilità pronta" if player == 0 else "Abilità carica", 12, c.darkened(0.25), Art.c("bianco"))
+		var rr := 15.0 + pulse * 2.0
+		draw_circle(bc + Vector2(0, 2), rr, Ui.ink())
+		draw_circle(bc, rr, Ui.ink())
+		draw_circle(bc, rr - 3.0, Art.c("radio_1").lerp(Art.c("radio_2"), pulse))
+		Ui.text(self, Vector2(bc.x - 15, bc.y + 7), "!", Ui.MID, Art.c("bianco"), HORIZONTAL_ALIGNMENT_CENTER, 30)
 	else:
-		Ui.pill(self, Vector2(w / 2.0, by), "Abilità fra %d" % ps.cooldown, 12, Art.c("ferro_2"), Art.c("legno_9"))
+		draw_circle(bc + Vector2(0, 2), 14, Ui.ink())
+		draw_circle(bc, 14, Ui.ink())
+		draw_circle(bc, 11, Art.c("ferro_2"))
+		Ui.text(self, Vector2(bc.x - 14, bc.y + 6), str(ps.cooldown), Ui.SMALL + 2, Art.c("legno_9"), HORIZONTAL_ALIGNMENT_CENTER, 28)

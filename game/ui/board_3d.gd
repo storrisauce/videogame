@@ -438,36 +438,94 @@ func _sync(p: int, i: int, c: CardInst, creature: bool) -> void:
 	_arrive(a, rest)
 
 
-## Arrivo: cade dall'alto, schiaccia toccando terra e si rimette in forma, con una nuvola di polvere.
+## Onda d'urto: un anello piatto sul terreno che si allarga e svanisce.
+func _ring(pos: Vector3, color: Color, size_to := 1.6, life := 0.35) -> void:
+	if reduce_motion or not is_inside_tree():
+		return
+	var tm := TorusMesh.new()
+	tm.inner_radius = 0.42
+	tm.outer_radius = 0.5
+	tm.rings = 24
+	tm.ring_segments = 4
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = color
+	var mi := MeshInstance3D.new()
+	mi.mesh = tm
+	mi.material_override = mat
+	mi.position = pos + Vector3(0, 0.03, 0)
+	mi.scale = Vector3(0.4, 0.15, 0.4)
+	world.add_child(mi)
+	var tw := mi.create_tween().set_parallel(true)
+	tw.tween_property(mi, "scale", Vector3(size_to, 0.15, size_to), life).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(mat, "albedo_color:a", 0.0, life).set_ease(Tween.EASE_IN)
+	tw.chain().tween_callback(mi.queue_free)
+
+
+## Pausa d'impatto (hit-stop) breve: rallenta il tempo e lo rimette a posto in tempo reale (game-feel).
+var _stop_id := 0
+func _hit_stop(dur := 0.07) -> void:
+	if reduce_motion or not is_inside_tree():
+		return
+	_stop_id += 1
+	var my := _stop_id
+	Engine.time_scale = 0.08
+	await get_tree().create_timer(dur, true, false, true).timeout
+	if my == _stop_id:
+		Engine.time_scale = 1.0
+
+
+## Colpo di telecamera: un piccolo zoom avanti e ritorno.
+func _cam_kick() -> void:
+	if reduce_motion:
+		return
+	var f0 := cam.fov
+	var tw := cam.create_tween()
+	tw.tween_property(cam, "fov", f0 - 2.5, 0.05)
+	tw.tween_property(cam, "fov", f0, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## Arrivo: cade ruotando, schiaccia toccando terra, onda d'urto e polvere, poi si rimette in forma.
 func _arrive(a: Node3D, rest: Vector3) -> void:
 	if reduce_motion or not is_inside_tree():
 		a.position = rest
 		return
-	a.position = rest + Vector3(0, 2.4, 0)
+	a.position = rest + Vector3(0, 2.6, 0)
+	a.rotation.y = -0.9
 	a.scale = Vector3(0.85, 1.2, 0.85)
 	var tw := a.create_tween()
 	tw.tween_property(a, "position", rest, 0.26).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_property(a, "scale", Vector3(1.3, 0.72, 1.3), 0.06)
-	tw.tween_property(a, "scale", Vector3.ONE, 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.parallel().tween_callback(func(): _puff(rest + Vector3(0, 0.05, 0), Art.c("legno_8"), 12, 0.35)).set_delay(0.0)
+	tw.parallel().tween_property(a, "rotation:y", 0.0, 0.26).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_callback(func():
+		_ring(rest, Color(Art.c("legno_9"), 0.9), 1.8, 0.4)
+		_puff(rest + Vector3(0, 0.05, 0), Art.c("legno_8"), 14, 0.4))
+	tw.tween_property(a, "scale", Vector3(1.3, 0.7, 1.3), 0.06)
+	tw.tween_property(a, "scale", Vector3.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
-## Morte: lampo bianco, si schiaccia e sparisce in una nuvoletta radioattiva.
+## Morte: lampo bianco, si ribalta di lato, sprofonda e scoppia in scintille radioattive.
 func _die(a: Node3D) -> void:
 	if a == null or not is_instance_valid(a):
 		return
 	if not is_inside_tree() or reduce_motion:
 		a.queue_free()
 		return
+	var pos := a.position
 	var tw := a.create_tween()
-	tw.tween_interval(0.18)
-	tw.tween_method(func(v: float): _set_param(a, "flash", v), 0.0, 1.0, 0.06)
-	tw.tween_property(a, "scale", Vector3(1.4, 0.15, 1.4), 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_callback(func(): _puff(a.position + Vector3(0, 0.2, 0), Art.c("radio_2"), 18, 0.5))
+	tw.tween_interval(0.2)
+	tw.tween_method(func(v: float): _set_param(a, "flash", v), 0.0, 1.0, 0.05)
+	tw.tween_property(a, "position", pos + Vector3(0, 0.35, 0), 0.12).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(a, "rotation:z", PI / 2.0, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tw.tween_property(a, "position", pos + Vector3(0, -0.3, 0), 0.16).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(a, "scale", Vector3(0.2, 0.2, 0.2), 0.16).set_ease(Tween.EASE_IN)
+	tw.tween_callback(func():
+		_puff(pos + Vector3(0, 0.3, 0), Art.c("radio_2"), 22, 0.6)
+		_ring(pos, Color(Art.c("radio_1"), 0.9), 2.0, 0.45))
 	tw.tween_callback(a.queue_free)
 
 
-## Attacco: la creatura carica, scatta in avanti verso il recinto di fronte e torna indietro.
+## Attacco: si carica all'indietro, salta ad arco verso il recinto di fronte e si schianta; poi torna con un saltello.
 func attack(p: int, i: int, hit_target: bool, crit: bool) -> void:
 	var a: Node3D = creature_sprites[p][i]
 	if a == null or not is_instance_valid(a) or not is_inside_tree():
@@ -477,43 +535,68 @@ func attack(p: int, i: int, hit_target: bool, crit: bool) -> void:
 		return
 	var rest: Vector3 = a.get_meta("rest", a.position)
 	var dir := Vector3(0, 0, -1.0 if p == 0 else 1.0)
+	var land := rest + dir * (ROW_D * 0.72 if hit_target else ROW_D * 1.05)
 	var tw := a.create_tween()
-	tw.tween_property(a, "position", rest - dir * 0.3, 0.09).set_ease(Tween.EASE_OUT)
-	tw.parallel().tween_property(a, "scale", Vector3(1.15, 0.85, 1.15), 0.09)
-	tw.tween_property(a, "position", rest + dir * (ROW_D * 0.75 if hit_target else ROW_D * 1.1), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.parallel().tween_property(a, "scale", Vector3(0.9, 1.12, 0.9), 0.12)
-	tw.tween_callback(func(): hit(1 - p, i, crit) if hit_target else shake(0.45 if not crit else 0.85))
-	tw.tween_property(a, "position", rest, 0.26).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(a, "position", rest - dir * 0.3, 0.1).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(a, "scale", Vector3(1.18, 0.8, 1.18), 0.1)
+	tw.tween_method(func(t: float):
+		a.position = rest.lerp(land, t) + Vector3(0, sin(t * PI) * 0.9, 0)
+		a.rotation.x = -0.35 * sin(t * PI) * (1.0 if p == 0 else -1.0), 0.0, 1.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(a, "scale", Vector3(0.9, 1.15, 0.9), 0.2)
+	tw.tween_callback(func():
+		_ring(land, Color(Art.c("bianco"), 0.85), 1.4, 0.3)
+		if hit_target:
+			hit(1 - p, i, crit)
+		else:
+			shake(0.45 if not crit else 0.85))
+	tw.tween_property(a, "scale", Vector3(1.25, 0.75, 1.25), 0.05)
+	tw.tween_method(func(t: float):
+		a.position = land.lerp(rest, t) + Vector3(0, sin(t * PI) * 0.4, 0)
+		a.rotation.x = 0.0, 0.0, 1.0, 0.26).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.parallel().tween_property(a, "scale", Vector3.ONE, 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
-## Colpo subito: lampo bianco, tremolio, scintille. Con la Botta Atomica trema anche la telecamera
-## e le scintille sono verdi radioattive.
+## Colpo subito: vola indietro inclinandosi, lampeggia, onda d'urto e scintille. Con la Botta Atomica:
+## pausa d'impatto, colpo di telecamera, scintille verdi radioattive.
 func hit(p: int, i: int, crit: bool) -> void:
-	shake(0.85 if crit else 0.35)
+	shake(0.9 if crit else 0.35)
+	if crit:
+		_hit_stop(0.08)
+		_cam_kick()
 	var a: Node3D = creature_sprites[p][i]
 	if a == null or not is_instance_valid(a):
 		return
 	var rest: Vector3 = a.get_meta("rest", a.position)
+	var back := Vector3(0, 0, 1.0 if p == 0 else -1.0)
 	var tw := a.create_tween()
-	tw.tween_method(func(v: float): _set_param(a, "flash", v), 1.0, 0.0, 0.18)
+	tw.tween_method(func(v: float): _set_param(a, "flash", v), 1.0, 0.0, 0.22)
 	var tw2 := a.create_tween()
-	for k in 4:
-		tw2.tween_property(a, "position", rest + Vector3(0.1 * (1 if k % 2 == 0 else -1), 0, 0), 0.035)
-	tw2.tween_property(a, "position", rest, 0.05)
-	_puff(rest + Vector3(0, float(a.get_meta("height", 0.8)) * 0.6, 0), Art.c("radio_2") if crit else Art.c("bianco"), 16 if crit else 8, 0.35)
+	tw2.tween_property(a, "position", rest + back * (0.55 if crit else 0.3), 0.07).set_ease(Tween.EASE_OUT)
+	tw2.parallel().tween_property(a, "rotation:x", 0.35 * (1.0 if p == 0 else -1.0), 0.07)
+	tw2.tween_property(a, "position", rest, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw2.parallel().tween_property(a, "rotation:x", 0.0, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	var h := float(a.get_meta("height", 0.8))
+	_ring(rest, Color(Art.c("radio_1") if crit else Art.c("rosso_3"), 0.9), 2.2 if crit else 1.5, 0.35)
+	_puff(rest + Vector3(0, h * 0.6, 0), Art.c("radio_2") if crit else Art.c("bianco"), 20 if crit else 10, 0.4)
 
 
-## Scuotere: la creatura si schiaccia e si allunga, con una nuvola di Caos verde.
+## Scuotere: saltello con piroetta e anello verde di Caos.
 func wiggle(p: int, i: int) -> void:
 	var a: Node3D = creature_sprites[p][i]
 	if a == null or not is_instance_valid(a) or reduce_motion:
 		return
+	var rest: Vector3 = a.get_meta("rest", a.position)
 	var tw := a.create_tween()
-	tw.tween_property(a, "scale", Vector3(1.25, 0.8, 1.25), 0.07)
-	tw.tween_property(a, "scale", Vector3(0.85, 1.2, 0.85), 0.08)
+	tw.tween_property(a, "scale", Vector3(1.2, 0.8, 1.2), 0.07)
+	tw.tween_property(a, "position", rest + Vector3(0, 0.45, 0), 0.16).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(a, "rotation:y", TAU, 0.32).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	tw.parallel().tween_property(a, "scale", Vector3(0.9, 1.15, 0.9), 0.16)
+	tw.tween_property(a, "position", rest, 0.16).set_ease(Tween.EASE_IN)
+	tw.tween_callback(func():
+		a.rotation.y = 0.0
+		_ring(rest, Color(Art.c("radio_1"), 0.9), 1.6, 0.4))
 	tw.tween_property(a, "scale", Vector3.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_puff(a.position + Vector3(0, 0.3, 0), Art.c("radio_1"), 14, 0.45)
+	_puff(rest + Vector3(0, 0.4, 0), Art.c("radio_1"), 14, 0.45)
 
 
 ## Effetto positivo (cura, +DEF, +ATK): la creatura si gonfia un attimo e manda scintille del colore dell'effetto.
@@ -534,6 +617,10 @@ func shake(amount: float) -> void:
 	if reduce_motion:
 		return
 	_trauma = clampf(_trauma + amount, 0.0, 1.0)
+
+
+func _exit_tree() -> void:
+	Engine.time_scale = 1.0   # mai lasciare il gioco rallentato se si esce durante una pausa d'impatto
 
 
 func _ready() -> void:

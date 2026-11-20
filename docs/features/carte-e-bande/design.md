@@ -2,7 +2,7 @@
 
 **Status:** designed · **Updated:** 2026-11-20 · [GDD](../../GDD.md)
 
-Le carte sono il cuore comico e strategico del gioco. Ogni banda ha una zona della fattoria, un colore, uno stile di gioco e un umorismo suo. Ogni carta nasce dal suo effetto: si sceglie l'effetto, poi un nome, un'immagine e una battuta che lo "spieghino" (pilastro 1). Carte, numeri ed eroi sono originali (D-001). Gli effetti si scelgono dalle famiglie del genere elencate nel [catalogo](../../catalogo-abilita-card-wars.md).
+Le carte sono il cuore comico e strategico del gioco. Ogni banda ha una zona della fattoria, un colore, uno stile di gioco e un umorismo suo. Ogni carta nasce dal suo effetto: si sceglie l'effetto, poi un nome, un'immagine e una battuta che lo "spieghino" (pilastro 1). Carte, numeri ed eroi sono originali (D-001). Gli effetti si scelgono dalle famiglie del genere elencate nel [catalogo](../../catalogo-abilita-card-wars.md), con le stesse regole, tradotte nel tema (D-007).
 
 ## Rules
 1. **Formato di una carta:** nome (max 4 parole, italiano), banda, tipo (creatura / struttura / evento), rarità (comune, rara, epica, leggendaria), costo in Caos, ATK e DEF (solo creature), effetto, costo di Scuotere (solo creature), battuta di una riga, illustrazione.
@@ -66,7 +66,8 @@ Le carte sono il cuore comico e strategico del gioco. Ogni banda ha una zona del
 ## Open questions
 - [ASSUMPTION] Abbinamento banda→stile, ciclo dei vantaggi (in [partita](../partita/design.md)), budget statistiche.
 - [ASSUMPTION] Rosa dei 6 sopravvissuti e relative abilità.
-- Serve un sopravvissuto per banda (5) o 6 liberi come ora?
+- 6 sopravvissuti al lancio, espandibili (D-009); le abilità si scelgono tra le famiglie delle abilità degli eroi del genere.
 
 ## History
 - 2026-11-20: designed.
+- 2026-11-20: abilità legate al catalogo del genere (D-007); rosa di 6 confermata (D-009).

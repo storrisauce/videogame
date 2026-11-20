@@ -132,6 +132,8 @@ static func _ratto() -> Node3D:
 			var tilt := rr * 1.8
 			Kit.cyl(n, Vector3(cos(a) * rr, y, sin(a) * rr), 0.065, 0.03, caps[i % caps.size()], Vector3(sin(a) * tilt, 0, -cos(a) * tilt))
 			i += 1
+	for k in 4:   # torretta di tappi impilati, ordinata (è la sua collezione buona)
+		Kit.cyl(n, Vector3(0.26 + 0.008 * k, 0.1 + k * 0.04, 0.16), 0.06, 0.035, caps[(k + 1) % caps.size()])
 	# ratto seduto in cima
 	var by := 0.1
 	Kit.blob(n, Vector3(0, by + 0.18, -0.02), Vector3(0.34, 0.36, 0.32), fur)           # corpo
@@ -173,11 +175,17 @@ static func _gazza() -> Node3D:
 	Kit.box(n, Vector3(0, 0.25, -0.37), Vector3(0.08, 0.042, 0.3), blue, Vector3(-0.5, 0, 0))
 	Kit.blob(n, Vector3(0, 0.7, 0.04), Vector3(0.36, 0.34, 0.34), black)                 # testa
 	Kit.eyes(n, Vector3(0, 0.74, 0.18), 0.15, 0.06, Vector3(0.25, 0, 1))
-	Kit.cone(n, Vector3(0, 0.66, 0.28), 0.05, 0.16, Art.c("ferro_1"), Vector3(PI / 2.0, 0, 0))   # becco
-	# coltello rubato stretto nel becco (manico a sinistra, lama a destra)
-	Kit.box(n, Vector3(-0.1, 0.645, 0.33), Vector3(0.12, 0.04, 0.04), Art.c("legno_3"))
-	Kit.box(n, Vector3(-0.035, 0.645, 0.33), Vector3(0.02, 0.06, 0.05), Art.c("ferro_3"))   # guardia
-	Kit.box(n, Vector3(0.08, 0.65, 0.33), Vector3(0.2, 0.05, 0.012), Art.c("ferro_5"))
+	Kit.cone(n, Vector3(0, 0.66, 0.28), 0.055, 0.17, Art.c("ferro_2"), Vector3(PI / 2.0, 0, 0))   # becco
+	# coltello rubato, alzato con l'ala destra come un trofeo
+	var kn := Node3D.new()
+	kn.position = Vector3(0.27, 0.5, 0.08)
+	kn.rotation = Vector3(0.2, 0, -0.35)
+	n.add_child(kn)
+	Kit.box(kn, Vector3(0, 0, 0), Vector3(0.045, 0.13, 0.045), Art.c("legno_3"))         # manico
+	Kit.box(kn, Vector3(0, 0.075, 0), Vector3(0.08, 0.025, 0.06), Art.c("ferro_3"))     # guardia
+	Kit.box(kn, Vector3(0.008, 0.2, 0), Vector3(0.06, 0.24, 0.014), Art.c("ferro_5"))   # lama
+	Kit.cone(kn, Vector3(0.008, 0.345, 0), 0.03, 0.05, Art.c("ferro_5"))                  # punta
+	Kit.blob(n, Vector3(0.25, 0.47, 0.1), Vector3(0.1, 0.1, 0.1), Art.c("acqua_1"))      # punta dell'ala che lo stringe
 	# cartucciera a tracolla, aderente alla pancia
 	var st := Node3D.new()
 	st.position = Vector3(0, 0.38, 0.2)
@@ -195,27 +203,33 @@ static func _baracca() -> Node3D:
 	var n := Kit.root("baracca_di_copertoni", -0.3)
 	var tire := Art.c("ferro_1")
 	# pareti: pile di copertoni (fianchi e retro), ognuna un po' storta
-	var cols := [Vector3(-0.4, 0, 0.14), Vector3(0.4, 0, 0.14), Vector3(-0.4, 0, -0.22), Vector3(0.4, 0, -0.22), Vector3(0, 0, -0.32)]
+	var cols := [Vector3(-0.36, 0, 0.16), Vector3(0.36, 0, 0.16), Vector3(-0.38, 0, -0.1), Vector3(0.38, 0, -0.1), Vector3(-0.36, 0, -0.36), Vector3(0.36, 0, -0.36)]
 	for ci in cols.size():
-		for k in 6:
+		for k in 4:
 			var wob := 0.02 * sin(k * 2.3 + ci)
-			Kit.torus(n, cols[ci] + Vector3(wob, 0.05 + k * 0.1, -wob), 0.07, 0.17, tire, Vector3(0.06 * sin(k + ci), 0, 0.06 * cos(k * 1.7)))
+			Kit.torus(n, cols[ci] + Vector3(wob, 0.06 + k * 0.125, -wob), 0.07, 0.17, tire, Vector3(0.06 * sin(k + ci), 0, 0.06 * cos(k * 1.7)))
+	Kit.box(n, Vector3(0, 0.4, -0.42), Vector3(0.84, 0.8, 0.05), Art.c("legno_2"))      # parete di fondo
+	Kit.box(n, Vector3(0, 0.5, 0.16), Vector3(0.6, 0.07, 0.07), Art.c("legno_3"), Vector3(0, 0, -0.06))   # architrave
 	# porta di assi sbilenche con lo spiraglio buio
-	Kit.box(n, Vector3(-0.07, 0.28, 0.1), Vector3(0.18, 0.54, 0.04), Art.c("legno_5"), Vector3(0, 0, 0.04))
-	Kit.box(n, Vector3(0.1, 0.27, 0.1), Vector3(0.14, 0.52, 0.04), Art.c("legno_4"), Vector3(0, 0, -0.03))
-	Kit.box(n, Vector3(0.0, 0.3, 0.125), Vector3(0.38, 0.05, 0.02), Art.c("legno_3"), Vector3(0, 0, 0.25))
-	# tetto di lamiera storta, con una toppa e un copertone sopra per non farlo volare via
-	Kit.box(n, Vector3(0, 0.66, -0.04), Vector3(1.16, 0.05, 0.82), Art.c("ruggine_2"), Vector3(-0.14, 0, 0.05))
-	for k in 3:
-		Kit.box(n, Vector3(0, 0.675, -0.3 + k * 0.25), Vector3(1.16, 0.03, 0.04), Art.c("ruggine_1"), Vector3(-0.14, 0, 0.05))   # ondine della lamiera
-	Kit.box(n, Vector3(0.27, 0.69, 0.1), Vector3(0.34, 0.03, 0.26), Art.c("ferro_4"), Vector3(-0.14, 0, 0.05))
-	Kit.torus(n, Vector3(0.2, 0.74, -0.15), 0.07, 0.17, tire, Vector3(-0.14, 0, 0.05))
+	Kit.box(n, Vector3(-0.08, 0.235, 0.14), Vector3(0.2, 0.45, 0.04), Art.c("legno_5"), Vector3(0, 0, 0.04))
+	Kit.box(n, Vector3(0.1, 0.225, 0.14), Vector3(0.15, 0.43, 0.04), Art.c("legno_4"), Vector3(0, 0, -0.03))
+	Kit.box(n, Vector3(0.0, 0.26, 0.165), Vector3(0.36, 0.05, 0.02), Art.c("legno_3"), Vector3(0, 0, 0.25))
+	# tetto di lamiera a spiovente verso chi guarda, con una toppa e un copertone sopra per non farlo volare via
+	var rf := Node3D.new()
+	rf.position = Vector3(0, 0.66, -0.08)
+	rf.rotation = Vector3(0.3, 0, 0.04)
+	n.add_child(rf)
+	Kit.box(rf, Vector3.ZERO, Vector3(1.02, 0.05, 0.86), Art.c("ruggine_1"))
+	for k in 4:
+		Kit.box(rf, Vector3(0, 0.03, -0.33 + k * 0.22), Vector3(1.02, 0.03, 0.05), Art.c("ruggine_2"))   # ondine della lamiera
+	Kit.box(rf, Vector3(0.24, 0.05, 0.12), Vector3(0.32, 0.03, 0.26), Art.c("ferro_4"), Vector3(0, 0.15, 0))   # toppa
+	Kit.torus(rf, Vector3(0.22, 0.08, -0.2), 0.07, 0.17, tire)
 	# tubo della stufa e fumo grigio (niente bagliore: è solo fumo)
-	Kit.cyl(n, Vector3(-0.25, 0.86, -0.2), 0.06, 0.4, Art.c("ferro_3"))
-	Kit.cyl(n, Vector3(-0.25, 1.07, -0.2), 0.08, 0.04, Art.c("ferro_2"))
-	Kit.blob(n, Vector3(-0.23, 1.17, -0.19), Vector3(0.18, 0.14, 0.18), Art.c("ferro_4"))
-	Kit.blob(n, Vector3(-0.14, 1.29, -0.2), Vector3(0.22, 0.17, 0.2), Art.c("ferro_5"))
-	Kit.blob(n, Vector3(0.0, 1.4, -0.22), Vector3(0.26, 0.18, 0.22), Art.c("ferro_6"))
+	Kit.cyl(n, Vector3(-0.22, 0.86, -0.25), 0.06, 0.32, Art.c("ferro_3"))
+	Kit.cyl(n, Vector3(-0.22, 1.01, -0.25), 0.08, 0.04, Art.c("ferro_2"))
+	Kit.blob(n, Vector3(-0.2, 1.11, -0.24), Vector3(0.18, 0.14, 0.18), Art.c("ferro_4"))
+	Kit.blob(n, Vector3(-0.11, 1.23, -0.25), Vector3(0.22, 0.17, 0.2), Art.c("ferro_5"))
+	Kit.blob(n, Vector3(0.03, 1.34, -0.27), Vector3(0.26, 0.18, 0.22), Art.c("ferro_6"))
 	return n
 
 

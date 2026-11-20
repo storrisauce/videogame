@@ -244,7 +244,7 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
   illustrazione, nome mai tagliato, abilità quando ingrandita, attacco/vita nelle icone, cornice del terreno), eroi negli angoli,
   contatori con icona, "Fine turno" che pulsa, mano a ventaglio, registro come banner; tabellone toon (vassoio di legno sul
   tavolo di lamiera di un bunker, terreni low-poly per banda, oggetti di scena Kenney CC0, bagliore solo radioattivo);
-  creature e sopravvissuti 3D da `game/models/` (kit + ricette per gruppo); illustrazioni delle carte = foto dei modelli
+  creature e sopravvissuti 3D da `game/models/` (kit + ricette per gruppo: **tutti i 37 modelli fatti**); illustrazioni delle carte = foto dei modelli
   (`godot --path game --script res://tools/render_models.gd -- <cartella> --bake` → `assets/art3d/`); **effetti delle
   abilità**: confronto del tavolo prima/dopo ogni Scuotere/eroe/evento/struttura → raggio verde dalla fonte ai bersagli e
   numeri (danno, cura, ±DEF, ±ATK, Caos, carte).
@@ -266,7 +266,10 @@ M1 regole senza grafica ✅ → **M2 vertical slice su iPhone** (gioco fatto; ma
    Rinforzare un po' Patate e Cane. Rifare la taratura quando arriva il set di lancio.
 3. **Contenuti:** scrivere il set di lancio (~15 carte per banda + 15 Cratere) seguendo il DNA tematico e il catalogo delle famiglie;
    implementare in `abilities.gd` le famiglie nuove che servono (con test).
-4. **Arte e vita, rifiniture:** effetti delle abilità (Scuotere mostra cosa succede), carattere pixel con accenti, suoni
+4. **Rifiniture dello stile A:** tabellone un po' più grande sullo schermo; dubbi aperti sui modelli (il tacchino con la
+   forchetta, le pile di copertoni della baracca, la fascia tricolore del Trattore da confermare con l'utente); i raggi della
+   Mucca Laser rimpiccioliscono la sua foto; suoni e vibrazioni.
+5. **Arte e vita, rifiniture:** effetti delle abilità (Scuotere mostra cosa succede), carattere pixel con accenti, suoni
    (`godot-audio`), vibrazioni, schermata di fine partita illustrata, tutorial. Poi: carattere pixel con accenti (serve scaricarne uno libero, chiedere), animazioni di attacco,
    colpito e morte, numeri di danno, effetti (fumo, scintille), schermata di fine partita illustrata. Poi, se l'utente vuole,
    la prospettiva (`BoardView.PERSPECTIVE = true`, sprite ×3 vicino e ×2 lontano) o un vero 2.5D.

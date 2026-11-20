@@ -163,15 +163,17 @@ static func _trattore() -> Node3D:
 		Kit.eye(n, Vector3(sx * 0.14, 0.44, 0.47), 0.07, Vector3(0.15, 0.1, 1))
 		_brow(n, Vector3(sx * 0.14, 0.555, 0.465), 0.13, Art.c("notte"), sx * -0.25)        # sopracciglia autoritarie
 	# marmitta con fumetto radioattivo
-	Kit.cyl(n, Vector3(0.17, 0.75, 0.3), 0.035, 0.44, Art.c("ferro_2"))
-	Kit.blob(n, Vector3(0.19, 1.12, 0.3), Vector3(0.14, 0.11, 0.14), Art.c("radio_2"), Vector3.ZERO, 1.6)
-	Kit.blob(n, Vector3(0.26, 1.24, 0.28), Vector3(0.1, 0.08, 0.1), Art.c("radio_2"), Vector3.ZERO, 1.6)
+	Kit.cyl(n, Vector3(-0.17, 0.75, 0.3), 0.035, 0.44, Art.c("ferro_2"))
+	Kit.blob(n, Vector3(-0.17, 1.05, 0.3), Vector3(0.14, 0.11, 0.14), Art.c("radio_2"), Vector3.ZERO, 1.6)
+	Kit.blob(n, Vector3(-0.24, 1.16, 0.28), Vector3(0.1, 0.08, 0.1), Art.c("radio_2"), Vector3.ZERO, 1.6)
 	# fascia tricolore sulla cabina (diagonale)
 	var cols := [Art.c("verde_3"), Art.c("bianco"), Art.c("rosso_1")]
 	for i in 3:
-		var off := (i - 1) * 0.07
-		Kit.box(n, Vector3(off * 0.7, 0.6 - off * 0.7, -0.24), Vector3(0.07, 0.9, 0.44), cols[i], Vector3(0, 0, -0.8))
-	Kit.cyl(n, Vector3(-0.17, 0.72, -0.015), 0.07, 0.03, Art.c("giallo_2"), Vector3(PI / 2.0, 0, 0))   # medaglia
+		var off := (i - 1) * 0.062
+		Kit.box(n, Vector3(0, 0.71 + off, -0.02), Vector3(0.7, 0.062, 0.02), cols[i], Vector3(0, 0, -0.4))
+		Kit.box(n, Vector3(0.315, 0.62 + off, -0.24), Vector3(0.02, 0.062, 0.44), cols[i], Vector3(-0.35, 0, 0))   # giro sul fianco
+	Kit.cyl(n, Vector3(0.2, 0.6, 0.0), 0.075, 0.03, Art.c("giallo_2"), Vector3(PI / 2.0, 0, 0))   # medaglia
+	Kit.cyl(n, Vector3(0.2, 0.6, 0.016), 0.04, 0.01, Art.c("arancio_1"), Vector3(PI / 2.0, 0, 0))
 	return n
 
 
@@ -278,10 +280,10 @@ static func _speaker() -> Node3D:
 	Kit.blob(n, Vector3(0.1, 1.08, 0.12), Vector3(0.2, 0.1, 0.12), hair, Vector3(0, 0, -0.3))  # ciuffo
 	Kit.eyes(n, Vector3(0, 0.93, 0.2), 0.17, 0.055, Vector3(0.1, 0.05, 1))
 	for sx in [-1.0, 1.0]:
-		_brow(n, Vector3(sx * 0.085, 1.01, 0.21), 0.09, hair, sx * 0.3)                       # sopracciglia alzate
+		_brow(n, Vector3(sx * 0.085, 1.03, 0.21), 0.09, hair, sx * -0.3)                       # sopracciglia alzate
 	Kit.blob(n, Vector3(0, 0.86, 0.25), Vector3(0.09, 0.08, 0.08), Art.c("pelle_1"))        # naso
-	Kit.blob(n, Vector3(0, 0.74, 0.2), Vector3(0.14, 0.1, 0.06), Art.c("legno_0"))         # bocca spalancata
-	Kit.blob(n, Vector3(0, 0.72, 0.215), Vector3(0.08, 0.04, 0.04), Art.c("rosso_3"))       # lingua
+	Kit.blob(n, Vector3(0, 0.71, 0.19), Vector3(0.15, 0.12, 0.08), Art.c("legno_0"))         # bocca spalancata
+	Kit.blob(n, Vector3(0, 0.68, 0.215), Vector3(0.08, 0.04, 0.04), Art.c("rosso_3"))       # lingua
 	for sx in [-1.0, 1.0]:
 		Kit.blob(n, Vector3(sx * 0.08, 0.8, 0.24), Vector3(0.15, 0.06, 0.07), hair, Vector3(0, 0, sx * -0.35))   # baffoni
 	# cuffie

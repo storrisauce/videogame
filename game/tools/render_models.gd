@@ -5,7 +5,7 @@ extends SceneTree
 ## Senza id: tutte le carte e tutti i sopravvissuti. Con --bake salva anche in res://assets/art3d/<id>.png
 ## (le illustrazioni usate dal gioco). Serve una finestra (non --headless): la grafica deve disegnare davvero.
 
-const SIZE := 256
+const SIZE := 320
 
 
 func _initialize() -> void:
@@ -66,6 +66,10 @@ func _initialize() -> void:
 			await process_frame
 		await RenderingServer.frame_post_draw
 		var img := vp.get_texture().get_image()
+		# ritaglio attorno al modello (con un piccolo margine), così nelle carte appare grande
+		var used := img.get_used_rect().grow(6).intersection(Rect2i(Vector2i.ZERO, img.get_size()))
+		if used.size.x > 8 and used.size.y > 8:
+			img = img.get_region(used)
 		img.save_png(out.path_join(id + ".png"))
 		if bake:
 			img.save_png(ProjectSettings.globalize_path("res://assets/art3d/%s.png" % id))

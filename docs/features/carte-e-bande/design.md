@@ -26,12 +26,12 @@ Le carte sono il cuore comico e strategico del gioco. Ogni banda ha una zona del
 
 | Sopravvissuto | Abilità | Ricarica [ASSUMPTION] |
 |---|---|---|
-| La Nonna col Fucile | **"Fuori dal mio orto!"**: 3 danni a una creatura avversaria | 3 turni |
-| Contadino Gianni in Mutande | **"Oggi è lunedì?"**: +2 Caos questo turno | 3 turni |
-| Il Trattore Senziente | **"Ordinanza del sindaco"**: +2 DEF a tutte le tue creature | 4 turni |
-| Il Veterinario Terrorizzato | **"Stai fermo, ti prego"**: cura 6 a tutte le tue creature | 2 turni |
-| Il Cane da Pastore che Ha Visto Troppo | **"Raduno."**: le creature di una banda costano 2 in meno questo turno | 2 turni |
-| Lo Speaker della Radio | **"Notizia dell'ultima ora"**: peschi 2 carte | 3 turni |
+| **Gertrude**, la Nonna col Fucile | **"Fuori dal mio orto!"**: 3 danni a una creatura avversaria | 3 turni |
+| **Gianni**, il Contadino in Mutande | **"Oggi è lunedì?"**: +2 Caos questo turno | 3 turni |
+| **Ermenegildo**, il Trattore Senziente | **"Ordinanza del sindaco"**: +2 DEF a tutte le tue creature | 4 turni |
+| **Dottor Tremolo**, il Veterinario Terrorizzato | **"Stai fermo, ti prego"**: cura 6 a tutte le tue creature | 2 turni |
+| **Brigadiere**, il Cane che Ha Visto Troppo | **"Raduno."**: le creature di una banda costano 2 in meno questo turno | 2 turni |
+| **Ruggero**, lo Speaker della Radio | **"Notizia dell'ultima ora"**: peschi 2 carte | 3 turni |
 
 ## Esempi di carte (calibro)
 

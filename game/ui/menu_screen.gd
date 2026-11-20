@@ -218,7 +218,7 @@ func _cycle_band(k: int) -> void:
 
 func _update() -> void:
 	var h: Dictionary = db.heroes[hero_ids[hero_index]]
-	hero_name.text = h["name"]
+	hero_name.text = "%s\n%s" % [h["name"], h.get("epithet", "")]
 	hero_desc.text = Abilities.describe_hero(h)
 	hero_portrait.art_id = h["id"]
 	hero_portrait.art_hero = true

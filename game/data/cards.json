@@ -70,11 +70,11 @@
      "ability": {"family": "DamageEveryone", "v1": 3}, "flavor": "Prendete l'ombrello. Anzi, no."}
   ],
   "heroes": [
-    {"id": "nonna", "name": "La Nonna col Fucile", "ability_name": "Fuori dal mio orto!", "family": "AttackCreature", "v1": 3, "cooldown": 3},
-    {"id": "gianni", "name": "Contadino Gianni in Mutande", "ability_name": "Oggi è lunedì?", "family": "GainActionPointsLeader", "v1": 2, "cooldown": 3},
-    {"id": "trattore", "name": "Il Trattore Senziente", "ability_name": "Ordinanza del sindaco", "family": "DEFBonusAllCreaturesLeader", "v1": 2, "cooldown": 4},
-    {"id": "veterinario", "name": "Il Veterinario Terrorizzato", "ability_name": "Stai fermo, ti prego", "family": "HealAllCreaturesLeader", "v1": 6, "cooldown": 2},
-    {"id": "cane", "name": "Il Cane da Pastore che Ha Visto Troppo", "ability_name": "Raduno.", "family": "ReduceFactionCreatureCostLeader", "v1": 2, "cooldown": 2},
-    {"id": "speaker", "name": "Lo Speaker della Radio", "ability_name": "Notizia dell'ultima ora", "family": "DrawCardsLeader", "v1": 2, "cooldown": 3}
+    {"id": "nonna", "name": "Gertrude", "epithet": "la Nonna col Fucile", "ability_name": "Fuori dal mio orto!", "family": "AttackCreature", "v1": 3, "cooldown": 3},
+    {"id": "gianni", "name": "Gianni", "epithet": "il Contadino in Mutande", "ability_name": "Oggi è lunedì?", "family": "GainActionPointsLeader", "v1": 2, "cooldown": 3},
+    {"id": "trattore", "name": "Ermenegildo", "epithet": "il Trattore Senziente", "ability_name": "Ordinanza del sindaco", "family": "DEFBonusAllCreaturesLeader", "v1": 2, "cooldown": 4},
+    {"id": "veterinario", "name": "Dottor Tremolo", "epithet": "il Veterinario Terrorizzato", "ability_name": "Stai fermo, ti prego", "family": "HealAllCreaturesLeader", "v1": 6, "cooldown": 2},
+    {"id": "cane", "name": "Brigadiere", "epithet": "il Cane che Ha Visto Troppo", "ability_name": "Raduno.", "family": "ReduceFactionCreatureCostLeader", "v1": 2, "cooldown": 2},
+    {"id": "speaker", "name": "Ruggero", "epithet": "lo Speaker della Radio", "ability_name": "Notizia dell'ultima ora", "family": "DrawCardsLeader", "v1": 2, "cooldown": 3}
   ]
 }

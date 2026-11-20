@@ -1,6 +1,6 @@
 # Fattoria Nucleare — Game Design Document
 
-**Version:** 0.8 · **Updated:** 2026-11-20 · [Features](#feature-index) · [Decisions](#decisions) · [Change log](#change-log)
+**Version:** 0.9 · **Updated:** 2026-11-20 · [Features](#feature-index) · [Decisions](#decisions) · [Change log](#change-log)
 
 ## Summary
 Gioco di carte a turni per telefono. Ogni giocatore schiera animali e ortaggi mutanti in **4 recinti** davanti a quelli avversari.
@@ -88,6 +88,7 @@ pesca → spendi Caos (gioca carte, scuoti creature) → attacca col mirino → 
 | D-014 | 2026-11-20 | Disposizione "da console": ritratti e contatori in due consolle laterali, tavolo-altopiano al centro, mano su un vassoio, creature in piedi nei recinti con ATK e Vita sopra la testa | Tavolo a carte piatte (prima versione) | Richiesta dell'utente, sul modello della disposizione tipica del genere; grafica tutta nostra. Prospettiva leggera pronta ma spenta finché tutto il 2D non è finito | schermo-di-gioco |
 | D-015 | 2026-11-20 | Tavolo in **3D vero** (altopiano inclinato, telecamera che si adatta allo schermo) con figure pixel art in piedi; interfaccia 2D sopra; animazioni di arrivo, attacco, colpo, morte, numeri di danno, scosse; menu rifatto; opzione "Meno movimento" | Restare piatti (D-014); falsa prospettiva 2D | Richiesta dell'utente ("dare tridimensionalità e vita"), regole delle skill game-feel, game-ui-ux, animate | schermo-di-gioco |
 | D-016 | 2026-11-20 | **Strada A**: tutto cartoon low-poly 3D con ombre a gradini e contorno nero (tavolo, creature, sopravvissuti) e interfaccia cartoon (Lilita One + Nunito, contorni spessi, lamiera e legno). La pixel art va in pensione; restano palette e regole di proporzione | B: 3D con pixel art e interfaccia pixel (Kenney Pixel UI Pack) | Scelta dell'utente sulla proposta [Stile Fattoria Nucleare](https://claude.ai/artifact/XEnCiiNFvFC85sW1pHutUc); pixel accanto al 3D liscio sarebbe stato "due mondi" | tutto |
+| D-017 | 2026-11-20 | Carte in stile C "targa di lamiera" (proposta https://claude.ai/artifact/GMV1gWEBoAWpuAFsouyKeE); sopravvissuti con nome proprio e soprannome (Gertrude, Gianni, Ermenegildo, Dottor Tremolo, Brigadiere, Ruggero); oggetti nucleari sul tavolo | Stili A e B; nomi solo descrittivi | Scelta dell'utente; i nomi rendono i personaggi meno anonimi | carte-e-bande, schermo-di-gioco |
 
 ## Open questions
 - **Assumptions to confirm:** tutti i numeri segnati `[ASSUMPTION]` nelle note delle feature; l'abbinamento banda→stile di gioco; i 6 sopravvissuti come rosa di lancio.
@@ -96,6 +97,7 @@ pesca → spendi Caos (gioca carte, scuoti creature) → attacca col mirino → 
 
 ## Change log
 **0.1 (2026-11-20):** prima stesura; partita, carte e bande, schermo di gioco progettati; D-001…D-005.
+**0.9 (2026-11-20):** 3D nitido a piena risoluzione, tabellone più grande, oggetti nucleari sul tavolo, carte in stile C, nomi dei sopravvissuti; D-017.
 **0.8 (2026-11-20):** stile cartoon 3D (D-016): interfaccia, carte, mano a ventaglio, tabellone sul tavolo del bunker, modelli 3D, effetti delle abilità.
 **0.7 (2026-11-20):** tavolo 3D, animazioni e menu nuovo ([schermo di gioco](features/schermo-di-gioco/design.md)); D-015.
 **0.6 (2026-11-20):** pixel art in tutto il gioco: 31 carte, 6 sopravvissuti, terreni, tavolo e interfaccia ([design system](art/design-system.md)); D-013, D-014.

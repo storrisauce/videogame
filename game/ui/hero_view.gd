@@ -72,9 +72,11 @@ func _draw() -> void:
 		hl.set_corner_radius_all(16)
 		draw_style_box(hl, por.grow(3))
 	# nome
-	Ui.fit_text(self, Rect2(0, por.end.y + 2, w, 18), String(ps.hero["name"]), Ui.SMALL, Art.c("legno_9"), 9)
+	# nome proprio grande, soprannome piccolo sotto
+	Ui.fit_text(self, Rect2(0, por.end.y + 1, w, 20), String(ps.hero["name"]), Ui.MID - 2, Art.c("giallo_2"), 11)
+	Ui.fit_text(self, Rect2(0, por.end.y + 19, w, 13), String(ps.hero.get("epithet", "")), 11, Art.c("legno_9"), 8)
 	# Pazienza: cuore + numero grande + barra
-	var y := por.end.y + 22
+	var y := por.end.y + 34
 	Ui.heart(self, Vector2(14, y + 14), 26, Art.c("rosso_2"))
 	Ui.text(self, Vector2(30, y + 24), str(ps.hp), Ui.BIG, Art.c("bianco"))
 	Ui.text(self, Vector2(30 + Ui.display().get_string_size(str(ps.hp), 0, -1, Ui.BIG).x + 3, y + 24), "/%d" % ps.max_hp, Ui.SMALL, Art.c("legno_9"))

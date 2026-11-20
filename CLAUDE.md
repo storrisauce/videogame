@@ -128,7 +128,7 @@ Riassumi lo stato in 3 righe e proponi le opzioni di §9 ("Prossimi passi"), con
 | Percorso | Cosa contiene |
 |---|---|
 | `CLAUDE.md` | questa memoria |
-| `docs/GDD.md` | il gioco in una pagina: pilastri, ciclo, **indice delle funzionalità con stati**, tappe M1–M5, **decisioni D-001…D-016**, domande aperte, storico |
+| `docs/GDD.md` | il gioco in una pagina: pilastri, ciclo, **indice delle funzionalità con stati**, tappe M1–M5, **decisioni D-001…D-017**, domande aperte, storico |
 | `docs/features/partita/` | regole e numeri della partita (`design.md`), codice (`implementation.md`), test (`testing.md`) |
 | `docs/features/carte-e-bande/design.md` | bande, sopravvissuti, formato delle carte, budget statistiche, carte d'esempio |
 | `docs/features/schermo-di-gioco/` | layout orizzontale iPhone, gesti, misure; implementazione e test |
@@ -222,7 +222,7 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
 ## 7. Stato (2026-11-20)
 - ✅ **Analisi** del gioco originale dall'APK: regole, formule, IA, meta, 239 famiglie di abilità.
 - ✅ **GDD 0.4** + note: `partita` (implemented), `schermo-di-gioco` (implemented, grafica provvisoria), `ia-avversaria`
-  (implemented), `carte-e-bande` (designed). Decisioni D-001…D-016.
+  (implemented), `carte-e-bande` (designed). Decisioni D-001…D-017.
 - ✅ **Gioco giocabile** su computer (e pronto per l'esportazione):
   - menu: sopravvissuto, 2 bande per il mazzo, mirino automatico, statistiche e scatolette;
   - partita contro l'IA in orizzontale: tocca una carta e poi un recinto per giocarla; tocca una tua creatura per **Scuoterla**;
@@ -248,6 +248,11 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
   (`godot --path game --script res://tools/render_models.gd -- <cartella> --bake` → `assets/art3d/`); **effetti delle
   abilità**: confronto del tavolo prima/dopo ogni Scuotere/eroe/evento/struttura → raggio verde dalla fonte ai bersagli e
   numeri (danno, cura, ±DEF, ±ATK, Caos, carte).
+- ✅ **D-017:** carte in stile C "targa di lamiera" (illustrazione ~2/3, nome su targhetta del colore della banda, gettoni
+  di attacco e vita, testo dell'abilità che si adatta quando la carta è scelta), sopravvissuti con nome e soprannome
+  (Gertrude, Gianni, Ermenegildo, Dottor Tremolo, Brigadiere, Ruggero: in `data/cards.json`, campi `name` ed `epithet`),
+  oggetti nucleari sul tavolo (barile col trifoglio, torre di raffreddamento, contatore Geiger, barre di uranio, fungo
+  mutante, cartello), 3D disegnato direttamente nella finestra a piena risoluzione con MSAA 4x + FXAA.
 - ✅ **Tavolo 3D e animazioni** (D-015): `game/ui/board_3d.gd` (altopiano 3D, Sprite3D pixel art, telecamera che si adatta,
   arrivi/attacchi/colpi/morti, scossa a trauma), `fx_layer.gd` (numeri di danno, carta che vola), `juice.gd` (pressione dei
   pulsanti, entrate sfalsate), menu rifatto, scheda carta compatta, opzione "Meno movimento". Controllo animazioni:

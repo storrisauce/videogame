@@ -209,12 +209,12 @@ func _layout() -> void:
 		return
 	# tabellone 3D dietro a tutto; il campo occupa i 2/3 superiori tra i due ritratti
 	var y_hand := roundf(H * (1.0 - HAND_FRAC))
-	var hero_w := clampf(W * 0.13, 88.0, 120.0)
+	var hero_w := clampf(W * 0.118, 84.0, 108.0)
 	board3d.position = Vector2.ZERO
 	board3d.size = Vector2(W, H)
 	# il tabellone usa tutta la larghezza: solo il fondo (stretto, in prospettiva) passa tra i due ritratti
-	board3d.focus = Rect2(6, 2, W - 12, y_hand + 4)
-	var hh := minf(hero_w + 96.0, y_hand - 6)
+	board3d.focus = Rect2(4, 0, W - 8, y_hand + 16)
+	var hh := minf(hero_w + 112.0, y_hand - 6)
 	board3d.avoid = [Rect2(0, 0, hero_w + 16, hh + 52), Rect2(W - hero_w - 16, 0, hero_w + 16, hh + 52)]
 	board.y_near = 0.0
 	board.panels = []
@@ -222,7 +222,7 @@ func _layout() -> void:
 	_place_lanes()
 	_place_lanes.call_deferred()
 	# sopravvissuti negli angoli in alto
-	var hero_h := minf(hero_w + 96.0, y_hand - 6)
+	var hero_h := minf(hero_w + 112.0, y_hand - 6)
 	hero_views[HUMAN].position = Vector2(8, 6)
 	hero_views[HUMAN].size = Vector2(hero_w, hero_h)
 	hero_views[AI].position = Vector2(W - hero_w - 8, 6)
@@ -235,7 +235,7 @@ func _layout() -> void:
 		chip.size = Vector2(oc, oc + 12)
 	# terzo inferiore: mazzo e Letamaio a sinistra, mano al centro, Caos e Fine turno a destra
 	var bottom := H - y_hand
-	var side_w := clampf(W * 0.2, 130.0, 190.0)
+	var side_w := clampf(W * 0.17, 118.0, 170.0)
 	var chip_s := minf(bottom - 16, side_w / 2.0 - 6)
 	my_deck.position = Vector2(8, H - chip_s - 8)
 	my_deck.size = Vector2(chip_s, chip_s)
@@ -243,10 +243,11 @@ func _layout() -> void:
 	my_discard.size = Vector2(chip_s, chip_s)
 	menu_button.position = Vector2(8, y_hand - 8 - 44) if y_hand > hero_h + 60 else Vector2(8, hero_h + 10)
 	menu_button.size = Vector2(44, 44)
-	my_caos.position = Vector2(W - side_w - 6, H - chip_s - 8)
-	my_caos.size = Vector2(chip_s * 0.8, chip_s)
-	end_button.position = Vector2(W - side_w - 6 + chip_s * 0.8 + 4, H - bottom + 14)
-	end_button.size = Vector2(side_w - chip_s * 0.8 - 6, bottom - 22)
+	# Caos e Fine turno: il gettone del Caos grande, il bottone evidente ma non più grande della mano
+	my_caos.position = Vector2(W - side_w - 6, H - bottom + 6)
+	my_caos.size = Vector2(side_w * 0.42, bottom - 12)
+	end_button.position = Vector2(W - side_w * 0.58 - 4, H - bottom + 18)
+	end_button.size = Vector2(side_w * 0.58 - 4, bottom - 30)
 	hand_layer.position = Vector2(side_w + 16, y_hand)
 	hand_layer.size = Vector2(W - 2 * side_w - 32, bottom)
 	var mid_y := board3d.project(Vector3(0, 0, 0)).y if board3d.has_view() else y_hand * 0.45
@@ -292,8 +293,8 @@ func _layout_hand() -> void:
 		return
 	var mid := (n - 1) / 2.0
 	var arc := 1.4
-	var ch := minf(hand_layer.size.y - 18.0 - mid * mid * arc, 150.0)   # resta spazio per la rotazione del ventaglio
-	var cw := roundf(ch * 0.72)
+	var ch := minf(hand_layer.size.y - 20.0 - mid * mid * arc, 160.0)   # resta spazio per la rotazione del ventaglio
+	var cw := roundf(ch * 0.74)
 	var step := minf(cw * 0.94, (hand_layer.size.x - cw) / maxf(n - 1, 1))
 	var total := step * (n - 1) + cw
 	var start := (hand_layer.size.x - total) / 2.0
@@ -304,7 +305,7 @@ func _layout_hand() -> void:
 		var target_rot := deg_to_rad(d * 3.5)
 		var target_size := Vector2(cw, ch)
 		if i == selected_hand:
-			target_size = Vector2(cw * 1.45, ch * 1.45)
+			target_size = Vector2(cw * 1.6, ch * 1.6)
 			target_pos = Vector2(start + i * step + cw / 2.0 - target_size.x / 2.0, hand_layer.size.y - target_size.y - 8)
 			target_pos.x = clampf(target_pos.x, -hand_layer.position.x + 4, hand_layer.size.x + 40 - target_size.x)
 			target_rot = 0.0
@@ -636,7 +637,7 @@ func _on_hero_tapped(p: int) -> void:
 	if p == HUMAN and m.can_use_hero(HUMAN):
 		buttons.append(["Usa abilità", _use_hero])
 	selected_hand = -1
-	_show_detail("%s\n%s" % [h["name"], Abilities.describe_hero(h)], buttons)
+	_show_detail("%s, %s\n%s" % [h["name"], h.get("epithet", ""), Abilities.describe_hero(h)], buttons)
 	refresh()
 
 

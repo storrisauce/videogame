@@ -173,6 +173,20 @@ uguale nel GDD e nel suo `design.md`. Ogni numero ha una sola casa: il `design.m
 `game/data/*.json`. Dopo ogni modifica lancia il controllo (§4.3) e registra le decisioni nella tabella del GDD.
 
 ### 6.3 Esportare per iPhone (sul Mac)
+**Via rapida da terminale (provata il 2026-11-20, iPhone 16e, Personal Team gratuito: l'app scade dopo 7 giorni):**
+template 4.7.2 già in `~/Library/Application Support/Godot/export_templates/4.7.2.stable`; il Team ID **non** va nel repo
+(si mette nel preset solo per l'esportazione e poi si toglie). Bundle ID: `it.storri.fattorianucleare`.
+```bash
+cd game && sed -i '' 's/app_store_team_id=""/app_store_team_id="<TEAM_ID>"/' export_presets.cfg
+godot --headless --export-debug "iOS" ../build/ios/FattoriaNucleare.xcodeproj
+sed -i '' 's/app_store_team_id="<TEAM_ID>"/app_store_team_id=""/' export_presets.cfg
+cd ../build/ios && xcodebuild -project FattoriaNucleare.xcodeproj -scheme FattoriaNucleare -configuration Debug -destination "id=<UDID>" -derivedDataPath dd -allowProvisioningUpdates -allowProvisioningDeviceRegistration DEVELOPMENT_TEAM=<TEAM_ID> CODE_SIGN_STYLE=Automatic build
+xcrun devicectl device install app --device <UDID> dd/Build/Products/Debug-iphoneos/FattoriaNucleare.app
+xcrun devicectl device process launch --device <UDID> it.storri.fattorianucleare
+```
+Team ID: `security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject` (campo OU). UDID: `xcrun devicectl list devices`.
+Icona provvisoria: `godot --headless --path game --script res://tools/make_icon.gd -- <id_creatura>` → `game/assets/icon.png`.
+
 1. Godot → *Editor → Manage Export Templates* → scarica i template della **stessa versione** (4.7.x).
 2. *Project → Export* → preset **iOS**: imposta **App Store Team ID** (dal tuo account Apple Developer) e cambia il
    **Bundle Identifier** provvisorio `it.fattorianucleare.gioco` (D-011) con uno tuo.
@@ -283,6 +297,7 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
 - ✅ **D-021, suoni e vibrazioni:** 32 effetti e 2 musiche originali sintetizzati da `art/audio/gen_audio.py`
   (in `game/assets/audio/`), suonati da `ui/sfx.gd` (`Sfx.play`, `Sfx.music`, `Sfx.buzz`, bus Musica/Effetti con limitatore);
   impostazioni Musica, Effetti sonori, Vibrazione nella rotellina della home (salvate nel profilo). Mancano i versi degli animali.
+- ✅ **Prima prova su iPhone reale** (2026-11-20): esportata, compilata e installata da terminale (§6.3).
 - ❌ Non ancora fatto: trascinamento delle carte (D-010), tutorial, set di lancio (~90 carte),
   costruzione libera del mazzo, campagna, casse/collezione, Supabase, build su iPhone reale, Android.
 

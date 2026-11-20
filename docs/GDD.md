@@ -1,6 +1,6 @@
 # Fattoria Nucleare — Game Design Document
 
-**Version:** 0.4 · **Updated:** 2026-11-20 · [Features](#feature-index) · [Decisions](#decisions) · [Change log](#change-log)
+**Version:** 0.5 · **Updated:** 2026-11-20 · [Features](#feature-index) · [Decisions](#decisions) · [Change log](#change-log)
 
 ## Summary
 Gioco di carte a turni per telefono. Ogni giocatore schiera animali e ortaggi mutanti in **4 recinti** davanti a quelli avversari.
@@ -83,6 +83,7 @@ pesca → spendi Caos (gioca carte, scuoti creature) → attacca col mirino → 
 | D-009 | 2026-11-20 | 6 sopravvissuti al lancio, espandibili | Copiare la rosa dell'originale | La rosa originale non è nell'APK (sta sul server) e resta comunque fuori da D-001 | carte-e-bande |
 | D-010 | 2026-11-20 | Giocare una carta toccandola e poi toccando il recinto | Trascinare (come nel design) | Più semplice e affidabile da far funzionare subito; il trascinamento si aggiunge sopra in seguito | schermo-di-gioco |
 | D-011 | 2026-11-20 | Identificativo dell'app provvisorio `it.fattorianucleare.gioco` | — | Serve per esportare; l'utente lo cambia col suo dominio o team Apple prima di pubblicare | export |
+| D-012 | 2026-11-20 | Chi gioca per secondo ha +1 Caos nel suo primo turno; prima taratura di sopravvissuti e carte | Lasciare il vantaggio del primo (D-005); più Caos iniziale o più Pazienza per tutti | Nelle simulazioni chi inizia vinceva il 65%; Caos iniziale e Pazienza non lo cambiavano. Eccezione a D-005 decisa dall'utente | partita, carte-e-bande |
 
 ## Open questions
 - **Assumptions to confirm:** tutti i numeri segnati `[ASSUMPTION]` nelle note delle feature; l'abbinamento banda→stile di gioco; i 6 sopravvissuti come rosa di lancio.
@@ -91,6 +92,7 @@ pesca → spendi Caos (gioca carte, scuoti creature) → attacca col mirino → 
 
 ## Change log
 **0.1 (2026-11-20):** prima stesura; partita, carte e bande, schermo di gioco progettati; D-001…D-005.
+**0.5 (2026-11-20):** prima taratura dei numeri con le simulazioni ([partita](features/partita/design.md)); D-012.
 **0.4 (2026-11-20):** gioco giocabile: menu, partita orizzontale con mirino, fine partita, rialzarsi, profilo locale, preset di esportazione iOS/Android; [IA avversaria](features/ia-avversaria/design.md) documentata; D-010, D-011.
 **0.3 (2026-11-20):** M1: motore delle regole, IA e test in `game/` ([partita](features/partita/implementation.md)).
 **0.2 (2026-11-20):** schermo solo orizzontale ([schermo di gioco](features/schermo-di-gioco/design.md)); D-006…D-009.

@@ -82,7 +82,8 @@ func test_caos_growth() -> bool:
 	var f := m.first_player
 	var s := 1 - f
 	check(m.players[f].caos, 2, "Caos iniziale del primo")
-	check(m.players[s].caos, 2, "Caos iniziale del secondo")
+	check(m.players[s].caos, 2 + db.rule_i("caos_bonus_secondo"), "Caos iniziale del secondo (+ bonus)")
+	check(db.rule_i("caos_bonus_secondo"), 1, "bonus del secondo = 1 (D-012)")
 	m.end_turn(f)
 	check(m.players[f].caos, 3, "primo: +1 dopo il suo turno")
 	m.end_turn(s)
@@ -197,7 +198,7 @@ func test_death_and_on_death() -> bool:
 	var m := new_match()
 	m.players[0].turns_taken = 1
 	put(m, 0, 1, "tacchino_furioso")                 # ATK 6 nel recinto 1
-	put(m, 1, 1, "germano_di_vedetta")               # stagno DEF 4, recinto 1 avversario (stagno)
+	put(m, 1, 1, "anatra_col_coltello")              # stagno DEF 3, recinto 1 avversario (stagno)
 	put(m, 1, 1, "silos_instabile")                  # quando muore: 3 alla Pazienza del giocatore 0
 	var hp0 := m.players[0].hp
 	m.combat(0)
@@ -276,7 +277,7 @@ func test_hero_cooldown() -> bool:
 	var m := new_match()
 	var e := put(m, 1, 0, "rapa_rancorosa")    # DEF 5
 	check(m.use_hero(0, {"p": 1, "lane": 0}), true, "Nonna: spara")
-	check(e.damage, 4, "4 danni")
+	check(e.damage, int(db.heroes["nonna"]["v1"]), "danni pari al valore della Nonna")
 	check(m.can_use_hero(0), false, "in ricarica")
 	for i in 3:
 		m.end_turn(m.current)

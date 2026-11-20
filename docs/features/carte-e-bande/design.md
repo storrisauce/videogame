@@ -26,11 +26,11 @@ Le carte sono il cuore comico e strategico del gioco. Ogni banda ha una zona del
 
 | Sopravvissuto | Abilità | Ricarica [ASSUMPTION] |
 |---|---|---|
-| La Nonna col Fucile | **"Fuori dal mio orto!"**: 4 danni a una creatura avversaria | 3 turni |
+| La Nonna col Fucile | **"Fuori dal mio orto!"**: 3 danni a una creatura avversaria | 3 turni |
 | Contadino Gianni in Mutande | **"Oggi è lunedì?"**: +2 Caos questo turno | 3 turni |
 | Il Trattore Senziente | **"Ordinanza del sindaco"**: +2 DEF a tutte le tue creature | 4 turni |
-| Il Veterinario Terrorizzato | **"Stai fermo, ti prego"**: cura 3 a tutte le tue creature | 3 turni |
-| Il Cane da Pastore che Ha Visto Troppo | **"Raduno."**: le creature di una banda costano 1 in meno questo turno | 2 turni |
+| Il Veterinario Terrorizzato | **"Stai fermo, ti prego"**: cura 6 a tutte le tue creature | 2 turni |
+| Il Cane da Pastore che Ha Visto Troppo | **"Raduno."**: le creature di una banda costano 2 in meno questo turno | 2 turni |
 | Lo Speaker della Radio | **"Notizia dell'ultima ora"**: peschi 2 carte | 3 turni |
 
 ## Esempi di carte (calibro)
@@ -45,8 +45,8 @@ Le carte sono il cuore comico e strategico del gioco. Ogni banda ha una zona del
 | Oca Esattrice | Stagno · creatura | 4 | 3/5 | Scuoti (2): rimanda in mano la creatura di fronte | "Le tasse si pagano anche dopo la fine del mondo." |
 | Patata Depressa | Patate · creatura | 1 | 1/4 | Scuoti (1): cura 2 alle creature adiacenti | "Sta male lei, così stanno bene gli altri." |
 | Carota Urlatrice | Patate · creatura | 3 | 2/6 | Scuoti (1): +1 DEF per ogni tua zona Patate | "Più ne pianti, più urlano." |
-| Procione con lo Scolapasta | Discarica · creatura | 2 | 2/3 | Scuoti (1): peschi 1 carta | "Ha trovato un elmo. E una lasagna del '93." |
-| Capra Baratto | Discarica · creatura | 3 | 2/5 | Scuoti (0): sacrifica una tua struttura, +2 Caos | "Ti do questa sedia per mezza scatoletta." |
+| Procione con lo Scolapasta | Discarica · creatura | 2 | 2/4 | Scuoti (1): peschi 1 carta | "Ha trovato un elmo. E una lasagna del '93." |
+| Capra Baratto | Discarica · creatura | 3 | 2/5 | Scuoti (0): sacrifica una tua struttura, +3 Caos | "Ti do questa sedia per mezza scatoletta." |
 | Rana a Due Teste | Cratere · creatura | 3 | 3/3 | Scuoti (2): scambia ATK e DEF di una creatura | "Le due teste non si parlano." |
 | Nano da Giardino Sacro | Cratere · struttura | 2 | — | La creatura davanti ha +2 ATK | "Pregatelo. Lui vi guarda. Sempre." |
 | Silos Instabile | Pollaio · struttura | 3 | — | Quando la creatura davanti muore, 3 danni alla Pazienza avversaria | "Vietato fumare. Vietato respirare forte." |

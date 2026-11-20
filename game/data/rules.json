@@ -4,6 +4,7 @@
   "starting_hand": 5,
   "max_hand": 7,
   "caos_iniziale": 2,
+  "caos_bonus_secondo": 1,
   "caos_max": 8,
   "hero_hp_base": 25,
   "hero_hp_per_level": 5,

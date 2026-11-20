@@ -12,6 +12,8 @@ func _initialize() -> void:
 	var seed_value := int(args[1]) if args.size() > 1 else 1
 	var crit := float(args[2]) if args.size() > 2 else 0.0
 	var db := CardDB.load_default()
+	if args.size() > 3:
+		_apply_overrides(db, args[3])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var hero_ids: Array = db.heroes.keys()
@@ -69,6 +71,29 @@ func _initialize() -> void:
 	for h in hero_ids:
 		print("  %-12s %5.1f%%  su %d" % [h, 100.0 * int(hero_wins.get(h, 0)) / maxi(int(hero_games.get(h, 0)), 1), int(hero_games.get(h, 0))])
 	quit(0)
+
+
+## Prove di taratura senza toccare i JSON. Formato: "chiave=valore;chiave=valore".
+## Chiavi: regola (caos_iniziale), hero.<id>.<campo> (hero.nonna.v1), card.<id>.<campo> (card.ratto_accumulatore.atk)
+## o card.<id>.ability.<campo> (card.capra_baratto.ability.v1).
+func _apply_overrides(db: CardDB, spec: String) -> void:
+	for pair in spec.split(";", false):
+		var kv := pair.split("=")
+		var path := kv[0].strip_edges().split(".")
+		var value: Variant = float(kv[1]) if kv[1].is_valid_float() else kv[1]
+		var target: Dictionary
+		if path[0] == "hero":
+			target = db.heroes[path[1]]
+			path = path.slice(2)
+		elif path[0] == "card":
+			target = db.cards[path[1]]
+			path = path.slice(2)
+		else:
+			target = db.rules
+		for i in path.size() - 1:
+			target = target[path[i]]
+		target[path[-1]] = value
+	print("Varianti: %s" % spec)
 
 
 func _two_bands(rng: RandomNumberGenerator) -> Array:

@@ -47,6 +47,8 @@ func start() -> void:
 	for p in 2:
 		_shuffle(players[p].deck)
 		players[p].caos = round_caos
+		if p != first_player:
+			players[p].caos += db.rule_i("caos_bonus_secondo")
 		for i in db.rule_i("starting_hand"):
 			draw(p)
 	current = first_player

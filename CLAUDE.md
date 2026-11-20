@@ -2,7 +2,7 @@
 
 Memoria del progetto. **Leggila tutta a inizio sessione**, poi fai i passi di "Primo avvio su un computer nuovo".
 Aggiornala (soprattutto "Stato" e "Prossimi passi") prima di ogni commit importante: chi riprende il lavoro deve sapere
-da qui cosa stiamo facendo, cosa è fatto e come continuare. Ultimo aggiornamento: **2026-11-20**.
+da qui cosa stiamo facendo, cosa è fatto e come continuare. Ultimo aggiornamento: **2026-11-20** (taratura 1).
 
 ---
 
@@ -112,7 +112,7 @@ Elenco completo dei nomi:
 ### 4.3 Verifica che tutto funzioni
 ```bash
 godot --headless --path game --import                                  # prima volta dopo il clone
-godot --headless --path game --script res://tests/test_runner.gd       # regole: atteso "73 ok, 0 falliti", uscita 0
+godot --headless --path game --script res://tests/test_runner.gd       # regole: atteso "74 ok, 0 falliti", uscita 0
 godot --headless --path game --script res://tests/test_ui.gd           # interfaccia: atteso "45 ok, 0 falliti", uscita 0
 python3 ~/.claude/skills/game-docs/scripts/check_docs.py docs          # documenti: 0 errori
 ```
@@ -128,7 +128,7 @@ Riassumi lo stato in 3 righe e proponi le opzioni di §9 ("Prossimi passi"), con
 | Percorso | Cosa contiene |
 |---|---|
 | `CLAUDE.md` | questa memoria |
-| `docs/GDD.md` | il gioco in una pagina: pilastri, ciclo, **indice delle funzionalità con stati**, tappe M1–M5, **decisioni D-001…D-011**, domande aperte, storico |
+| `docs/GDD.md` | il gioco in una pagina: pilastri, ciclo, **indice delle funzionalità con stati**, tappe M1–M5, **decisioni D-001…D-012**, domande aperte, storico |
 | `docs/features/partita/` | regole e numeri della partita (`design.md`), codice (`implementation.md`), test (`testing.md`) |
 | `docs/features/carte-e-bande/design.md` | bande, sopravvissuti, formato delle carte, budget statistiche, carte d'esempio |
 | `docs/features/schermo-di-gioco/` | layout orizzontale iPhone, gesti, misure; implementazione e test |
@@ -200,19 +200,20 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
 ## 7. Stato (2026-11-20)
 - ✅ **Analisi** del gioco originale dall'APK: regole, formule, IA, meta, 239 famiglie di abilità.
 - ✅ **GDD 0.4** + note: `partita` (implemented), `schermo-di-gioco` (implemented, grafica provvisoria), `ia-avversaria`
-  (implemented), `carte-e-bande` (designed). Decisioni D-001…D-011.
+  (implemented), `carte-e-bande` (designed). Decisioni D-001…D-012.
 - ✅ **Gioco giocabile** su computer (e pronto per l'esportazione):
   - menu: sopravvissuto, 2 bande per il mazzo, mirino automatico, statistiche e scatolette;
   - partita contro l'IA in orizzontale: tocca una carta e poi un recinto per giocarla; tocca una tua creatura per **Scuoterla**;
     tocca il tuo ritratto per l'abilità; **Fine turno** → mirino Geiger per ogni tuo attacco → turno dell'IA animato;
   - fine partita con ricompense in scatolette di fagioli, **rialzarsi** con 1 scatoletta di tonno (una volta), rivincita;
   - profilo salvato in `user://profilo.json`.
-- ✅ **Test:** 73 controlli delle regole + 45 dell'interfaccia (3 partite intere dalle schermate, layout a 852×393, 667×375,
+- ✅ **Test:** 74 controlli delle regole + 45 dell'interfaccia (3 partite intere dalle schermate, layout a 852×393, 667×375,
   932×430), tutti verdi e senza errori di script. Screenshot controllati a occhio.
 - ✅ **Preset di esportazione** iOS e Android; pacchetto esportato provato: parte e carica i dati.
 - ✅ **Blender** testato (prova "Nano da Giardino Sacro").
-- ⚠️ **Bilanciamento** (2000 partite IA contro IA, set di prova): chi inizia vince il **64%**; la Nonna il 65%;
-  Veterinario e Cane il 41%; Discarica la banda più debole (44%). Da tarare con l'utente (solo numeri, D-005).
+- ✅ **Taratura 1** (D-012, accettata dall'utente): +1 Caos al secondo giocatore nel primo turno, sopravvissuti e
+  carte ritoccati. 2000 partite: chi inizia **61%** (prima 65%); sopravvissuti 45–56%; bande 46–53% (Patate la più debole).
+  Il simulatore accetta varianti senza toccare i JSON, es. `-- 1000 7 0.25 "caos_bonus_secondo=2;hero.nonna.v1=3;card.ratto_accumulatore.atk=2"`.
 - ❌ Non ancora fatto: arte e audio veri, vibrazioni, trascinamento delle carte (D-010), tutorial, set di lancio (~90 carte),
   costruzione libera del mazzo, campagna, casse/collezione, Supabase, build su iPhone reale, Android.
 
@@ -223,8 +224,8 @@ M1 regole senza grafica ✅ → **M2 vertical slice su iPhone** (gioco fatto; ma
 ## 9. Prossimi passi — da proporre all'utente
 1. **Provarlo sul tuo iPhone** (consigliato per primo): template 4.7, Team ID e Bundle ID, export Xcode, run sul telefono/TestFlight.
    Serve l'Apple Developer Program per TestFlight.
-2. **Bilanciamento:** proporre numeri per ridurre il vantaggio di chi inizia (es. Caos iniziale diverso tra primo e secondo,
-   solo se l'utente accetta, oppure statistiche delle carte), rinforzare Veterinario, Cane e Discarica; rilanciare `simulate.gd`.
+2. **Bilanciamento (taratura 2):** chi inizia è ancora al 61%; si può provare `caos_bonus_secondo=2` (chiedere all'utente).
+   Rinforzare un po' Patate e Cane. Rifare la taratura quando arriva il set di lancio.
 3. **Contenuti:** scrivere il set di lancio (~15 carte per banda + 15 Cratere) seguendo il DNA tematico e il catalogo delle famiglie;
    implementare in `abilities.gd` le famiglie nuove che servono (con test).
 4. **Arte:** collegare Blender a Claude (§4.2.2), valutare con l'utente Scenario/Meshy (§4.2.1), definire lo stile con `create-game-assets`, illustrazioni delle carte in `game/assets/cards/`, sfondo del tavolo,

@@ -1,0 +1,14 @@
+{
+  "_doc": "Numeri della partita. Casa dei valori: docs/features/partita/design.md (tutti [ASSUMPTION] finché non tarati).",
+  "lanes": 4,
+  "starting_hand": 5,
+  "max_hand": 7,
+  "caos_iniziale": 2,
+  "caos_max": 8,
+  "hero_hp_base": 25,
+  "hero_hp_per_level": 5,
+  "molt_botta": 1.5,
+  "advantage": 0.25,
+  "advantage_cycle": ["porcile", "patate", "stagno", "pollaio", "discarica"],
+  "max_turns": 200
+}

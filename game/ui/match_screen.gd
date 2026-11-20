@@ -23,6 +23,8 @@ var selected_hand := -1
 var pending: Dictionary = {}
 var log_lines: Array[String] = []
 var _loss_recorded := false
+var _detail_rect := Rect2()
+var _detail_strip := Rect2()
 
 var lane_views := [[], []]
 var hero_views: Array[HeroView] = []
@@ -121,6 +123,14 @@ func _build() -> void:
 	vb.add_child(detail_buttons)
 	detail.add_child(vb)
 	detail.visible = false
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.06, 0.05, 0.03, 0.96)
+	sb.border_color = Pal.YELLOW.darkened(0.3)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(6)
+	sb.set_content_margin_all(8)
+	detail.add_theme_stylebox_override("panel", sb)
+	over_panel.add_theme_stylebox_override("panel", sb)
 	add_child(detail)
 	# fine partita
 	var ob := VBoxContainer.new()
@@ -181,9 +191,9 @@ func _layout() -> void:
 	hand_layer.size = Vector2(lanes_w, HAND_H - 6)
 	banner.position = Vector2(x0, y_mid - 14)
 	banner.size = Vector2(lanes_w, 24)
-	detail.position = Vector2(x0 + 20, y_mid - 40)
-	detail.size = Vector2(lanes_w - 40, 0)
-	detail.custom_minimum_size = Vector2(lanes_w - 40, 0)
+	_detail_rect = Rect2(x0 + 10, y_opp + 4, lanes_w - 20, row_h - 8)
+	_detail_strip = Rect2(x0 + 60, y_mid - 22, lanes_w - 120, MID_H + 44)
+	_place_detail()
 	over_panel.position = Vector2(W / 2 - 170, H / 2 - 80)
 	over_panel.custom_minimum_size = Vector2(340, 0)
 	_layout_hand()
@@ -450,6 +460,22 @@ func _show_detail(text: String, buttons: Array) -> void:
 		close.pressed.connect(_deselect)
 		detail_buttons.add_child(close)
 	detail.visible = true
+	_place_detail()
+
+
+func _place_detail() -> void:
+	# Normale: sopra la fila avversaria (i tuoi recinti restano visibili).
+	# Scelta del bersaglio: una striscia al centro, così si vedono entrambe le file.
+	var r := _detail_strip if state == "target" else _detail_rect
+	detail.position = r.position
+	detail_text.custom_minimum_size = Vector2(r.size.x - 20, 0)
+	detail.custom_minimum_size = Vector2(r.size.x, 0)
+	detail.size = Vector2(r.size.x, 0)
+	_shrink_detail.call_deferred()
+
+
+func _shrink_detail() -> void:
+	detail.size = Vector2(detail.custom_minimum_size.x, 0)
 
 
 func _show_card_detail(c: CardInst) -> void:

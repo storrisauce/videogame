@@ -31,15 +31,22 @@ func _ready() -> void:
 
 
 func _apply_safe_area() -> void:
-	var win := Vector2(DisplayServer.window_get_size())
-	var area := DisplayServer.get_display_safe_area()
-	if win.x <= 0 or area.size.x <= 0 or DisplayServer.get_name() == "headless":
+	# L'area sicura è in coordinate dello schermo: la riduciamo alla finestra del gioco.
+	if DisplayServer.get_name() == "headless":
 		return
-	var k := size / win
-	safe.offset_left = area.position.x * k.x
-	safe.offset_top = area.position.y * k.y
-	safe.offset_right = -(win.x - area.end.x) * k.x
-	safe.offset_bottom = -(win.y - area.end.y) * k.y
+	var win_pos := DisplayServer.window_get_position()
+	var win_size := DisplayServer.window_get_size()
+	if win_size.x <= 0 or win_size.y <= 0:
+		return
+	var win := Rect2i(win_pos, win_size)
+	var area := DisplayServer.get_display_safe_area().intersection(win)
+	if area.size.x <= 0 or area.size.y <= 0:
+		area = win
+	var k := size / Vector2(win_size)
+	safe.offset_left = (area.position.x - win.position.x) * k.x
+	safe.offset_top = (area.position.y - win.position.y) * k.y
+	safe.offset_right = -(win.end.x - area.end.x) * k.x
+	safe.offset_bottom = -(win.end.y - area.end.y) * k.y
 
 
 func _swap(screen: Control) -> void:

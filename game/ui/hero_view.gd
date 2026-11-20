@@ -38,9 +38,9 @@ func _draw() -> void:
 	draw_multiline_string(f, Vector2(4, 14), ps.hero["name"], HORIZONTAL_ALIGNMENT_CENTER, size.x - 8, 9, 3, Pal.TEXT)
 	# Pazienza
 	var frac := clampf(float(ps.hp) / float(ps.max_hp), 0.0, 1.0)
-	var bar := Rect2(6, size.y - 34, size.x - 12, 12)
+	draw_string(f, Vector2(0, size.y - 40), "Pazienza %d/%d" % [ps.hp, ps.max_hp], HORIZONTAL_ALIGNMENT_CENTER, size.x, 10, Pal.TEXT)
+	var bar := Rect2(6, size.y - 34, size.x - 12, 10)
 	draw_rect(bar, Pal.RED.darkened(0.6))
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Pal.GREEN.darkened(0.2))
-	draw_string(f, Vector2(0, size.y - 24), "Pazienza %d" % ps.hp, HORIZONTAL_ALIGNMENT_CENTER, size.x, 9, Pal.TEXT)
 	var cd := "Abilità pronta" if ps.cooldown <= 0 else "Ricarica: %d" % ps.cooldown
 	draw_string(f, Vector2(0, size.y - 8), cd, HORIZONTAL_ALIGNMENT_CENTER, size.x, 8, Pal.YELLOW if ps.cooldown <= 0 else Pal.TEXT)

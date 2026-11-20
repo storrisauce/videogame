@@ -11,6 +11,7 @@ const AI := 1
 const SIDE := 100.0
 const MID_H := 16.0
 const HAND_H := 112.0
+const HAND_FRAC := 0.35          ## la mano occupa il terzo inferiore dello schermo
 
 var db: CardDB
 var profile: Profile
@@ -35,6 +36,13 @@ var opp_label := Label.new()
 var board := BoardView.new()      ## consolle laterali e vassoio (2D)
 var board3d := Board3D.new()      ## il tavolo in 3D
 var fx := FxLayer.new()
+var my_deck := StatChip.new("deck", "Mazzo")
+var my_discard := StatChip.new("discard", "Letamaio")
+var my_caos := StatChip.new("caos", "Caos", true)
+var opp_hand := StatChip.new("hand", "Mano")
+var opp_deck := StatChip.new("deck", "Mazzo")
+var opp_caos := StatChip.new("caos", "Caos")
+var _log_tw: Tween
 var log_label := Label.new()
 var end_button := Button.new()
 var menu_button := Button.new()
@@ -96,31 +104,50 @@ func _build() -> void:
 		add_child(hv)
 		hero_views.append(hv)
 	add_child(hand_layer)
-	for l: Label in [caos_label, info_label, opp_label, log_label, banner]:
-		l.add_theme_color_override("font_color", Pal.TEXT)
+	for l: Label in [caos_label, info_label, opp_label]:
+		l.visible = false   # sostituite dai contatori con icona
+		add_child(l)
+	for chip in [my_deck, my_discard, my_caos, opp_hand, opp_deck, opp_caos]:
+		add_child(chip)
+	for l: Label in [log_label, banner]:
 		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(l)
-	caos_label.add_theme_font_size_override("font_size", 16)
-	caos_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	info_label.add_theme_font_size_override("font_size", 9)
-	info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	opp_label.add_theme_font_size_override("font_size", 9)
-	opp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	log_label.add_theme_font_size_override("font_size", 10)
+	# registro delle azioni: un banner leggibile in alto che appare a ogni azione e poi svanisce
+	log_label.add_theme_font_size_override("font_size", Ui.SMALL)
 	log_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	log_label.clip_text = true
-	banner.add_theme_font_size_override("font_size", 22)
-	banner.add_theme_constant_override("outline_size", 7)
+	log_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var lsb := StyleBoxFlat.new()
+	lsb.bg_color = Color(Art.c("inchiostro"), 0.82)
+	lsb.border_color = Art.c("legno_6")
+	lsb.set_border_width_all(3)
+	lsb.set_corner_radius_all(14)
+	lsb.set_content_margin_all(6)
+	log_label.add_theme_stylebox_override("normal", lsb)
+	log_label.modulate.a = 0.0
+	banner.add_theme_font_size_override("font_size", Ui.BIG)
+	banner.add_theme_constant_override("outline_size", 10)
 	banner.add_theme_color_override("font_outline_color", Art.c("inchiostro"))
-	banner.add_theme_color_override("font_color", Pal.YELLOW)
+	banner.add_theme_color_override("font_color", Art.c("giallo_2"))
 	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	end_button.text = "Fine\nturno"
 	end_button.pressed.connect(_on_end_turn)
-	end_button.add_theme_font_size_override("font_size", 16)
+	end_button.add_theme_font_size_override("font_size", Ui.MID + 2)
+	end_button.add_theme_color_override("font_color", Art.c("bianco"))
+	for st in ["normal", "hover", "pressed", "disabled", "focus"]:
+		var esb := StyleBoxFlat.new()
+		esb.bg_color = Art.c({"normal": "radio_1", "hover": "radio_2", "pressed": "verde_4", "disabled": "ferro_2", "focus": "radio_1"}[st])
+		esb.border_color = Art.c("inchiostro")
+		esb.set_border_width_all(4)
+		esb.set_corner_radius_all(16)
+		esb.shadow_color = Art.c("inchiostro")
+		esb.shadow_offset = Vector2(0, 0 if st == "pressed" else 5)
+		esb.shadow_size = 1
+		end_button.add_theme_stylebox_override(st, esb)
 	Juice.press(end_button)
 	Juice.press(menu_button)
 	add_child(end_button)
-	menu_button.text = "Menu"
+	menu_button.text = "II"
+	menu_button.tooltip_text = "Menu"
 	menu_button.pressed.connect(func(): exit_to_menu.emit())
 	add_child(menu_button)
 	# pannello dettagli e azioni
@@ -137,18 +164,24 @@ func _build() -> void:
 	detail.add_child(vb)
 	detail.visible = false
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Art.c("legno_2")
-	sb.border_color = Art.c("legno_6")
-	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(0)
-	sb.set_content_margin_all(8)
+	sb.bg_color = Art.c("ferro_1")
+	sb.border_color = Art.c("inchiostro")
+	sb.set_border_width_all(4)
+	sb.set_corner_radius_all(12)
+	sb.shadow_color = Art.c("inchiostro")
+	sb.shadow_offset = Vector2(0, 4)
+	sb.shadow_size = 1
+	sb.set_content_margin_all(10)
+	detail_text.add_theme_font_override("font", Ui.body())
+	detail_text.add_theme_font_size_override("font_size", Ui.BODY + 1)
+	detail_text.add_theme_constant_override("outline_size", 0)
 	detail.add_theme_stylebox_override("panel", sb)
 	over_panel.add_theme_stylebox_override("panel", sb)
 	add_child(detail)
 	# fine partita
 	var ob := VBoxContainer.new()
 	over_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	over_text.add_theme_font_size_override("font_size", 18)
+	over_text.add_theme_font_size_override("font_size", Ui.BIG)
 	ob.add_child(over_text)
 	ob.add_child(over_buttons)
 	over_panel.add_child(ob)
@@ -172,47 +205,55 @@ func _layout() -> void:
 	var H := size.y
 	if W <= 0 or H <= 0:
 		return
-	# tavolo 3D tra le due consolle laterali; la mano su un vassoio sotto
-	var x0 := SIDE + 4
-	var x1 := W - SIDE - 4
-	var y_hand := H - HAND_H
-	board3d.position = Vector2(x0, 0)
-	board3d.size = Vector2(x1 - x0, y_hand + 2)
-	board.y_near = 0.0   # il tavolo 2D disegna solo consolle e vassoio
+	# tabellone 3D dietro a tutto; il campo occupa i 2/3 superiori tra i due ritratti
+	var y_hand := roundf(H * (1.0 - HAND_FRAC))
+	var hero_w := clampf(W * 0.13, 88.0, 120.0)
+	board3d.position = Vector2.ZERO
+	board3d.size = Vector2(W, H)
+	board3d.focus = Rect2(hero_w + 14, 4, W - 2 * hero_w - 28, y_hand + 6)
+	board.y_near = 0.0
+	board.panels = []
+	board.tray = Rect2()
 	_place_lanes()
 	_place_lanes.call_deferred()
-	# consolle: a sinistra il tuo sopravvissuto e il tuo Caos, a destra l'avversario e Fine turno
-	var col_h := y_hand - 8
-	board.panels = [Rect2(4, 4, SIDE - 4, col_h), Rect2(W - SIDE, 4, SIDE - 4, col_h)]
-	board.tray = Rect2(SIDE + 4, y_hand + 2, W - 2 * SIDE - 8, HAND_H - 4)
-	var por_h := minf(150.0, col_h - 70.0)
-	hero_views[HUMAN].position = Vector2(10, 10)
-	hero_views[HUMAN].size = Vector2(SIDE - 16, por_h)
-	hero_views[AI].position = Vector2(W - SIDE + 6, 10)
-	hero_views[AI].size = Vector2(SIDE - 16, por_h)
-	info_label.position = Vector2(8, 14 + por_h)
-	info_label.size = Vector2(SIDE - 12, col_h - por_h - 14)
-	opp_label.position = Vector2(W - SIDE + 2, 14 + por_h)
-	opp_label.size = Vector2(SIDE - 12, col_h - por_h - 14)
-	caos_label.position = Vector2(6, y_hand + 10)
-	caos_label.size = Vector2(SIDE - 8, 40)
-	menu_button.position = Vector2(12, H - 44)
-	menu_button.size = Vector2(SIDE - 24, 34)
-	end_button.position = Vector2(W - SIDE + 4, y_hand + 6)
-	end_button.size = Vector2(SIDE - 12, HAND_H - 14)
-	hand_layer.position = Vector2(SIDE + 12, y_hand + 8)
-	hand_layer.size = Vector2(W - 2 * SIDE - 24, HAND_H - 12)
-	var mid_y := (board3d.project(Vector3(0, 0, 0)).y if board3d.vp.size.x > 0 else y_hand * 0.45)
-	log_label.position = Vector2(x0, y_hand - 18)
-	log_label.size = Vector2(x1 - x0, 16)
-	banner.position = Vector2(x0, mid_y - 14)
-	banner.size = Vector2(x1 - x0, 28)
-	var lanes_w := x1 - x0
-	_detail_rect = Rect2(x0 + 4, 2, lanes_w - 8, 0)
-	_detail_strip = Rect2(x0 + 4, 2, lanes_w - 8, 0)
+	# sopravvissuti negli angoli in alto
+	var hero_h := minf(hero_w + 96.0, y_hand - 6)
+	hero_views[HUMAN].position = Vector2(8, 6)
+	hero_views[HUMAN].size = Vector2(hero_w, hero_h)
+	hero_views[AI].position = Vector2(W - hero_w - 8, 6)
+	hero_views[AI].size = Vector2(hero_w, hero_h)
+	# sotto il ritratto avversario: la sua mano, il suo mazzo e il suo Caos
+	var oc := (hero_w - 4) / 3.0
+	for k in 3:
+		var chip: StatChip = [opp_hand, opp_deck, opp_caos][k]
+		chip.position = Vector2(W - hero_w - 8 + k * (oc + 2), hero_h + 8)
+		chip.size = Vector2(oc, oc + 12)
+	# terzo inferiore: mazzo e Letamaio a sinistra, mano al centro, Caos e Fine turno a destra
+	var bottom := H - y_hand
+	var side_w := clampf(W * 0.2, 130.0, 190.0)
+	var chip_s := minf(bottom - 16, side_w / 2.0 - 6)
+	my_deck.position = Vector2(8, H - chip_s - 8)
+	my_deck.size = Vector2(chip_s, chip_s)
+	my_discard.position = Vector2(8 + chip_s + 4, H - chip_s - 8)
+	my_discard.size = Vector2(chip_s, chip_s)
+	menu_button.position = Vector2(8, y_hand - 8 - 44) if y_hand > hero_h + 60 else Vector2(8, hero_h + 10)
+	menu_button.size = Vector2(44, 44)
+	my_caos.position = Vector2(W - side_w - 6, H - chip_s - 8)
+	my_caos.size = Vector2(chip_s * 0.8, chip_s)
+	end_button.position = Vector2(W - side_w - 6 + chip_s * 0.8 + 4, H - bottom + 14)
+	end_button.size = Vector2(side_w - chip_s * 0.8 - 6, bottom - 22)
+	hand_layer.position = Vector2(side_w + 16, y_hand)
+	hand_layer.size = Vector2(W - 2 * side_w - 32, bottom)
+	var mid_y := board3d.project(Vector3(0, 0, 0)).y if board3d.vp.size.x > 0 else y_hand * 0.45
+	banner.position = Vector2(hero_w + 16, mid_y - 20)
+	banner.size = Vector2(W - 2 * hero_w - 32, 40)
+	log_label.position = Vector2(W / 2.0 - 180, 6)
+	log_label.size = Vector2(360, 0)
+	_detail_rect = Rect2(hero_w + 16, 4, W - 2 * hero_w - 32, 0)
+	_detail_strip = _detail_rect
 	_place_detail()
-	over_panel.position = Vector2(W / 2 - 170, H / 2 - 80)
-	over_panel.custom_minimum_size = Vector2(340, 0)
+	over_panel.position = Vector2(W / 2 - 190, H / 2 - 100)
+	over_panel.custom_minimum_size = Vector2(380, 0)
 	board.queue_redraw()
 	_layout_hand()
 
@@ -238,24 +279,53 @@ func _place_lanes() -> void:
 			lv.queue_redraw()
 
 
+## Mano a ventaglio: carte grandi sovrapposte, leggermente ruotate su un arco. La carta scelta sale,
+## si raddrizza e si ingrandisce mostrando il testo dell'abilità (entrate in ease-out, 180 ms).
 func _layout_hand() -> void:
 	var n := hand_layer.get_child_count()
 	if n == 0:
 		return
-	var cw := 74.0
-	var ch := HAND_H - 8
-	var step := minf(cw + 6, (hand_layer.size.x - cw) / maxf(n - 1, 1))
+	var mid := (n - 1) / 2.0
+	var arc := 1.4
+	var ch := minf(hand_layer.size.y - 18.0 - mid * mid * arc, 150.0)   # resta spazio per la rotazione del ventaglio
+	var cw := roundf(ch * 0.72)
+	var step := minf(cw * 0.94, (hand_layer.size.x - cw) / maxf(n - 1, 1))
 	var total := step * (n - 1) + cw
 	var start := (hand_layer.size.x - total) / 2.0
 	for i in n:
 		var v := hand_layer.get_child(i) as CardView
-		v.size = Vector2(cw, ch)
-		v.position = Vector2(start + i * step, 0)
+		var d := i - mid
+		var target_pos := Vector2(start + i * step, 4 + d * d * arc)
+		var target_rot := deg_to_rad(d * 3.5)
+		var target_size := Vector2(cw, ch)
 		if i == selected_hand:
-			if speed > 0.0 and is_inside_tree():
-				create_tween().tween_property(v, "position:y", -14.0, 0.16).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-			else:
-				v.position.y = -14
+			target_size = Vector2(cw * 1.45, ch * 1.45)
+			target_pos = Vector2(start + i * step + cw / 2.0 - target_size.x / 2.0, hand_layer.size.y - target_size.y - 8)
+			target_pos.x = clampf(target_pos.x, -hand_layer.position.x + 4, hand_layer.size.x + 40 - target_size.x)
+			target_rot = 0.0
+			v.z_index = 5
+		v.pivot_offset = Vector2(cw / 2.0, ch)
+		v.size = target_size
+		if speed > 0.0 and is_inside_tree() and i == selected_hand:
+			v.position = Vector2(start + i * step, 4)
+			var tw := create_tween().set_parallel(true)
+			tw.tween_property(v, "position", target_pos, 0.18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			tw.tween_property(v, "rotation", target_rot, 0.18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		else:
+			v.position = target_pos
+			v.rotation = target_rot
+		v.set_meta("rest_y", target_pos.y)
+
+
+## Passaggio del mouse (solo dove c'è un mouse): la carta sale un po'.
+func _hover_card(v: CardView, on: bool) -> void:
+	if not is_instance_valid(v) or speed <= 0.0:
+		return
+	if v.z_index > 0:   # la carta scelta resta dov'è
+		return
+	var rest: float = v.get_meta("rest_y", v.position.y)
+	var tw := v.create_tween()
+	tw.tween_property(v, "position:y", rest - 16.0 if on else rest, 0.14).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 # --- Aggiornamento ------------------------------------------------------------
@@ -298,10 +368,18 @@ func refresh() -> void:
 		v.highlighted = (i == selected_hand)
 		v.dimmed = not _playable_anywhere(hand[i])
 		v.tapped.connect(_on_hand_tapped)
+		v.mouse_entered.connect(_hover_card.bind(v, true))
+		v.mouse_exited.connect(_hover_card.bind(v, false))
 		v.long_pressed.connect(func(cv: CardView): _show_card_detail(cv.card))
 		hand_layer.add_child(v)
 	_layout_hand()
 	var me := m.players[HUMAN]
+	my_deck.set_value(me.deck.size())
+	my_discard.set_value(me.discard.size())
+	my_caos.set_value(me.caos)
+	opp_hand.set_value(m.players[AI].hand.size())
+	opp_deck.set_value(m.players[AI].deck.size())
+	opp_caos.set_value(m.players[AI].caos)
 	caos_label.text = "Caos\n%d" % me.caos
 	info_label.text = "Mazzo %d\nLetamaio %d" % [me.deck.size(), me.discard.size()]
 	opp_label.text = "Mano %d · Mazzo %d\nCaos %d" % [m.players[AI].hand.size(), m.players[AI].deck.size(), m.players[AI].caos]
@@ -311,7 +389,7 @@ func refresh() -> void:
 	_place_lanes()
 	board.queue_redraw()
 	end_button.disabled = state != "play"
-	log_label.text = "  ·  ".join(PackedStringArray(log_lines.slice(maxi(0, log_lines.size() - 2))))
+	_end_pulse(state == "play" and GreedyAI.choose(m, HUMAN).is_empty())
 
 
 func _playable_anywhere(c: CardInst) -> bool:
@@ -333,8 +411,33 @@ func _delayed_pop(text: String, at: Vector2, color: Color, big: bool, shake_targ
 		fx.shake_control(shake_target, 8.0 if big else 5.0)
 
 
+## "Fine turno" pulsa quando non restano mosse utili.
+var _end_tw: Tween
+func _end_pulse(on: bool) -> void:
+	if _end_tw:
+		_end_tw.kill()
+		_end_tw = null
+	end_button.offset_transform_enabled = true
+	end_button.offset_transform_pivot = end_button.size / 2.0
+	if not on or speed <= 0.0 or (profile and profile.meno_movimento):
+		end_button.offset_transform_scale = Vector2.ONE
+		return
+	_end_tw = create_tween().set_loops()
+	_end_tw.tween_property(end_button, "offset_transform_scale", Vector2(1.06, 1.06), 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_end_tw.tween_property(end_button, "offset_transform_scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
 func _log(t: String) -> void:
 	log_lines.append(t)
+	log_label.text = t
+	log_label.size = Vector2(log_label.size.x, 0)
+	if speed > 0.0 and is_inside_tree():
+		if _log_tw:
+			_log_tw.kill()
+		log_label.modulate.a = 1.0
+		_log_tw = create_tween()
+		_log_tw.tween_interval(2.2)
+		_log_tw.tween_property(log_label, "modulate:a", 0.0, 0.3)
 	if log_lines.size() > 50:
 		log_lines.remove_at(0)
 

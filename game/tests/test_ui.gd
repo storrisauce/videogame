@@ -72,7 +72,7 @@ func _test_layout() -> void:
 			for i in 4:
 				var lv: LaneView = ms.lane_views[p][i]
 				# tavolo in prospettiva (D-015): la fila lontana è più piccola; conta che si tocchi bene (≥ 44 pt, HIG Apple)
-				var need := Vector2(100, 70) if p == 0 else Vector2(80, 44)
+				var need := Vector2(80, 56) if p == 0 else Vector2(56, 44)
 				check(lv.size.x >= need.x and lv.size.y >= need.y, "recinto abbastanza grande a %s (%s)" % [sz, lv.size])
 		check(ms.end_button.size.y >= 44, "pulsante Fine turno toccabile a %s" % sz)
 		vp.queue_free()

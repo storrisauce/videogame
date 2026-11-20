@@ -48,17 +48,18 @@ func _ready() -> void:
 	cols.add_child(left)
 	var title := Label.new()
 	title.text = "Fattoria Nucleare"
-	title.add_theme_font_size_override("font_size", 34)
+	title.add_theme_font_size_override("font_size", 44)
 	title.add_theme_color_override("font_color", Art.c("radio_1"))
 	title.add_theme_color_override("font_outline_color", Art.c("verde_0"))
-	title.add_theme_constant_override("outline_size", 10)
+	title.add_theme_constant_override("outline_size", 14)
+	title.add_theme_color_override("font_outline_color", Art.c("inchiostro"))
 	left.add_child(title)
 	var sub := Label.new()
 	sub.text = "Animali mutanti. Recinti contesi.\nVince chi fa perdere la Pazienza all'altro."
-	sub.add_theme_font_size_override("font_size", 13)
+	sub.add_theme_font_size_override("font_size", Ui.SMALL)
 	sub.add_theme_color_override("font_color", Art.c("legno_9"))
 	left.add_child(sub)
-	stats.add_theme_font_size_override("font_size", 12)
+	stats.add_theme_font_size_override("font_size", Ui.SMALL)
 	stats.add_theme_color_override("font_color", Art.c("bianco"))
 	left.add_child(_panel(stats))
 	left.add_child(_section("Nel tuo mazzo"))
@@ -73,18 +74,19 @@ func _ready() -> void:
 	left.add_child(spacer)
 	play_button.text = "Gioca"
 	play_button.custom_minimum_size = Vector2(0, 62)
-	play_button.add_theme_font_size_override("font_size", 24)
-	play_button.add_theme_color_override("font_color", Art.c("verde_0"))
-	play_button.add_theme_color_override("font_hover_color", Art.c("verde_0"))
-	play_button.add_theme_color_override("font_pressed_color", Art.c("verde_0"))
-	play_button.add_theme_color_override("font_outline_color", Art.c("radio_2"))
-	play_button.add_theme_constant_override("outline_size", 0)
+	play_button.add_theme_font_size_override("font_size", Ui.BIG)
+	for k in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		play_button.add_theme_color_override(k, Art.c("bianco"))
+	play_button.add_theme_constant_override("outline_size", 10)
 	for st in ["normal", "hover", "pressed", "focus"]:
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = Art.c({"normal": "radio_1", "hover": "radio_2", "pressed": "verde_4", "focus": "radio_1"}[st])
-		sb.border_color = Art.c("verde_1")
-		sb.set_border_width_all(3)
-		sb.border_width_bottom = 6
+		sb.border_color = Art.c("inchiostro")
+		sb.set_border_width_all(4)
+		sb.set_corner_radius_all(16)
+		sb.shadow_color = Art.c("inchiostro")
+		sb.shadow_offset = Vector2(0, 0 if st == "pressed" else 5)
+		sb.shadow_size = 1
 		play_button.add_theme_stylebox_override(st, sb)
 	play_button.pressed.connect(_on_play)
 	Juice.press(play_button)
@@ -121,11 +123,13 @@ func _ready() -> void:
 	who.add_theme_constant_override("separation", 0)
 	hero_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hero_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hero_name.add_theme_font_size_override("font_size", 16)
+	hero_name.add_theme_font_size_override("font_size", Ui.MID)
 	hero_name.add_theme_color_override("font_color", Art.c("giallo_2"))
 	hero_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	who.add_child(hero_name)
-	hero_desc.add_theme_font_size_override("font_size", 12)
+	hero_desc.add_theme_font_size_override("font_size", Ui.BODY + 1)
+	hero_desc.add_theme_font_override("font", Ui.body())
+	hero_desc.add_theme_constant_override("outline_size", 0)
 	hero_desc.add_theme_color_override("font_color", Art.c("bianco"))
 	hero_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	who.add_child(hero_desc)
@@ -161,7 +165,7 @@ func _ready() -> void:
 func _section(t: String) -> Label:
 	var l := Label.new()
 	l.text = t
-	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_font_size_override("font_size", Ui.SMALL)
 	l.add_theme_color_override("font_color", Art.c("legno_9"))
 	return l
 
@@ -169,9 +173,10 @@ func _section(t: String) -> Label:
 func _panel(inner: Control) -> PanelContainer:
 	var p := PanelContainer.new()
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(Art.c("legno_2"), 0.85)
-	sb.border_color = Art.c("legno_6")
-	sb.set_border_width_all(2)
+	sb.bg_color = Art.c("ferro_1")
+	sb.border_color = Art.c("inchiostro")
+	sb.set_border_width_all(4)
+	sb.set_corner_radius_all(12)
 	sb.set_content_margin_all(8)
 	p.add_theme_stylebox_override("panel", sb)
 	p.add_child(inner)

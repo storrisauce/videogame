@@ -8,8 +8,8 @@ extends SubViewportContainer
 
 signal framed   ## la telecamera si è sistemata: i recinti sullo schermo sono cambiati
 
-const COL_W := 2.4          ## larghezza di un recinto (unità del mondo; 1 unità = 16 pixel dello sprite)
-const ROW_D := 2.3          ## profondità di un recinto
+const COL_W := 2.1          ## larghezza di un recinto (unità del mondo): corsie lunghe e strette
+const ROW_D := 2.95         ## profondità di un recinto: circa 1 : 1,4
 const MID := 0.8            ## sentiero tra le due file
 const PX := 1.0 / 16.0      ## un pixel dello sprite in unità del mondo: 1 tile da 16 px = 1 unità (design system §3)
 const STRUCT_SCALE := 0.8   ## le strutture stanno dietro, un po' più piccole
@@ -29,6 +29,7 @@ var _trauma := 0.0
 var _cam_rest := Transform3D()
 var _t := 0.0
 var reduce_motion := false
+var focus := Rect2()     ## zona dello schermo (coordinate del controllo) in cui il tabellone deve stare
 
 
 func _init() -> void:
@@ -205,9 +206,13 @@ func _fit_camera() -> void:
 	var lo := 3.0
 	var hi := 40.0
 	var area := Rect2(Vector2(4, 4), Vector2(vp.size) - Vector2(8, 8))
+	if focus.size.x > 0:
+		var k := Vector2(vp.size) / size
+		area = Rect2(focus.position * k, focus.size * k)
 	for k in 24:
 		var d := (lo + hi) / 2.0
 		cam.look_at_from_position(CAM_TARGET + dir * d, CAM_TARGET, Vector3.UP)
+		cam.v_offset = _v_offset_for(d, area)
 		var ok := true
 		for v in pts:
 			if cam.is_position_behind(v) or not area.has_point(cam.unproject_position(v)):
@@ -218,8 +223,15 @@ func _fit_camera() -> void:
 		else:
 			lo = d
 	cam.look_at_from_position(CAM_TARGET + dir * hi, CAM_TARGET, Vector3.UP)
+	cam.v_offset = _v_offset_for(hi, area)
 	_cam_rest = cam.transform
 	framed.emit()
+
+
+## Spostamento verticale dell'inquadratura perché il centro del tabellone cada al centro della zona `area`.
+func _v_offset_for(d: float, area: Rect2) -> float:
+	var dy := vp.size.y / 2.0 - area.get_center().y
+	return -dy * 2.0 * d * tan(deg_to_rad(cam.fov) / 2.0) / float(vp.size.y)
 
 
 # --- Geometria -----------------------------------------------------------------

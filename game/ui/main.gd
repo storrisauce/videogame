@@ -12,7 +12,7 @@ var test_mode := false   ## test: partite istantanee giocate dall'IA anche per i
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	theme = _make_theme()
+	theme = Ui.theme()
 	add_child(TerrainBG.new("erba", 0.35))
 	safe.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(safe)

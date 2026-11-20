@@ -1,105 +1,213 @@
 # CLAUDE.md — Fattoria Nucleare
 
-Questo file è la memoria del progetto: leggilo per intero a inizio sessione e **aggiornalo prima di ogni commit importante**
-(sezioni "Stato" e "Prossimi passi"). Chi riprende il lavoro deve sapere da qui cosa stiamo facendo, cosa è fatto e come continuare.
+Memoria del progetto. **Leggila tutta a inizio sessione**, poi fai i passi di "Primo avvio su un computer nuovo".
+Aggiornala (soprattutto "Stato" e "Prossimi passi") prima di ogni commit importante: chi riprende il lavoro deve sapere
+da qui cosa stiamo facendo, cosa è fatto e come continuare. Ultimo aggiornamento: **2026-11-20**.
 
-## Il progetto in breve
+---
+
+## 1. Il progetto in breve
 **Fattoria Nucleare** è un gioco di carte a corsie per telefono, **solo in orizzontale**, prima **iPhone** e poi **Android**.
-Due sopravvissuti schierano animali e ortaggi mutanti in 4 recinti a testa e si tolgono "Pazienza" a turni.
-Tono demenziale post-nucleare cartoon. Engine: **Godot 4.7, GDScript**. Backend: **Supabase** (account, salvataggi, dati delle carte).
+Due sopravvissuti schierano animali e ortaggi mutanti in 4 recinti a testa, spendono **Caos** per giocare carte e
+**Scuotere** le creature, attaccano con un **mirino Geiger** a tempo e si tolgono **Pazienza**. Tono demenziale post-nucleare cartoon.
+- Engine: **Godot 4.7, GDScript** (cartella `game/`).
+- Backend previsto: **Supabase** (non ancora collegato).
+- Repo GitHub: `storrisauce/videogame`, ramo principale **`main`** (sempre aggiornato).
 
-## L'utente
+## 2. L'utente
 - Parla italiano: **rispondi sempre in italiano semplice**, frasi brevi, niente gergo non spiegato.
-- Ha un **Mac** (le build iOS si fanno lì con Xcode, o su GitHub Actions macOS).
-- Vuole salvataggi frequenti: **pusha sul ramo di lavoro e ogni tanto anche su `main`** (permesso esplicito dato il 2026-11-20).
+- Ha un **Mac**: le build iOS si fanno lì con Xcode.
+- Vuole salvataggi frequenti: **committa e pusha su `main` spesso**, non solo alla fine.
+- Prima di decidere al posto suo su gusti, contenuti o regole, **chiedi**. Sui dettagli tecnici scegli tu e spiega in una riga.
 
-## Regole che non si discutono
-1. **Contenuti originali (D-001, D-007 nel GDD).** Le regole del gioco e le *famiglie* di abilità del genere a corsie restano identiche
+## 3. Regole che non si discutono
+1. **Contenuti originali (D-001, D-007 nel GDD).** Regole del gioco e *famiglie* di abilità del genere a corsie restano identiche
    a quelle studiate in `docs/analisi-meccaniche-card-wars.md` e `docs/catalogo-abilita-card-wars.md`.
    Ogni **carta, numero, eroe, nome, immagine** è invece originale: **mai** una mappatura carta-per-carta del gioco originale,
    anche se l'utente la chiede o la lascia intendere. Si spiega con gentilezza e si prosegue con contenuti originali.
-2. **Nessun nome, termine o personaggio** dell'opera originale nel gioco (testi, codice visibile, asset). Nei documenti di studio sì.
+2. **Nessun nome, termine o personaggio** dell'opera originale dentro il gioco (testi, codice visibile, asset). Nei documenti di studio sì.
 3. **Nessuna novità di regole (D-005):** le debolezze dell'originale (difesa scenica, IA a una mossa, primo turno senza attacco,
-   mazzo finito diverso fra umano e IA) restano finché l'utente non decide altrimenti. Sono elencate come proposte aperte.
-4. **Il tema segue il DNA tematico** (`docs/dna-tematico.md`): nome = battuta che spiega l'effetto, flavor di una riga, test finale per ogni carta.
-5. **Non committare l'APK** né asset estratti dall'originale.
+   mazzo finito diverso fra umano e IA) restano finché l'utente non decide altrimenti. I **numeri** sono nostri e si possono tarare.
+4. **Il tema segue il DNA tematico** (`docs/dna-tematico.md`): nome = battuta che spiega l'effetto, battuta di una riga, test finale per ogni carta.
+5. **Non committare l'APK** né asset estratti dall'originale. Non mettere mai chiavi segrete nel repo.
 
-## Mappa dei file
-| File | Cosa contiene |
-|---|---|
-| `docs/GDD.md` | Il gioco in una pagina: pilastri, ciclo, indice funzionalità con stati, tappe M1–M5, **decisioni D-001…**, domande aperte |
-| `docs/features/partita/design.md` | Regole della partita e numeri (Caos, mirino Geiger, danni, vittoria) |
-| `docs/features/carte-e-bande/design.md` | Bande, sopravvissuti, formato carte, bilanciamento, carte d'esempio |
-| `docs/features/schermo-di-gioco/design.md` | Layout orizzontale iPhone, gesti, misure |
-| `docs/dna-tematico.md` | Mondo, tono, lessico, formule dei nomi (testo dell'utente) |
-| `docs/analisi-meccaniche-card-wars.md` | Studio delle regole del gioco originale, ricavato dal codice dell'APK |
-| `docs/catalogo-abilita-card-wars.md` | Le 239 famiglie di abilità con trigger ed effetti |
-| `game/` | Progetto Godot: `core/` regole e IA, `data/` carte e numeri, `tests/` test, `tools/` simulatore |
+---
 
-## Come si lavora
-- **Documenti di design:** si usa la skill `game-docs`. Ogni feature ha uno stato (`idea` → `designed` → `in progress` → `implemented`)
-  uguale nel GDD e nel suo `design.md`. Dopo ogni modifica: `python3 ~/.claude/skills/game-docs/scripts/check_docs.py docs` deve dare 0 errori.
-  Quando una feature riceve codice, si aggiungono `implementation.md` e `testing.md` accanto al suo `design.md`.
-- **Numeri:** ogni numero ha una sola casa (il `design.md` della feature). Il codice li legge da file dati, non li ricopia a mano.
-- **Skill utili** (installate in `~/.claude/skills`): `router`, `godot-gdscript`, `godot-gdscript-headless-testing`, `card-game`,
-  `game-ai`, `godot-ui-control`, `game-ui-ux`, `game-feel`, `godot-export`, `create-game-assets`, `game-docs`.
-- **Git:** ramo di lavoro `claude/vibrant-turing-1ezyql`; pusha lì, e periodicamente `git push origin HEAD:main`.
-  Messaggi di commit in inglese, chiusi dalle righe di attribuzione richieste dalla sessione.
+## 4. Primo avvio su un computer nuovo (es. il Mac dell'utente)
+Fai questi controlli **appena apri la cartella**, poi riassumi all'utente cosa manca e **chiedi il permesso prima di installare app**.
 
-## Ambiente (sessione cloud, container usa-e-getta)
-Ogni nuova sessione parte da un container pulito: va reinstallato ciò che serve.
-- **Skill gamedev:** si installano da sole con lo script di setup dell'ambiente cloud "Default"
-  (`npx -y skills add gamedev-skills/awesome-gamedev-agent-skills -a claude-code -g -y`). Se mancano, lancia quel comando.
-- **Godot 4.7 (Linux, senza grafica):**
-  ```bash
-  mkdir -p /opt/godot && cd /opt/godot && curl -sSL -o g.zip https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip && unzip -o -q g.zip && ln -sf /opt/godot/Godot_v4.7-stable_linux.x86_64 /usr/local/bin/godot && godot --headless --version
-  ```
-- **Blender 5.3 (per arte 3D / immagini delle carte):** il sito download.blender.org è bloccato dal proxy; si usa il pacchetto
-  Python ufficiale `bpy` da PyPI, più alcune librerie di sistema per il rendering senza schermo:
-  ```bash
-  apt-get install -y libegl1 libgl1 libxkbcommon0 libsm6 libxi6 libxxf86vm1 libxfixes3 libxrender1
-  python3 -m venv /opt/blender-venv && /opt/blender-venv/bin/pip install bpy
-  /opt/blender-venv/bin/python -I script.py   # dentro: import bpy; motore CYCLES con device CPU (EEVEE/Workbench non vanno senza GPU)
-  ```
-- **Skill Three.js** (chieste dall'utente, utili solo per prototipi web o materiale promozionale, non per il gioco Godot):
-  ```bash
-  npx -y skills add https://github.com/cloudai-x/threejs-skills -a claude-code -g -y
-  npx -y skills add scottstts/Threejs-Awesome-Graphics-Agent-Skills -a claude-code -g -y
-  ```
-- **Supabase:** l'utente sta mettendo nei secret/variabili di GitHub Actions `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`
-  (secret) e `SUPABASE_PROJECT_ID`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` (variabili). Da questa sessione non sono leggibili:
-  per lavorare sul database da qui serve una credenziale chiesta con il modulo sicuro dell'ambiente. Mai chiedere chiavi in chat;
-  mai mettere la chiave `service_role` nel gioco.
+### 4.1 Strumenti
+| Strumento | Serve per | Controllo | Installazione su Mac |
+|---|---|---|---|
+| Homebrew | installare il resto | `brew --version` | https://brew.sh |
+| **Godot 4.7.x** (standard, non .NET) | il gioco | `godot --version` | `brew install --cask godot` oppure https://godotengine.org/download/macos/ — releases: https://github.com/godotengine/godot/releases (serve la **4.7**; se brew installa una versione diversa, scarica la 4.7.x dal link) |
+| Comando `godot` nel terminale | test e simulazioni | `which godot` | `sudo ln -sf /Applications/Godot.app/Contents/MacOS/Godot /usr/local/bin/godot` |
+| Export templates Godot 4.7 | build iPhone/Android | Godot → Editor → Manage Export Templates | pulsante *Download and Install* (stessa versione dell'editor) |
+| **Xcode** | build e firma iOS | `xcodebuild -version` | App Store, poi `xcode-select --install` |
+| Apple Developer Program | TestFlight e App Store | — | https://developer.apple.com/programs/ (99 $/anno) |
+| **Node.js ≥ 22.20** | installare le skill | `node -v` | `brew install node` |
+| Python 3 | controllo dei documenti | `python3 --version` | già presente su macOS |
+| **Blender** (≥ 4.x, testato 5.3) | arte 3D → immagini delle carte | `/Applications/Blender.app/Contents/MacOS/Blender --version` | `brew install --cask blender` oppure https://www.blender.org/download/ (sorgente: https://github.com/blender/blender, non serve compilarlo) |
+| Android Studio + JDK 17 | build Android (più avanti) | — | https://developer.android.com/studio ; poi in Godot: Editor Settings → Export → Android, percorsi SDK e JDK |
+| Supabase CLI | database (più avanti) | `supabase --version` | `brew install supabase/tap/supabase` |
 
-## Stato (aggiornato 2026-11-20)
-- ✅ Analisi del gioco originale dall'APK (regole, formule, IA, meta, catalogo abilità).
-- ✅ GDD 0.3 + note di design di `partita` (in progress), `carte-e-bande`, `schermo-di-gioco` (designed). Decisioni D-001…D-009.
-- ✅ **M1 quasi finita:** progetto Godot in `game/` (orizzontale, 852×393):
-  - `game/core/`: motore delle regole (`match.gd`), famiglie di abilità (`abilities.gd`), dati (`card_db.gd`), IA (`greedy_ai.gd`), partita IA contro IA (`game_runner.gd`).
-  - `game/data/cards.json`: set di prova di 31 carte (6 per banda + 4 del Cratere) e 6 sopravvissuti; `game/data/rules.json`: numeri.
-  - `game/tests/test_runner.gd`: 64 controlli, tutti verdi; il runner esce con 1 se un controllo fallisce (verificato).
-  - `game/tools/simulate.gd`: 2000 partite in ~4 minuti. Risultati in `docs/features/partita/design.md` (Open questions):
-    chi inizia vince il 64%, Nonna troppo forte (65%), Veterinario e Cane deboli (41%), Discarica debole (44%).
-- ✅ Blender 5.3 (`bpy`) installato e testato: renderizza senza schermo con Cycles su CPU.
-- ✅ Ramo `main` allineato.
-
-## Prossimi passi
-1. **Chiudere M1:** implementare la regola 13 della partita (rialzarsi con 1 scatoletta di tonno); proporre all'utente
-   come tarare i numeri (vantaggio di chi inizia, sopravvissuti, Discarica) e rilanciare le simulazioni. Non cambiare
-   regole del genere senza il suo via libera (D-005): si toccano solo i numeri nostri.
-2. **M2 vertical slice su iPhone:** scena di gioco orizzontale in Godot secondo `docs/features/schermo-di-gioco/design.md`
-   (skill `godot-ui-control`, `game-ui-ux`, `game-feel`), mirino Geiger interattivo, collegata a `Match`.
-   Poi export iOS dal Mac dell'utente (skill `godot-export`) e TestFlight (serve l'Apple Developer Program).
-3. Arte: definire lo stile con la skill `create-game-assets`; Blender può servire per modelli 3D trasformati in immagini 2D.
-
-Comandi utili:
+### 4.2 Skill di Claude Code
+Installate globalmente (`-g`) per Claude Code. Controllo: `ls ~/.claude/skills | wc -l` (atteso circa 118).
+Se mancano, installale (servono Node.js; alla fine, se non compaiono, riavvia Claude Code):
 ```bash
-godot --headless --path game --import
-godot --headless --path game --script res://tests/test_runner.gd
-godot --headless --path game --script res://tools/simulate.gd -- 2000 7 0.25   # partite, seme, probabilità di Botta Atomica
-python3 ~/.claude/skills/game-docs/scripts/check_docs.py docs
+npx -y skills add gamedev-skills/awesome-gamedev-agent-skills -a claude-code -g -y
+npx -y skills add https://github.com/cloudai-x/threejs-skills -a claude-code -g -y
+npx -y skills add scottstts/Threejs-Awesome-Graphics-Agent-Skills -a claude-code -g -y
 ```
+| Pacchetto | Link | Quante | Uso nel progetto |
+|---|---|---|---|
+| Awesome Gamedev Agent Skills | https://github.com/gamedev-skills/awesome-gamedev-agent-skills | 80 | **le principali**: Godot, design, UI, carte, export |
+| Three.js skills | https://github.com/cloudai-x/threejs-skills | 13 | solo per prototipi web o materiale promozionale (il gioco è Godot) |
+| Three.js Awesome Graphics | https://github.com/scottstts/Threejs-Awesome-Graphics-Agent-Skills | 24 | come sopra (bloom, particelle, effetti radioattivi nel web) |
 
-## Dopo M1
-M2 vertical slice su iPhone (schermo orizzontale, 2 bande, 2 sopravvissuti, 30 carte, TestFlight) → M3 contenuti → M4 campagna e Supabase → M5 Android.
-Prima di M2 serve l'iscrizione dell'utente all'Apple Developer Program.
+**Skill usate finora:** `game-docs` (GDD e note di design, con il controllo `scripts/check_docs.py`), `godot-gdscript-headless-testing`
+(test senza grafica), `godot-ui-control` (schermate), `godot-export` (preset iOS/Android). **Da usare nei prossimi passi:** `router`,
+`card-game`, `game-ui-ux`, `game-feel` (vibrazioni, scuotimenti, mirino), `create-game-assets` (stile e immagini delle carte),
+`audio-design` / `godot-audio`, `save-systems` (profilo), `godot-animation`, `performance-optimization`, `level-design` (campagna).
+Nessuna skill specifica per Blender è installata: Blender si usa con script Python (vedi §6.4).
+
+Elenco completo dei nomi:
+- Gamedev (80): ai-behavior-trees-utility-ai, audio-design, bevy-ecs, camera-systems, card-game, create-game-assets, defold-core, dialogue-systems, ebitengine-game, fps-shooter, game-ai, game-docs, game-feel, game-jam, game-ui-ux, godot-2d-movement, godot-3d-essentials, godot-animation, godot-audio, godot-csharp, godot-export, godot-gdscript, godot-gdscript-headless-testing, godot-multiplayer, godot-nodes-scenes, godot-physics, godot-resources, godot-shaders, godot-signals-groups, godot-tilemap, godot-ui-control, input-systems, itch-publish, level-design, love2d-core, performance-optimization, phaser-arcade-physics, phaser-core, physics-tuning, pixijs-rendering, platformer, procedural-gen, prototype-fast, puzzle, pygame-core, roblox-* (8), roguelike, router, rpg, save-systems, shader-programming, steam-publish, survival-crafting, threejs-gltf-loading, threejs-materials-lighting, threejs-scene-setup, tower-defense, unity-* (8), unreal-* (6), visual-novel.
+- Three.js (13): threejs-animation, -asset-pipeline, -fundamentals, -geometry, -interaction, -lighting, -loaders, -materials, -performance, -postprocessing, -react-three-fiber, -shaders, -textures.
+- Three.js Graphics (24): threejs-atmosphere-aerial-perspective, -bloom, -camera-direction, -exposure-color-grading, -image-pipeline, -parallax-occlusion-mapping, -precipitation-surfaces, -procedural-animation, -procedural-architecture, -procedural-fields, -procedural-geometry, -procedural-materials, -procedural-planets, -procedural-vegetation, -procedural-vfx, -raymarched-space-effects, -screen-space-ambient-occlusion, -shadow-systems, -skill-router, -spectral-ocean, -temporal-surfaces, -visual-validation, -volumetric-clouds, -water-optics.
+
+### 4.3 Verifica che tutto funzioni
+```bash
+godot --headless --path game --import                                  # prima volta dopo il clone
+godot --headless --path game --script res://tests/test_runner.gd       # regole: atteso "73 ok, 0 falliti", uscita 0
+godot --headless --path game --script res://tests/test_ui.gd           # interfaccia: atteso "45 ok, 0 falliti", uscita 0
+python3 ~/.claude/skills/game-docs/scripts/check_docs.py docs          # documenti: 0 errori
+```
+I test escono con codice 1 se qualcosa fallisce. Gli errori di script **non** cambiano il codice d'uscita: cerca anche
+`SCRIPT ERROR` nell'output.
+
+### 4.4 Poi chiedi all'utente come continuare
+Riassumi lo stato in 3 righe e proponi le opzioni di §9 ("Prossimi passi"), con la tua raccomandazione per prima.
+
+---
+
+## 5. Mappa dei file
+| Percorso | Cosa contiene |
+|---|---|
+| `CLAUDE.md` | questa memoria |
+| `docs/GDD.md` | il gioco in una pagina: pilastri, ciclo, **indice delle funzionalità con stati**, tappe M1–M5, **decisioni D-001…D-011**, domande aperte, storico |
+| `docs/features/partita/` | regole e numeri della partita (`design.md`), codice (`implementation.md`), test (`testing.md`) |
+| `docs/features/carte-e-bande/design.md` | bande, sopravvissuti, formato delle carte, budget statistiche, carte d'esempio |
+| `docs/features/schermo-di-gioco/` | layout orizzontale iPhone, gesti, misure; implementazione e test |
+| `docs/features/ia-avversaria/` | l'IA del genere: formula del punteggio del tavolo |
+| `docs/dna-tematico.md` | mondo, tono, lessico, formule dei nomi (testo dell'utente) |
+| `docs/analisi-meccaniche-card-wars.md` | studio delle regole del gioco originale, dal codice dell'APK |
+| `docs/catalogo-abilita-card-wars.md` | le 239 famiglie di abilità con quando scattano ed effetti |
+| `game/project.godot` | progetto Godot 4.7: 852×393, orientamento orizzontale (sensor landscape), renderer mobile |
+| `game/main.tscn`, `game/ui/main.gd` | scena principale: tema, margini sicuri, menu ⇄ partita |
+| `game/ui/` | `menu_screen.gd`, `match_screen.gd` (tavolo, input, turni IA, mirino, fine partita), `card_view.gd`, `lane_view.gd`, `hero_view.gd`, `geiger_dial.gd`, `pal.gd` (colori/nomi) |
+| `game/core/` | **motore delle regole senza grafica**: `match.gd` (stato e regole), `abilities.gd` (famiglie + testi in italiano), `card_db.gd`, `card_inst.gd`, `lane.gd`, `player_state.gd`, `greedy_ai.gd`, `game_runner.gd`, `deck_factory.gd`, `profile.gd` |
+| `game/data/cards.json` | 31 carte di prova (6 per banda + 4 del Cratere) e 6 sopravvissuti; ogni carta = famiglia + valori |
+| `game/data/rules.json` | tutti i numeri (Caos, Pazienza, mirino, vantaggi fra bande, ricompense) |
+| `game/tests/` | `test_runner.gd` (regole), `test_ui.gd` (partite intere dall'interfaccia + layout a 3 misure) |
+| `game/tools/` | `simulate.gd` (partite IA contro IA con statistiche), `screenshot.gd` (immagini di menu, partita, mirino) |
+| `game/export_presets.cfg` | preset **iOS** e **Android** minimi (includono `data/*.json`); Godot li completa all'apertura |
+| `art/blender/nano_da_giardino_sacro.py` | prova di illustrazione con Blender da script (Cycles + contorni cartoon) |
+
+## 6. Come si lavora
+
+### 6.1 Giocare e provare
+- **Nell'editor:** apri Godot → *Import* → scegli `game/project.godot` → **F5** per giocare (col mouse al posto del dito).
+- **Simulazioni di bilanciamento:** `godot --headless --path game --script res://tools/simulate.gd -- 2000 7 0.25`
+  (partite, seme, probabilità di Botta Atomica). Circa 4 minuti per 2000 partite.
+- **Screenshot** (sul Mac basta la finestra; nel cloud serve `xvfb-run`):
+  `godot --path game --resolution 852x393 --script res://tools/screenshot.gd -- /percorso/cartella`
+
+### 6.2 Documenti di design (skill `game-docs`)
+Ogni funzionalità ha uno stato (`idea` → `designed` → `in progress` → `implemented`, più `changed — code pending` e `cut`),
+uguale nel GDD e nel suo `design.md`. Ogni numero ha una sola casa: il `design.md` della funzionalità; il codice lo legge da
+`game/data/*.json`. Dopo ogni modifica lancia il controllo (§4.3) e registra le decisioni nella tabella del GDD.
+
+### 6.3 Esportare per iPhone (sul Mac)
+1. Godot → *Editor → Manage Export Templates* → scarica i template della **stessa versione** (4.7.x).
+2. *Project → Export* → preset **iOS**: imposta **App Store Team ID** (dal tuo account Apple Developer) e cambia il
+   **Bundle Identifier** provvisorio `it.fattorianucleare.gioco` (D-011) con uno tuo.
+3. *Export Project* → crea un progetto Xcode in `build/ios/` → aprilo in Xcode → collega l'iPhone → *Run*.
+   Per TestFlight: in Xcode *Product → Archive → Distribute App*.
+4. Prima di esportare puoi verificare i dati con: `godot --headless --path game --export-pack "iOS" ../build/test.pck`
+   e `godot --headless --main-pack build/test.pck --quit-after 200` (nessun `ERROR` atteso).
+Android (più avanti): preset **Android** già presente; servono Android Studio, JDK 17, una keystore di rilascio
+(mai nel repo: Godot la tiene in `.godot/export_credentials.cfg`, che è ignorato da git).
+
+### 6.4 Blender e "texture"
+- **Cosa sono le texture:** semplicemente **immagini** (PNG) usate dal gioco: illustrazioni delle carte, sfondi, icone.
+  In Godot basta metterle nella cartella del progetto: Godot le importa da solo. Oggi il gioco **non ne usa**: carte e tavolo
+  sono disegnati con rettangoli e testo (grafica provvisoria).
+- **Piano per l'arte:** illustrazioni delle carte in `game/assets/cards/<id-carta>.png` (es. `mucca_laser.png`, verticale ~600×800);
+  `CardView` le mostrerà quando esistono, altrimenti resta il rettangolo. Sfondi in `game/assets/board/`. Definire prima lo stile
+  con la skill `create-game-assets`.
+- **Blender sul Mac:** gli script in `art/blender/` si lanciano così:
+  `/Applications/Blender.app/Contents/MacOS/Blender --background --python art/blender/nano_da_giardino_sacro.py -- /percorso/out.png`
+  (lo script usa Cycles su CPU e contorni a "guscio invertito"; sul Mac con GPU si può passare a EEVEE e provare Freestyle).
+  Blender va bene per oggetti, strutture e ambienti in stile uniforme; per creature espressive serve un artista o un generatore
+  di immagini, con Blender per uniformare.
+
+### 6.5 Git
+- Ramo principale: `main`. Committa e pusha spesso. Messaggi di commit in inglese.
+- `build/` e `game/.godot/` sono ignorati. Non committare APK, keystore, chiavi.
+
+### 6.6 Supabase (non ancora collegato)
+Su GitHub (repo → Settings → Secrets and variables → Actions) l'utente sta inserendo: secret `SUPABASE_ACCESS_TOKEN`,
+`SUPABASE_DB_PASSWORD`; variabili `SUPABASE_PROJECT_ID`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`. Il gioco userà solo URL e chiave
+*anon/publishable*; **mai** la chiave `service_role` nel gioco. In locale, URL e chiave anon si possono tenere in un file non
+committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
+
+---
+
+## 7. Stato (2026-11-20)
+- ✅ **Analisi** del gioco originale dall'APK: regole, formule, IA, meta, 239 famiglie di abilità.
+- ✅ **GDD 0.4** + note: `partita` (implemented), `schermo-di-gioco` (implemented, grafica provvisoria), `ia-avversaria`
+  (implemented), `carte-e-bande` (designed). Decisioni D-001…D-011.
+- ✅ **Gioco giocabile** su computer (e pronto per l'esportazione):
+  - menu: sopravvissuto, 2 bande per il mazzo, mirino automatico, statistiche e scatolette;
+  - partita contro l'IA in orizzontale: tocca una carta e poi un recinto per giocarla; tocca una tua creatura per **Scuoterla**;
+    tocca il tuo ritratto per l'abilità; **Fine turno** → mirino Geiger per ogni tuo attacco → turno dell'IA animato;
+  - fine partita con ricompense in scatolette di fagioli, **rialzarsi** con 1 scatoletta di tonno (una volta), rivincita;
+  - profilo salvato in `user://profilo.json`.
+- ✅ **Test:** 73 controlli delle regole + 45 dell'interfaccia (3 partite intere dalle schermate, layout a 852×393, 667×375,
+  932×430), tutti verdi e senza errori di script. Screenshot controllati a occhio.
+- ✅ **Preset di esportazione** iOS e Android; pacchetto esportato provato: parte e carica i dati.
+- ✅ **Blender** testato (prova "Nano da Giardino Sacro").
+- ⚠️ **Bilanciamento** (2000 partite IA contro IA, set di prova): chi inizia vince il **64%**; la Nonna il 65%;
+  Veterinario e Cane il 41%; Discarica la banda più debole (44%). Da tarare con l'utente (solo numeri, D-005).
+- ❌ Non ancora fatto: arte e audio veri, vibrazioni, trascinamento delle carte (D-010), tutorial, set di lancio (~90 carte),
+  costruzione libera del mazzo, campagna, casse/collezione, Supabase, build su iPhone reale, Android.
+
+## 8. Tappe (dal GDD)
+M1 regole senza grafica ✅ → **M2 vertical slice su iPhone** (gioco fatto; manca la prova su TestFlight) → M3 contenuti di lancio
+(carte, arte, audio) → M4 meta e backend (campagna, mazzo, Supabase) → M5 Android.
+
+## 9. Prossimi passi — da proporre all'utente
+1. **Provarlo sul tuo iPhone** (consigliato per primo): template 4.7, Team ID e Bundle ID, export Xcode, run sul telefono/TestFlight.
+   Serve l'Apple Developer Program per TestFlight.
+2. **Bilanciamento:** proporre numeri per ridurre il vantaggio di chi inizia (es. Caos iniziale diverso tra primo e secondo,
+   solo se l'utente accetta, oppure statistiche delle carte), rinforzare Veterinario, Cane e Discarica; rilanciare `simulate.gd`.
+3. **Contenuti:** scrivere il set di lancio (~15 carte per banda + 15 Cratere) seguendo il DNA tematico e il catalogo delle famiglie;
+   implementare in `abilities.gd` le famiglie nuove che servono (con test).
+4. **Arte:** definire lo stile con `create-game-assets`, illustrazioni delle carte in `game/assets/cards/`, sfondo del tavolo,
+   `CardView` che mostra le immagini.
+5. **Rifiniture dello schermo:** trascinamento delle carte, vibrazioni e scuotimento con la Botta Atomica (`game-feel`), suoni
+   (`godot-audio`), tutorial alla prima partita.
+6. **Meta e Supabase (M4):** costruzione del mazzo, campagna, profilo sul server, dati delle carte scaricati.
+7. **Android (M5).**
+
+---
+
+## 10. Note solo per la sessione cloud (container Linux)
+Valide solo quando si lavora nel cloud di Claude Code, non sul Mac.
+- La rete passa da un proxy: `download.blender.org` è bloccato; GitHub releases e PyPI funzionano.
+- Godot: `mkdir -p /opt/godot && cd /opt/godot && curl -sSL -o g.zip https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip && unzip -o -q g.zip && ln -sf /opt/godot/Godot_v4.7-stable_linux.x86_64 /usr/local/bin/godot`
+- Blender come modulo Python: `apt-get install -y libegl1 libgl1 libxkbcommon0 libsm6 libxi6 libxxf86vm1 libxfixes3 libxrender1 && python3 -m venv /opt/blender-venv && /opt/blender-venv/bin/pip install bpy`
+  poi `/opt/blender-venv/bin/python -I art/blender/<script>.py <out.png>` (solo Cycles su CPU; Freestyle non funziona).
+- Screenshot: `apt-get install -y xvfb libgl1-mesa-dri` e `xvfb-run -s "-screen 0 1704x786x24" godot --path game --rendering-driver opengl3 --resolution 852x393 --script res://tools/screenshot.gd -- <cartella>`
+- Le skill gamedev si reinstallano da sole con lo script di setup dell'ambiente cloud "Default"; le altre con i comandi di §4.2.

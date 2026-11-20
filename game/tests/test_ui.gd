@@ -22,8 +22,31 @@ func _initialize() -> void:
 	await _test_full_game_through_ui()
 	await _test_layout()
 	_test_audio_files()
+	_test_outlines_prepared()
 	print("Risultati UI: %d ok, %d falliti" % [passed, failed])
 	quit(1 if failed > 0 else 0)
+
+
+## Ogni mesh con contorno ha le normali medie (altrimenti il contorno si stacca agli spigoli, D-020).
+func _test_outlines_prepared() -> void:
+	var roots: Array[Node3D] = []
+	var board := Board3D.new()
+	roots.append(board.world)
+	var db := CardDB.load_default()
+	for id in db.cards.keys() + db.heroes.keys():
+		var n := Models.build(id)
+		if n:
+			roots.append(n)
+	var missing := 0
+	for r in roots:
+		for mi: MeshInstance3D in r.find_children("*", "MeshInstance3D", true, false):
+			if Kit._has_outline(mi) and not mi.has_meta("smooth"):
+				missing += 1
+	check(missing == 0, "contorni compatti su tutte le mesh (%d senza)" % missing)
+	for r in roots:
+		if r != board.world:
+			r.free()
+	board.free()
 
 
 ## Ogni suono e musica usati dal gioco esiste davvero (Sfx tace senza errori se manca un file).

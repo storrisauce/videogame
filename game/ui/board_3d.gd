@@ -14,7 +14,7 @@ const MID := 0.8            ## sentiero tra le due file
 const PX := 1.0 / 16.0      ## un pixel dello sprite in unità del mondo: 1 tile da 16 px = 1 unità (design system §3)
 const STRUCT_SCALE := 0.8   ## le strutture stanno dietro, un po' più piccole
 const CAM_TARGET := Vector3(0, 0, 0.35)
-const CAM_DIR := Vector3(0, 0.76, 0.65)   ## inclinazione fissa (~50 gradi); la distanza si adatta allo schermo
+const CAM_DIR := Vector3(0, 0.707, 0.707)   ## inclinazione fissa (45 gradi: un plastico visto dal tavolo); la distanza si adatta
 
 var cam := Camera3D.new()
 var world := Node3D.new()
@@ -91,7 +91,7 @@ func _build_world() -> void:
 	sun.shadow_enabled = false
 	sun.directional_shadow_max_distance = 40.0
 	world.add_child(sun)
-	cam.fov = 40.0
+	cam.fov = 36.0   ## poca deformazione ai bordi, figure in fondo non troppo piccole
 	cam.look_at_from_position(CAM_TARGET + CAM_DIR * 10.0, CAM_TARGET, Vector3.UP)
 	world.add_child(cam)
 	_rng.seed = 7
@@ -117,6 +117,7 @@ func _build_world() -> void:
 			_fence(x, zr[0], zr[1])
 	# il bunker: luce della lampada, tavolo di lamiera, oggetti di scena, polvere (ui/bunker_set.gd)
 	BunkerSet.build(world, bw, bd, reduce_motion)
+	Kit.prepare_outlines(world)
 
 
 
@@ -135,12 +136,11 @@ func _toon(color: Color, tex: Texture2D = null, glow := 0.0) -> ShaderMaterial:
 
 
 ## Contorno uniforme (D-020). `width` resta per compatibilità ma non conta più: lo spessore è sullo schermo.
-## radial = 1 per le forme centrate (casse, vassoio, steccati), 0 per le mesh importate o le ciambelle.
-func _outlined(m: ShaderMaterial, width := 0.035, radial := 1.0) -> ShaderMaterial:
+## Il guscio usa le normali medie (Kit.prepare_outlines), chiamato a fine costruzione.
+func _outlined(m: ShaderMaterial, width := 0.035) -> ShaderMaterial:
 	var o := ShaderMaterial.new()
 	o.shader = OUTLINE
 	o.set_shader_parameter("thickness", Kit.outline_thickness)
-	o.set_shader_parameter("radial", radial)
 	m.next_pass = o
 	return m
 
@@ -212,7 +212,8 @@ func _model(path: String, pos: Vector3, s := 1.0, rot := 0.0, glow_tint := Color
 			var orig := mi.mesh.surface_get_material(si) as BaseMaterial3D
 			var tex: Texture2D = orig.albedo_texture if orig else null
 			var col: Color = orig.albedo_color if orig else Color.WHITE
-			mi.set_surface_override_material(si, _outlined(_toon(col, tex), 0.02, 0.0))
+			mi.set_surface_override_material(si, _outlined(_toon(col, tex), 0.02))
+	Kit.prepare_outlines(n)
 	return n
 
 
@@ -262,9 +263,15 @@ func _build_cell(p: int, i: int, band: String) -> void:
 				b.rotation.y = _rng.randf_range(0, PI)
 				(b.material_override as ShaderMaterial).set_shader_parameter("emission", acc)
 				(b.material_override as ShaderMaterial).set_shader_parameter("emission_energy", 2.4)
+	Kit.prepare_outlines(n)
 
 
 const MODEL_SCALE := COL_W / 2.0 * 1.3    ## 1 unità del kit ≈ due terzi di recinto: figure ben visibili
+## Ingombro massimo di una figura sul tavolo: le creature grandi restano grandi, ma non coprono la fila dietro
+## né escono dal recinto (giro dei glitch: il maiale carro armato copriva mezzo tabellone).
+const MAX_H := 1.7
+const MAX_W := COL_W * 0.86
+const MAX_D := ROW_D * 0.62
 
 
 ## Attore di un recinto: un Node3D con dentro il modello 3D della carta (models/), o la vecchia figura pixel art
@@ -275,6 +282,12 @@ func _actor(id: String, p: int, creature: bool) -> Node3D:
 	var model := Models.build(id)
 	var sc := MODEL_SCALE * (1.0 if creature else 0.85)
 	if model:
+		var bb := Models.bounds(model)
+		var k := (1.0 if creature else 0.85)
+		sc = minf(sc, MAX_H * k / maxf(bb.size.y, 0.01))
+		sc = minf(sc, MAX_W * k / maxf(bb.size.x, 0.01))
+		sc = minf(sc, MAX_D * k / maxf(bb.size.z, 0.01))
+		a.set_meta("model_scale", sc)
 		model.scale = Vector3.ONE * sc
 		if p == 1:
 			model.rotation.y = -model.rotation.y   # l'avversario si gira dall'altra parte, verso il centro
@@ -321,8 +334,11 @@ func _fit_camera() -> void:
 	var bd := ROW_D * 2.0 + MID
 	var pts := [Vector3(-bw / 2.0, 0.3, -bd / 2.0 - 0.6), Vector3(bw / 2.0, 0.3, -bd / 2.0 - 0.6),
 		Vector3(-bw / 2.0 - 0.3, -0.5, bd / 2.0 + 0.3), Vector3(bw / 2.0 + 0.3, -0.5, bd / 2.0 + 0.3),
-		Vector3(0, 0.9, -bd / 2.0 - 0.45),
-		Vector3(-bw / 2.0 + COL_W / 2.0, 2.4, -MID / 2.0 - ROW_D / 2.0), Vector3(bw / 2.0 - COL_W / 2.0, 2.4, -MID / 2.0 - ROW_D / 2.0)]   # teste delle figure in fondo
+		Vector3(0, 0.9, -bd / 2.0 - 0.45)]
+	# teste delle figure più alte in fondo: devono restare nello schermo
+	var heads := []
+	for i in 4:
+		heads.append(_creature_pos(1, i) + Vector3(0, MAX_H, 0))
 	var dir := CAM_DIR.normalized()
 	var lo := 3.0
 	var hi := 40.0
@@ -334,7 +350,13 @@ func _fit_camera() -> void:
 		cam.look_at_from_position(CAM_TARGET + dir * d, CAM_TARGET, Vector3.UP)
 		cam.v_offset = _v_offset_for(d, area)
 		var ok := true
+		for v in heads:
+			var sh := cam.unproject_position(v)
+			if sh.y < 6.0:
+				ok = false
 		for v in pts:
+			if not ok:
+				break
 			var sp := cam.unproject_position(v)
 			if cam.is_position_behind(v) or not area.has_point(sp):
 				ok = false
@@ -352,6 +374,9 @@ func _fit_camera() -> void:
 	cam.v_offset = _v_offset_for(hi, area)
 	_cam_rest = cam.transform
 	framed.emit()
+
+
+const TOKEN_H := 34.0   ## altezza dei gettoni sopra la testa (punti dell'interfaccia)
 
 
 ## Spostamento verticale dell'inquadratura perché il centro del tabellone cada al centro della zona `area`.
@@ -394,8 +419,12 @@ func cell_poly(p: int, i: int) -> PackedVector2Array:
 		project(c + Vector3(hx, 0, hz)), project(c + Vector3(-hx, 0, hz))])
 
 
-## Punto sopra la testa della creatura (per ATK e Vita), in coordinate di questo controllo.
+## Dove stanno i gettoni di attacco e vita, in coordinate di questo controllo: sempre verso il sentiero centrale.
+## Le tue creature li hanno sopra la testa; quelle avversarie ai piedi, davanti. Così i numeri non finiscono
+## mai fuori dallo schermo o sotto il registro in alto, e le due file si leggono una di fronte all'altra.
 func head_point(p: int, i: int) -> Vector2:
+	if p == 1:
+		return project(_creature_pos(p, i) + Vector3(0, 0.05, 0.75)) + Vector2(0, 4)
 	var a: Node3D = creature_sprites[p][i]
 	var h := 0.9
 	if a and is_instance_valid(a):
@@ -680,7 +709,7 @@ func _process(delta: float) -> void:
 						s3.frame = (f + int(a.get_meta("phase", 0.0))) % s3.hframes
 				elif not reduce_motion and arr == creature_sprites:
 					var ph: float = a.get_meta("phase", 0.0)
-					(c as Node3D).scale = Vector3.ONE * MODEL_SCALE * Vector3(1.0 + 0.02 * sin(tsec * 2.6 + ph), 1.0 - 0.025 * sin(tsec * 2.6 + ph), 1.0)
+					(c as Node3D).scale = Vector3.ONE * float(a.get_meta("model_scale", MODEL_SCALE)) * Vector3(1.0 + 0.02 * sin(tsec * 2.6 + ph), 1.0 - 0.025 * sin(tsec * 2.6 + ph), 1.0)
 	if _trauma > 0.0:
 		_trauma = maxf(_trauma - 1.6 * delta, 0.0)
 		_t += delta * 30.0

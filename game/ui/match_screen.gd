@@ -278,7 +278,8 @@ func _layout() -> void:
 	log_label.position = Vector2(W / 2.0 - 180, 6)
 	log_label.size = Vector2(360, 0)
 	_detail_rect = Rect2(hero_w + 16, 4, W - 2 * hero_w - 32, 0)
-	_detail_strip = _detail_rect
+	# scelta del bersaglio: la striscia sta sopra la mano (che intanto non serve), così si vedono tutte e due le file
+	_detail_strip = Rect2(side_w + 16, y_hand + 10, W - 2 * side_w - 32, 0)
 	_place_detail()
 	over_panel.custom_minimum_size = Vector2(320, 0)
 	over_panel.position = Vector2(W / 2 - 160, H * 0.18)
@@ -412,6 +413,7 @@ func refresh() -> void:
 	caos_label.text = "Caos\n%d" % me.caos
 	info_label.text = "Mazzo %d\nLetamaio %d" % [me.deck.size(), me.discard.size()]
 	opp_label.text = "Mano %d · Mazzo %d\nCaos %d" % [m.players[AI].hand.size(), m.players[AI].deck.size(), m.players[AI].caos]
+	hand_layer.modulate.a = 0.3 if state == "target" else 1.0
 	board3d.reduce_motion = speed <= 0.0 or (profile != null and profile.meno_movimento)
 	fx.reduce_motion = board3d.reduce_motion
 	board3d.refresh(m)

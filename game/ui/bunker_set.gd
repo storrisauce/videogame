@@ -7,7 +7,7 @@ extends RefCounted
 
 
 
-static func build(world: Node3D, bw: float, bd: float, calm: bool) -> void:
+static func build(world: Node3D, bw: float, bd: float, calm: bool, home := false) -> void:
 	_lights(world, bw, bd)
 	_table(world, bw, bd)
 	var L := -bw / 2.0
@@ -15,7 +15,8 @@ static func build(world: Node3D, bw: float, bd: float, calm: bool) -> void:
 	_barrel(world, Vector3(L - 1.7, 0, 2.0), 0.4, calm)
 	_spilled_beans(world, Vector3(L - 1.1, 0, 3.3), -0.4)
 	_gas_mask(world, Vector3(L - 1.5, 0, -0.2), 0.6)
-	_gnome_shrine(world, Vector3(L - 1.4, 0, -2.9), calm)
+	if not home:   # nella home starebbe dietro al testo dell'abilità
+		_gnome_shrine(world, Vector3(L - 1.4, 0, -2.9), calm)
 	_radio(world, Vector3(R + 1.6, 0, 0.3), -0.5)
 	_geiger(world, Vector3(R + 1.5, 0, 2.6), -0.3)
 	_uranium(world, Vector3(R + 1.5, 0, -2.8), calm)

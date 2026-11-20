@@ -20,8 +20,8 @@ static var _mats: Dictionary = {}
 
 
 ## Materiale cartoon (condiviso per colore). `glow` > 1 accende il bagliore (bloom).
-static func mat(color: Color, glow := 0.0, outline := true, radial := 1.0) -> ShaderMaterial:
-	var key := "%s|%.2f|%s|%.4f|%.1f" % [color.to_html(), glow, outline, outline_thickness, radial]
+static func mat(color: Color, glow := 0.0, outline := true) -> ShaderMaterial:
+	var key := "%s|%.2f|%s|%.4f" % [color.to_html(), glow, outline, outline_thickness]
 	if _mats.has(key):
 		return _mats[key]
 	var m := ShaderMaterial.new()
@@ -34,7 +34,6 @@ static func mat(color: Color, glow := 0.0, outline := true, radial := 1.0) -> Sh
 		var o := ShaderMaterial.new()
 		o.shader = OUTLINE
 		o.set_shader_parameter("thickness", outline_thickness)
-		o.set_shader_parameter("radial", radial)
 		m.next_pass = o
 	_mats[key] = m
 	return m
@@ -46,8 +45,7 @@ static func _add(parent: Node3D, mesh: Mesh, pos: Vector3, color: Color, scl := 
 	mi.position = pos
 	mi.scale = scl
 	mi.rotation = rot
-	# le forme del kit sono centrate: contorno spinto dal centro (compatto agli spigoli); le ciambelle no
-	mi.material_override = mat(color, glow, outline, 0.0 if mesh is TorusMesh else 1.0)
+	mi.material_override = mat(color, glow, outline)
 	parent.add_child(mi)
 	return mi
 
@@ -166,9 +164,9 @@ static func food(parent: Node3D, name: String, pos: Vector3, s := 1.0, rot := Ve
 			var o := ShaderMaterial.new()
 			o.shader = OUTLINE
 			o.set_shader_parameter("thickness", outline_thickness)
-			o.set_shader_parameter("radial", 0.0)   # mesh importate: non centrate
 			m.next_pass = o
 			mi.set_surface_override_material(si, m)
+	prepare_outlines(n)
 	return n
 
 
@@ -178,3 +176,96 @@ static func root(id: String, turn := -0.35) -> Node3D:
 	n.name = id
 	n.rotation.y = turn
 	return n
+
+
+# --- contorni compatti (D-020) ---------------------------------------------------------------
+## Il contorno è il modello gonfiato lungo le normali. Ma casse, cilindri e modelli low-poly hanno le normali
+## "spezzate" agli spigoli (una per faccia): gonfiando lungo quelle, il guscio si apre e il contorno si stacca.
+## Qui ogni mesh con contorno riceve, nel colore dei vertici, la normale MEDIA di tutti i vertici nello stesso
+## punto: il guscio resta chiuso e il contorno aderisce agli spigoli. Lo shader del contorno usa quella.
+## Va chiamata dopo aver costruito un modello o una scena (Models.build, Board3D, BunkerSet la chiamano già).
+
+static var _smooth_cache: Dictionary = {}
+
+
+static func prepare_outlines(root: Node) -> void:
+	var list: Array = root.find_children("*", "MeshInstance3D", true, false)
+	if root is MeshInstance3D:
+		list.append(root)
+	for mi: MeshInstance3D in list:
+		if mi.mesh == null or mi.has_meta("smooth") or not _has_outline(mi):
+			continue
+		var count := mi.get_surface_override_material_count()
+		var overrides := []
+		for s in count:
+			overrides.append(mi.get_surface_override_material(s))
+		mi.mesh = smoothed(mi.mesh)
+		for s in mini(count, overrides.size()):
+			if overrides[s]:
+				mi.set_surface_override_material(s, overrides[s])
+		mi.set_meta("smooth", true)
+
+
+static func _has_outline(mi: MeshInstance3D) -> bool:
+	var mats: Array = [mi.material_override]
+	for s in mi.get_surface_override_material_count():
+		mats.append(mi.get_surface_override_material(s))
+	for m in mats:
+		var mm := m as Material
+		while mm:
+			if mm is ShaderMaterial and (mm as ShaderMaterial).shader == OUTLINE:
+				return true
+			mm = mm.next_pass
+	return false
+
+
+static func _mesh_key(mesh: Mesh) -> String:
+	if mesh is SphereMesh:
+		var m := mesh as SphereMesh
+		return "S%.4f|%.4f|%d|%d|%s" % [m.radius, m.height, m.radial_segments, m.rings, m.is_hemisphere]
+	if mesh is BoxMesh:
+		var b := mesh as BoxMesh
+		return "B%s" % [b.size]
+	if mesh is CylinderMesh:
+		var c := mesh as CylinderMesh
+		return "C%.4f|%.4f|%.4f|%d|%d" % [c.top_radius, c.bottom_radius, c.height, c.radial_segments, c.rings]
+	if mesh is TorusMesh:
+		var t := mesh as TorusMesh
+		return "T%.4f|%.4f|%d|%d" % [t.inner_radius, t.outer_radius, t.rings, t.ring_segments]
+	if mesh is PrismMesh:
+		var p := mesh as PrismMesh
+		return "P%s|%.3f" % [p.size, p.left_to_right]
+	return "I%d" % mesh.get_instance_id()
+
+
+## Copia della mesh con la normale media nel colore dei vertici (rgb = normale * 0,5 + 0,5).
+static func smoothed(mesh: Mesh) -> Mesh:
+	var key := _mesh_key(mesh)
+	if _smooth_cache.has(key):
+		return _smooth_cache[key]
+	var out := ArrayMesh.new()
+	for s in mesh.get_surface_count():
+		var arrays := mesh.surface_get_arrays(s)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL] if arrays[Mesh.ARRAY_NORMAL] != null else PackedVector3Array()
+		var sums := {}
+		for k in verts.size():
+			var q := Vector3i((verts[k] * 2000.0).round())
+			var nrm := normals[k] if k < normals.size() else Vector3.UP
+			sums[q] = sums.get(q, Vector3.ZERO) + nrm
+		var cols := PackedColorArray()
+		cols.resize(verts.size())
+		for k in verts.size():
+			var q := Vector3i((verts[k] * 2000.0).round())
+			var d: Vector3 = sums[q]
+			if d.length_squared() < 1e-6:
+				d = normals[k] if k < normals.size() else Vector3.UP
+			d = d.normalized()
+			cols[k] = Color(d.x * 0.5 + 0.5, d.y * 0.5 + 0.5, d.z * 0.5 + 0.5, 1.0)
+		arrays[Mesh.ARRAY_COLOR] = cols
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		var sm := mesh.surface_get_material(s)
+		if sm:
+			out.surface_set_material(s, sm)
+	_smooth_cache[key] = out
+	return out

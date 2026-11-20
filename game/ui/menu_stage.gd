@@ -33,7 +33,7 @@ func _init() -> void:
 	fill.light_energy = 0.4
 	fill.light_color = Color(0.7, 0.78, 1.0)
 	world.add_child(fill)
-	BunkerSet.build(world, 4.0, 2.4, false)
+	BunkerSet.build(world, 4.0, 2.4, false, true)
 	# piedistallo: una cassa di legno con il simbolo radioattivo
 	var ped := Node3D.new()
 	ped.position = SPOT
@@ -41,6 +41,7 @@ func _init() -> void:
 	Kit.box(ped, Vector3(0, 0.25, 0), Vector3(1.6, 0.5, 1.6), Art.c("legno_5"))
 	Kit.box(ped, Vector3(0, 0.52, 0), Vector3(1.7, 0.08, 1.7), Art.c("legno_3"))
 	BunkerSet.trefoil(ped, Vector3(0, 0.26, 0.81), 0.16)
+	Kit.prepare_outlines(world)
 	_hero_root.position = SPOT + Vector3(0, 0.56, 0)
 	world.add_child(_hero_root)
 	# luce sul personaggio

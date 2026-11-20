@@ -125,5 +125,7 @@ func start_match(hero: String, bands: Array) -> void:
 	ms.exit_to_menu.connect(show_menu)
 	ms.rematch.connect(start_match.bind(hero, bands))
 	var opp_ids: Array = db.heroes.keys()
+	if opp_ids.size() > 1:
+		opp_ids.erase(hero)   # mai lo stesso sopravvissuto da tutte e due le parti
 	var opp_hero: String = opp_ids[rng.randi_range(0, opp_ids.size() - 1)]
 	ms.start_match(db, profile, hero, bands, opp_hero, DeckFactory.random_pair(rng), rng.randi())

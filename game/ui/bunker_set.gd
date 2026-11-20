@@ -28,17 +28,25 @@ static func build(world: Node3D, bw: float, bd: float, calm: bool, home := false
 # --- luce e tavolo -------------------------------------------------------------
 
 static func _lights(world: Node3D, bw: float, bd: float) -> void:
+	# la lampada del bunker: sopra e un po' davanti al tabellone, così le facce delle creature prendono luce
 	var spot := SpotLight3D.new()
-	spot.position = Vector3(0, 11.0, 1.0)
-	spot.rotation_degrees = Vector3(-90, 0, 0)
 	spot.light_color = Color(1.0, 0.9, 0.72)
 	spot.light_energy = 3.0
-	spot.spot_range = 22.0
-	spot.spot_angle = 38.0
+	spot.spot_range = 24.0
+	spot.spot_angle = 36.0
 	spot.spot_attenuation = 0.6
 	spot.spot_angle_attenuation = 1.4
 	spot.shadow_enabled = true
+	spot.shadow_bias = 0.04
 	world.add_child(spot)
+	spot.look_at_from_position(Vector3(-0.8, 11.0, 3.6), Vector3(0, 0, 0.2), Vector3.UP)
+	# luce fredda da dietro, bassa: non illumina, disegna solo il bordo chiaro sulle sagome (toon.gdshader)
+	var rim := DirectionalLight3D.new()
+	rim.rotation_degrees = Vector3(-14, 180, 0)
+	rim.light_color = Color(0.62, 0.86, 1.0)
+	rim.light_energy = 1.1
+	rim.shadow_enabled = false
+	world.add_child(rim)
 
 
 static func _table(world: Node3D, bw: float, bd: float) -> void:

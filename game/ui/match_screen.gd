@@ -118,11 +118,13 @@ func _build() -> void:
 	log_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	log_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	var lsb := StyleBoxFlat.new()
-	lsb.bg_color = Color(Art.c("inchiostro"), 0.82)
+	lsb.bg_color = Color(Art.c("inchiostro"), 0.6)   # leggero: sotto si intravedono le figure in fondo
 	lsb.border_color = Art.c("legno_6")
 	lsb.set_border_width_all(3)
 	lsb.set_corner_radius_all(14)
-	lsb.set_content_margin_all(6)
+	lsb.set_content_margin_all(3)
+	lsb.content_margin_left = 12
+	lsb.content_margin_right = 12
 	log_label.add_theme_stylebox_override("normal", lsb)
 	log_label.modulate.a = 0.0
 	banner.add_theme_font_size_override("font_size", Ui.BIG)
@@ -454,7 +456,7 @@ func _snapshot() -> Dictionary:
 
 
 func _lane_point(p: int, i: int) -> Vector2:
-	return board3d.position + board3d.head_point(p, i)
+	return board3d.position + board3d.body_point(p, i)
 
 
 func _hero_point(p: int) -> Vector2:
@@ -601,7 +603,7 @@ func _on_event(kind: String, d: Dictionary) -> void:
 		"attack":
 			_log("%s colpisce %s: -%d%s" % [db.card(d["card"])["name"], db.card(d["target"])["name"], d["damage"], " BOTTA ATOMICA!" if d["crit"] else ""])
 			board3d.attack(d["player"], d["lane"], true, d["crit"])
-			var at := board3d.position + board3d.head_point(1 - d["player"], d["lane"])
+			var at := board3d.position + board3d.body_point(1 - d["player"], d["lane"])
 			_delayed_pop("-%d" % d["damage"], at, Art.c("allarme") if d["crit"] else Art.c("rosso_3"), d["crit"])
 		"attack_hero":
 			_log("%s colpisce la Pazienza: -%d%s" % [db.card(d["card"])["name"], d["damage"], " BOTTA ATOMICA!" if d["crit"] else ""])

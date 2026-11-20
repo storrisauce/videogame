@@ -15,6 +15,7 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(world)
+	Ui3D.vignette(self, 0.5)
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Art.c("inchiostro")
@@ -25,6 +26,7 @@ func _init() -> void:
 	env.glow_enabled = true
 	env.glow_hdr_threshold = 1.15
 	env.glow_intensity = 0.45
+	Ui3D.grade(env)
 	var we := WorldEnvironment.new()
 	we.environment = env
 	world.add_child(we)
@@ -83,6 +85,7 @@ func _process(_d: float) -> void:
 	if _hero and not calm:
 		var t := Time.get_ticks_msec() / 1000.0
 		_hero.rotation.y = -0.35 + sin(t * 0.6) * 0.35
+		Kit.idle_life(_hero, t, 0.5, false)
 		_hero.scale = Vector3.ONE * 1.4 * Vector3(1.0 + 0.012 * sin(t * 2.4), 1.0 - 0.015 * sin(t * 2.4), 1.0)
 
 

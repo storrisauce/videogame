@@ -113,7 +113,7 @@ Elenco completo dei nomi:
 ```bash
 godot --headless --path game --import                                  # prima volta dopo il clone
 godot --headless --path game --script res://tests/test_runner.gd       # regole: atteso "74 ok, 0 falliti", uscita 0
-godot --headless --path game --script res://tests/test_ui.gd           # interfaccia: atteso "46 ok, 0 falliti" (la fila lontana in prospettiva deve restare toccabile, ≥ 44 pt), uscita 0
+godot --headless --path game --script res://tests/test_ui.gd           # interfaccia: atteso "47 ok, 0 falliti" (la fila lontana in prospettiva deve restare toccabile, ≥ 44 pt), uscita 0
 python3 ~/.claude/skills/game-docs/scripts/check_docs.py docs          # documenti: 0 errori
 ```
 I test escono con codice 1 se qualcosa fallisce. Gli errori di script **non** cambiano il codice d'uscita: cerca anche
@@ -274,6 +274,12 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
   arrivi/attacchi/colpi/morti, scossa a trauma), `fx_layer.gd` (numeri di danno, carta che vola), `juice.gd` (pressione dei
   pulsanti, entrate sfalsate), menu rifatto, scheda carta compatta, opzione "Meno movimento". Controllo animazioni:
   `godot --path game --resolution 852x393 --script res://tools/anim_check.gd -- <cartella> 20` (foto ogni secondo).
+- ✅ **D-022, rifiniture 3D e glitch:** contorni con normali medie nel colore dei vertici (`Kit.prepare_outlines`, da chiamare
+  dopo aver costruito modelli o scene; un test controlla che nessuna mesh resti senza), gettoni ATK/vita ai piedi delle creature
+  (`Board3D.head_point`), figure limitate al recinto (`MAX_H/MAX_W/MAX_D`), telecamera 45° fov 36, luce di contorno da dietro
+  (`toon.gdshader`: le luci "da dietro" disegnano solo il bordo), vignettatura e colori (`ui/ui3d.gd`), terreni 3D per banda
+  e acqua animata (`shaders/water.gdshader`), occhi con riflesso e `Kit.idle_life` (palpebre, sguardo), scelta del bersaglio
+  sopra la mano, avversario mai con il tuo stesso sopravvissuto, Pazienza mai negativa sullo schermo.
 - ✅ **D-021, suoni e vibrazioni:** 32 effetti e 2 musiche originali sintetizzati da `art/audio/gen_audio.py`
   (in `game/assets/audio/`), suonati da `ui/sfx.gd` (`Sfx.play`, `Sfx.music`, `Sfx.buzz`, bus Musica/Effetti con limitatore);
   impostazioni Musica, Effetti sonori, Vibrazione nella rotellina della home (salvate nel profilo). Mancano i versi degli animali.

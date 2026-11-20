@@ -55,8 +55,8 @@ static func blob(parent: Node3D, pos: Vector3, size: Vector3, color: Color, rot 
 	var sm := SphereMesh.new()
 	sm.radius = 0.5
 	sm.height = 1.0
-	sm.radial_segments = 10
-	sm.rings = 6
+	sm.radial_segments = 18
+	sm.rings = 10
 	return _add(parent, sm, pos, color, size, rot, glow)
 
 
@@ -72,7 +72,7 @@ static func cyl(parent: Node3D, pos: Vector3, radius: float, height: float, colo
 	cm.top_radius = radius if top < 0.0 else top
 	cm.bottom_radius = radius
 	cm.height = height
-	cm.radial_segments = 8
+	cm.radial_segments = 12
 	cm.rings = 1
 	return _add(parent, cm, pos, color, Vector3.ONE, rot)
 
@@ -83,7 +83,7 @@ static func cone(parent: Node3D, pos: Vector3, radius: float, height: float, col
 	cm.top_radius = 0.0
 	cm.bottom_radius = radius
 	cm.height = height
-	cm.radial_segments = 8
+	cm.radial_segments = 12
 	cm.rings = 1
 	return _add(parent, cm, pos, color, Vector3.ONE, rot)
 
@@ -100,13 +100,14 @@ static func torus(parent: Node3D, pos: Vector3, inner: float, outer: float, colo
 ## Occhio cartoon: bianco + pupilla nera che guarda nella direzione `look` (in locale). `r` = raggio del bianco.
 static func eye(parent: Node3D, pos: Vector3, r: float, look := Vector3(0, 0, 1), mutant := false) -> Node3D:
 	var e := Node3D.new()
+	e.name = "Eye"
 	e.position = pos
 	parent.add_child(e)
 	var sm := SphereMesh.new()
 	sm.radius = r
 	sm.height = r * 2.0
-	sm.radial_segments = 10
-	sm.rings = 6
+	sm.radial_segments = 14
+	sm.rings = 8
 	_add(e, sm, Vector3.ZERO, Art.c("bianco"), Vector3.ONE, Vector3.ZERO, 0.0, true)
 	var pm := SphereMesh.new()
 	pm.radius = r * 0.55
@@ -114,8 +115,35 @@ static func eye(parent: Node3D, pos: Vector3, r: float, look := Vector3(0, 0, 1)
 	pm.radial_segments = 8
 	pm.rings = 4
 	var pc := Art.c("radio_1") if mutant else Art.c("inchiostro")
-	_add(e, pm, look.normalized() * r * 0.62, pc, Vector3.ONE, Vector3.ZERO, 2.2 if mutant else 0.0, false)
+	var pp := look.normalized() * r * 0.62
+	_add(e, pm, pp, pc, Vector3.ONE, Vector3.ZERO, 2.2 if mutant else 0.0, false)
+	# riflesso: un puntino bianco in alto sulla pupilla (occhi vivi, da cartone)
+	var hm := SphereMesh.new()
+	hm.radius = r * 0.2
+	hm.height = r * 0.4
+	hm.radial_segments = 6
+	hm.rings = 3
+	_add(e, hm, pp * 1.12 + Vector3(-r * 0.2, r * 0.24, 0), Art.c("bianco"), Vector3.ONE, Vector3.ZERO, 0.6, false)
 	return e
+
+
+## Vita da fermi: sbatte le palpebre ogni tanto e si guarda intorno piano. Da chiamare a ogni fotogramma
+## sul modello (radice di Models.build). `seed` diverso per ogni figura, così non si muovono tutte insieme.
+static func idle_life(model: Node3D, tsec: float, seed: float, look := true) -> void:
+	if not model.has_meta("eyes"):
+		model.set_meta("eyes", model.find_children("Eye", "Node3D", true, false))
+		model.set_meta("base_rot", model.rotation.y)
+	var period := 3.1 + fmod(seed * 1.37, 1.6)
+	var ph := fmod(tsec + seed * 2.3, period)
+	var blink := 1.0
+	if ph < 0.14:
+		blink = maxf(0.12, absf(ph - 0.07) / 0.07)
+	for e: Node3D in model.get_meta("eyes"):
+		if is_instance_valid(e):
+			e.scale.y = blink
+	if look:
+		var turn := smoothstep(-0.35, 0.35, sin(tsec * 0.42 + seed * 2.1)) - 0.5
+		model.rotation.y = float(model.get_meta("base_rot")) + turn * 0.45
 
 
 ## Due occhi simmetrici sulla faccia (centro `pos`, distanza `gap`).

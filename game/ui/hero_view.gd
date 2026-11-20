@@ -78,8 +78,8 @@ func _draw() -> void:
 	# Pazienza: cuore + numero grande + barra
 	var y := por.end.y + 34
 	Ui.heart(self, Vector2(14, y + 14), 26, Art.c("rosso_2"))
-	Ui.text(self, Vector2(30, y + 24), str(ps.hp), Ui.BIG, Art.c("bianco"))
-	Ui.text(self, Vector2(30 + Ui.display().get_string_size(str(ps.hp), 0, -1, Ui.BIG).x + 3, y + 24), "/%d" % ps.max_hp, Ui.SMALL, Art.c("legno_9"))
+	Ui.text(self, Vector2(30, y + 24), str(maxi(ps.hp, 0)), Ui.BIG, Art.c("bianco"))
+	Ui.text(self, Vector2(30 + Ui.display().get_string_size(str(maxi(ps.hp, 0)), 0, -1, Ui.BIG).x + 3, y + 24), "/%d" % ps.max_hp, Ui.SMALL, Art.c("legno_9"))
 	var bar := Rect2(2, y + 32, w - 4, 10)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Art.c("rosso_1")

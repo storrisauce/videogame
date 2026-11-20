@@ -37,6 +37,7 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(world)
 	_build_world()
+	Ui3D.vignette(self, 0.55)
 
 
 func _notification(what: int) -> void:
@@ -61,6 +62,7 @@ func has_view() -> bool:
 const SURF := 0.22          ## altezza della superficie dei recinti
 const TOON := preload("res://shaders/toon.gdshader")
 const OUTLINE := preload("res://shaders/outline.gdshader")
+const WATER := preload("res://shaders/water.gdshader")
 const TERRAIN := {
 	"porcile": ["legno_4", "legno_3"], "pollaio": ["pelle_3", "arancio_4"], "stagno": ["acqua_4", "acqua_6"],
 	"patate": ["legno_3", "legno_5"], "discarica": ["ferro_3", "ferro_2"], "cratere": ["viola_1", "radio_1"], "erba": ["verde_4", "verde_3"]}
@@ -81,6 +83,7 @@ func _build_world() -> void:
 	env.glow_hdr_threshold = 1.15
 	env.glow_intensity = 0.45
 	env.glow_bloom = 0.0
+	Ui3D.grade(env)
 	var we := WorldEnvironment.new()
 	we.environment = env
 	world.add_child(we)
@@ -102,7 +105,11 @@ func _build_world() -> void:
 	_box(Vector3(0, 0.0, 0), Vector3(bw + 0.7, 0.36, bd + 0.7), Art.c("legno_5"))
 	_box(Vector3(0, SURF - 0.06, 0), Vector3(bw + 0.1, 0.1, bd + 0.1), Art.c("legno_3"), 0.0)
 	# sentiero di terra tra i due schieramenti
-	_box(Vector3(0, SURF - 0.03, 0), Vector3(bw, 0.06, MID), Art.c("legno_8"), 0.0)
+	_box(Vector3(0, SURF - 0.03, 0), Vector3(bw, 0.06, MID), Art.c("legno_7"), 0.0)
+	for k in 14:   # sassolini e solchi di ruote sul sentiero
+		var pb := _box(Vector3(_rng.randf_range(-bw / 2.0 + 0.3, bw / 2.0 - 0.3), SURF + 0.005, _rng.randf_range(-MID / 2.0 + 0.1, MID / 2.0 - 0.1)),
+			Vector3(_rng.randf_range(0.08, 0.16), 0.04, _rng.randf_range(0.06, 0.12)), Art.c("legno_8") if k % 2 else Art.c("legno_5"), 0.0)
+		pb.rotation.y = _rng.randf_range(0, PI)
 	# recinti: terreno e decorazioni (rifatti in refresh() secondo la zona)
 	for p in 2:
 		for i in 4:
@@ -188,12 +195,25 @@ func _cyl(pos: Vector3, r: float, h: float, color: Color, parent: Node3D = null,
 	return _mesh(cm, pos, color, outline, 0.0, parent)
 
 
+## Steccato: paletti a punta un po' storti, due traverse, una più chiara.
 func _fence(x: float, z0: float, z1: float) -> void:
 	var len := z1 - z0
-	_box(Vector3(x, SURF + 0.2, (z0 + z1) / 2.0), Vector3(0.09, 0.08, len), Art.c("legno_6"), 0.025)
+	_box(Vector3(x, SURF + 0.24, (z0 + z1) / 2.0), Vector3(0.07, 0.07, len), Art.c("legno_6"), 0.025)
+	_box(Vector3(x, SURF + 0.1, (z0 + z1) / 2.0), Vector3(0.06, 0.06, len), Art.c("legno_4"), 0.025)
 	var z := z0 + 0.12
 	while z <= z1 + 0.01:
-		_box(Vector3(x, SURF + 0.13, z), Vector3(0.13, 0.3, 0.13), Art.c("legno_5"), 0.025)
+		var post := Node3D.new()
+		post.position = Vector3(x, SURF, z)
+		post.rotation = Vector3(_rng.randf_range(-0.06, 0.06), 0, _rng.randf_range(-0.07, 0.07))
+		world.add_child(post)
+		_box(Vector3(0, 0.15, 0), Vector3(0.13, 0.3, 0.13), Art.c("legno_5"), 0.025, post)
+		var tip := CylinderMesh.new()
+		tip.top_radius = 0.0
+		tip.bottom_radius = 0.092
+		tip.height = 0.12
+		tip.radial_segments = 4
+		var t := _mesh(tip, Vector3(0, 0.36, 0), Art.c("legno_6"), 0.03, 0.0, post)
+		t.rotation.y = PI / 4.0
 		z += 0.9
 
 
@@ -217,7 +237,8 @@ func _model(path: String, pos: Vector3, s := 1.0, rot := 0.0, glow_tint := Color
 	return n
 
 
-## Terreno e decorazioni di un recinto, ben distinti per banda.
+## Terreno e decorazioni di un recinto, ben distinti per banda: una zolla rialzata con il bordo più scuro,
+## macchie di colore, e oggetti piccoli della banda sui bordi (mai dove stanno creatura e struttura).
 func _build_cell(p: int, i: int, band: String) -> void:
 	var n: Node3D = _cells[p][i]
 	for c in n.get_children():
@@ -227,43 +248,197 @@ func _build_cell(p: int, i: int, band: String) -> void:
 	var acc := Art.c(cols[1])
 	var w := COL_W - 0.14
 	var d := ROW_D - 0.12
-	_box(Vector3(0, SURF - 0.02, 0), Vector3(w, 0.08, d), base, 0.0, n)
 	_rng.seed = hash(band) + p * 31 + i * 7
+	# zolla: bordo scuro e piano un po' più chiaro, poco rialzato
+	_deco_box(n, Vector3(0, SURF - 0.03, 0), Vector3(w, 0.1, d), base.darkened(0.25))
+	_deco_box(n, Vector3(0, SURF + 0.0, 0), Vector3(w - 0.12, 0.06, d - 0.12), base)
+	# macchie: il terreno non è mai a tinta unita
+	for k in 5:
+		var sp := _free_spot(p, 0.0)
+		_deco_blob(n, sp + Vector3(0, SURF + 0.03, 0), Vector3(_rng.randf_range(0.3, 0.6), 0.02, _rng.randf_range(0.25, 0.5)), base.lightened(0.08) if k % 2 else base.darkened(0.08))
 	match band:
-		"porcile":   # fango con pozzanghere
+		"porcile":   # fango: pozze lucide, montagnole, un trogolo
 			for k in 3:
-				_disc(Vector3(_rng.randf_range(-0.6, 0.6), SURF + 0.03, _rng.randf_range(-1.1, 1.1)), _rng.randf_range(0.22, 0.38), acc, 0.03, n)
-		"pollaio":   # paglia sparsa
-			for k in 10:
-				var b := _box(Vector3(_rng.randf_range(-0.8, 0.8), SURF + 0.04, _rng.randf_range(-1.2, 1.2)), Vector3(0.36, 0.04, 0.06), acc, 0.0, n)
-				b.rotation.y = _rng.randf_range(0, PI)
-		"stagno":    # acqua con ninfee
+				var sp := _free_spot(p, 0.35)
+				var r := _rng.randf_range(0.22, 0.36)
+				_deco_blob(n, sp + Vector3(0, SURF + 0.035, 0), Vector3(r * 2.0, 0.03, r * 1.6), acc.darkened(0.15))
+				_deco_blob(n, sp + Vector3(-r * 0.3, SURF + 0.05, -r * 0.2), Vector3(r * 0.5, 0.012, r * 0.25), base.lightened(0.35))
 			for k in 3:
-				_disc(Vector3(_rng.randf_range(-0.6, 0.6), SURF + 0.04, _rng.randf_range(-1.1, 1.1)), 0.2, Art.c("verde_4"), 0.03, n)
-			_disc(Vector3(0, SURF + 0.025, 0), 0.6, acc, 0.01, n)
-		"patate":    # solchi con germogli
+				_deco_blob(n, _free_spot(p, 0.2) + Vector3(0, SURF + 0.04, 0), Vector3(0.28, 0.14, 0.22), base.darkened(0.12), true)
+			var tz := (-1.05 if p == 0 else 1.05)
+			var tr := Node3D.new()
+			tr.position = Vector3(0.62, SURF + 0.1, tz)
+			n.add_child(tr)
+			_deco_box(tr, Vector3.ZERO, Vector3(0.62, 0.16, 0.26), Art.c("legno_3"), true)
+			_deco_box(tr, Vector3(0, 0.06, 0), Vector3(0.5, 0.06, 0.16), Art.c("radio_1").darkened(0.35))
+		"pollaio":   # paglia: mucchi, fili sparsi, un nido con un uovo, piume
+			for k in 2:
+				var sp := _free_spot(p, 0.4)
+				_deco_blob(n, sp + Vector3(0, SURF + 0.08, 0), Vector3(0.55, 0.2, 0.42), acc, true)
+				for q in 4:
+					var st := _deco_box(n, sp + Vector3(_rng.randf_range(-0.2, 0.2), SURF + 0.17, _rng.randf_range(-0.15, 0.15)), Vector3(0.3, 0.02, 0.025), Art.c("giallo_1"))
+					st.rotation = Vector3(0, _rng.randf_range(0, PI), _rng.randf_range(-0.4, 0.4))
+			for k in 14:
+				var st := _deco_box(n, _free_spot(p, 0.0) + Vector3(0, SURF + 0.04, 0), Vector3(0.32, 0.018, 0.03), Art.c("giallo_1") if k % 3 else acc.darkened(0.1))
+				st.rotation.y = _rng.randf_range(0, PI)
+			var nest := _free_spot(p, 0.4)
+			var tm := TorusMesh.new()
+			tm.inner_radius = 0.1
+			tm.outer_radius = 0.2
+			tm.rings = 10
+			tm.ring_segments = 6
+			_deco_mesh(n, tm, nest + Vector3(0, SURF + 0.06, 0), Art.c("legno_4"), Vector3(1, 0.7, 1), true)
+			_deco_blob(n, nest + Vector3(0, SURF + 0.1, 0), Vector3(0.12, 0.15, 0.12), Art.c("bianco"), true)
 			for k in 3:
-				var zz := -0.9 + k * 0.9
-				_box(Vector3(0, SURF + 0.06, zz), Vector3(w - 0.2, 0.12, 0.3), acc, 0.0, n)
+				var f := _deco_blob(n, _free_spot(p, 0.0) + Vector3(0, SURF + 0.04, 0), Vector3(0.16, 0.015, 0.06), Art.c("ferro_6"))
+				f.rotation.y = _rng.randf_range(0, PI)
+		"stagno":    # acqua che si muove, ninfee con un fiore, canne e sassi sul bordo
+			var water := MeshInstance3D.new()
+			var cm := CylinderMesh.new()
+			cm.top_radius = 0.5
+			cm.bottom_radius = 0.5
+			cm.height = 0.02
+			cm.radial_segments = 24
+			water.mesh = cm
+			water.position = Vector3(0, SURF + 0.04, 0)
+			water.scale = Vector3(w - 0.3, 1, d - 0.35)
+			var wm := ShaderMaterial.new()
+			wm.shader = WATER
+			wm.set_shader_parameter("speed", 0.0 if reduce_motion else 1.0)
+			water.material_override = wm
+			n.add_child(water)
+			for k in 3:
+				var sp := _free_spot(p, 0.3)
+				var pad := _deco_mesh(n, _cyl_mesh(0.17, 0.02, 10), sp + Vector3(0, SURF + 0.055, 0), Art.c("verde_3"))
+				pad.rotation.y = _rng.randf_range(0, TAU)
+				if k == 0:
+					_deco_blob(n, sp + Vector3(0.04, SURF + 0.09, 0), Vector3(0.1, 0.07, 0.1), Art.c("rosa_4"), true)
+			for side in [-1.0, 1.0]:
+				var rz := (-1.15 if p == 0 else 1.15)
 				for q in 3:
-					_ball(Vector3(-0.55 + q * 0.55, SURF + 0.16, zz), 0.07, Art.c("verde_4"), false, n)
-		"discarica": # rottami e un copertone
-			for k in 4:
-				var b := _box(Vector3(_rng.randf_range(-0.7, 0.7), SURF + 0.05, _rng.randf_range(-1.1, 1.1)), Vector3(0.25, 0.08, 0.15), Art.c("ruggine_2") if k % 2 == 0 else acc, 0.02, n)
-				b.rotation.y = _rng.randf_range(0, PI)
-			var tire := TorusMesh.new()
-			tire.inner_radius = 0.12
-			tire.outer_radius = 0.24
-			tire.rings = 10
-			tire.ring_segments = 6
-			_mesh(tire, Vector3(0.55, SURF + 0.06, 1.05), Art.c("notte"), 0.0, 0.0, n)
-		"cratere":   # terra viola con crepe che brillano
+					var rx: float = side * (w / 2.0 - 0.14) + _rng.randf_range(-0.06, 0.06)
+					var h := _rng.randf_range(0.38, 0.55)
+					var reed := _deco_mesh(n, _cyl_mesh(0.022, h, 5), Vector3(rx + q * 0.07 * side, SURF + h / 2.0, rz + q * 0.06), Art.c("verde_2"))
+					reed.rotation.z = _rng.randf_range(-0.15, 0.15)
+					_deco_blob(n, Vector3(rx + q * 0.07 * side, SURF + h, rz + q * 0.06), Vector3(0.06, 0.13, 0.06), Art.c("legno_3"))
+			for k in 5:
+				var a := _rng.randf_range(0, TAU)
+				_deco_blob(n, Vector3(cos(a) * (w / 2.0 - 0.12), SURF + 0.05, sin(a) * (d / 2.0 - 0.12)), Vector3(0.16, 0.1, 0.13), Art.c("ferro_4"), true)
+		"patate":    # solchi tondi di terra con germogli a due foglie, zolle
 			for k in 3:
-				var b := _box(Vector3(_rng.randf_range(-0.6, 0.6), SURF + 0.03, _rng.randf_range(-1.1, 1.1)), Vector3(0.5, 0.02, 0.05), acc, 0.0, n)
+				var zz := -0.95 + k * 0.95
+				var row := _deco_mesh(n, _cyl_mesh(0.14, w - 0.3, 8), Vector3(0, SURF + 0.03, zz), acc, Vector3.ONE, true)
+				row.rotation.z = PI / 2.0
+				row.scale = Vector3(1, 1, 0.75)
+				for q in 4:
+					var sx := -0.6 + q * 0.4
+					if absf(sx + 0.2) < 0.45 and absf(zz - (0.2 if p == 0 else -0.2)) < 0.6:
+						continue   # lì sta la creatura
+					var b := Vector3(sx, SURF + 0.15, zz)
+					_deco_blob(n, b + Vector3(-0.05, 0.03, 0), Vector3(0.12, 0.04, 0.07), Art.c("verde_4"), false).rotation.z = 0.5
+					_deco_blob(n, b + Vector3(0.05, 0.03, 0), Vector3(0.12, 0.04, 0.07), Art.c("verde_3"), false).rotation.z = -0.5
+			for k in 4:
+				_deco_blob(n, _free_spot(p, 0.0) + Vector3(0, SURF + 0.05, 0), Vector3(0.1, 0.07, 0.09), acc.darkened(0.15))
+		"discarica": # lamiera con macchie d'olio, rottami, un copertone, una lattina, una molla
+			for k in 3:
+				var sp := _free_spot(p, 0.3)
+				_deco_blob(n, sp + Vector3(0, SURF + 0.035, 0), Vector3(_rng.randf_range(0.35, 0.55), 0.015, 0.3), Art.c("notte"))
+				_deco_blob(n, sp + Vector3(0.05, SURF + 0.045, -0.04), Vector3(0.12, 0.008, 0.05), Art.c("viola_4"))
+			for k in 4:
+				var b := _deco_box(n, _free_spot(p, 0.2) + Vector3(0, SURF + 0.06, 0), Vector3(0.3, 0.035, 0.2), Art.c("ruggine_2") if k % 2 == 0 else acc, true)
+				b.rotation = Vector3(_rng.randf_range(-0.25, 0.25), _rng.randf_range(0, PI), _rng.randf_range(-0.2, 0.2))
+			var tire := TorusMesh.new()
+			tire.inner_radius = 0.1
+			tire.outer_radius = 0.22
+			tire.rings = 12
+			tire.ring_segments = 6
+			var tsp := _free_spot(p, 0.4)
+			_deco_mesh(n, tire, tsp + Vector3(0, SURF + 0.07, 0), Art.c("notte"), Vector3(1, 1.3, 1), true).rotation.x = 0.3
+			var can := _deco_mesh(n, _cyl_mesh(0.06, 0.15, 8), _free_spot(p, 0.2) + Vector3(0, SURF + 0.08, 0), Art.c("rosso_2"), Vector3.ONE, true)
+			can.rotation = Vector3(PI / 2.0, _rng.randf_range(0, PI), 0)
+		"cratere":   # terra viola spaccata: crepe che brillano, un piccolo cratere, cristalli
+			for k in 5:
+				var b := _deco_box(n, _free_spot(p, 0.0) + Vector3(0, SURF + 0.035, 0), Vector3(_rng.randf_range(0.35, 0.6), 0.012, 0.045), acc, false, 2.2)
 				b.rotation.y = _rng.randf_range(0, PI)
-				(b.material_override as ShaderMaterial).set_shader_parameter("emission", acc)
-				(b.material_override as ShaderMaterial).set_shader_parameter("emission_energy", 2.4)
+			var csp := _free_spot(p, 0.45)
+			var rim := TorusMesh.new()
+			rim.inner_radius = 0.16
+			rim.outer_radius = 0.3
+			rim.rings = 12
+			rim.ring_segments = 6
+			_deco_mesh(n, rim, csp + Vector3(0, SURF + 0.04, 0), base.lightened(0.15), Vector3(1, 0.5, 1), true)
+			_deco_blob(n, csp + Vector3(0, SURF + 0.04, 0), Vector3(0.3, 0.02, 0.3), acc, false, 1.6)
+			for k in 3:
+				var cp := _free_spot(p, 0.25)
+				for q in 2:
+					var cr := CylinderMesh.new()
+					cr.top_radius = 0.0
+					cr.bottom_radius = 0.06
+					cr.height = 0.24 - q * 0.08
+					cr.radial_segments = 5
+					var c := _deco_mesh(n, cr, cp + Vector3(q * 0.07, SURF + 0.1, q * 0.05), Art.c("viola_4"), Vector3.ONE, true, 1.3)
+					c.rotation = Vector3(_rng.randf_range(-0.3, 0.3), 0, _rng.randf_range(-0.3, 0.3))
+		_:           # erba: ciuffi e fiorellini
+			for k in 8:
+				var sp := _free_spot(p, 0.0)
+				for q in 3:
+					var g := CylinderMesh.new()
+					g.top_radius = 0.0
+					g.bottom_radius = 0.035
+					g.height = 0.16
+					g.radial_segments = 4
+					_deco_mesh(n, g, sp + Vector3(q * 0.04 - 0.04, SURF + 0.1, 0), Art.c("verde_3")).rotation.z = (q - 1) * 0.35
 	Kit.prepare_outlines(n)
+
+
+## Un punto libero del recinto per una decorazione: lontano dalla creatura e dalla struttura (coordinate locali).
+func _free_spot(p: int, margin: float) -> Vector3:
+	var hw := (COL_W - 0.14) / 2.0 - 0.12 - margin * 0.5
+	var hd := (ROW_D - 0.12) / 2.0 - 0.12 - margin * 0.5
+	var cpos := Vector3(-0.2, 0, 0.2 if p == 0 else -0.2)
+	var spos := Vector3(0.5, 0, 0.85 if p == 0 else -0.85)
+	var best := Vector3.ZERO
+	for k in 24:
+		var v := Vector3(_rng.randf_range(-hw, hw), 0, _rng.randf_range(-hd, hd))
+		best = v
+		if v.distance_to(cpos) > 0.65 + margin and v.distance_to(spos) > 0.5 + margin:
+			return v
+	return best
+
+
+func _deco_mesh(parent: Node3D, mesh: Mesh, pos: Vector3, color: Color, scl := Vector3.ONE, outline := false, glow := 0.0) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.position = pos
+	mi.scale = scl
+	mi.material_override = Kit.mat(color, glow, outline)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if not outline else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	parent.add_child(mi)
+	return mi
+
+
+func _deco_box(parent: Node3D, pos: Vector3, sz: Vector3, color: Color, outline := false, glow := 0.0) -> MeshInstance3D:
+	var bm := BoxMesh.new()
+	return _deco_mesh(parent, bm, pos, color, sz, outline, glow)
+
+
+func _deco_blob(parent: Node3D, pos: Vector3, sz: Vector3, color: Color, outline := false, glow := 0.0) -> MeshInstance3D:
+	var sm := SphereMesh.new()
+	sm.radius = 0.5
+	sm.height = 1.0
+	sm.radial_segments = 12
+	sm.rings = 6
+	return _deco_mesh(parent, sm, pos, color, sz, outline, glow)
+
+
+func _cyl_mesh(r: float, h: float, seg := 8) -> CylinderMesh:
+	var cm := CylinderMesh.new()
+	cm.top_radius = r
+	cm.bottom_radius = r
+	cm.height = h
+	cm.radial_segments = seg
+	cm.rings = 1
+	return cm
 
 
 const MODEL_SCALE := COL_W / 2.0 * 1.3    ## 1 unità del kit ≈ due terzi di recinto: figure ben visibili
@@ -419,17 +594,20 @@ func cell_poly(p: int, i: int) -> PackedVector2Array:
 		project(c + Vector3(hx, 0, hz)), project(c + Vector3(-hx, 0, hz))])
 
 
-## Dove stanno i gettoni di attacco e vita, in coordinate di questo controllo: sempre verso il sentiero centrale.
-## Le tue creature li hanno sopra la testa; quelle avversarie ai piedi, davanti. Così i numeri non finiscono
-## mai fuori dallo schermo o sotto il registro in alto, e le due file si leggono una di fronte all'altra.
+## Dove stanno i gettoni di attacco e vita, in coordinate di questo controllo: ai piedi della creatura, sul
+## davanti (verso chi guarda), per tutte e due le file. Così non finiscono mai fuori dallo schermo o sotto il
+## registro in alto, e i gettoni di una fila non si sovrappongono a quelli dell'altra.
 func head_point(p: int, i: int) -> Vector2:
-	if p == 1:
-		return project(_creature_pos(p, i) + Vector3(0, 0.05, 0.75)) + Vector2(0, 4)
+	return project(_creature_pos(p, i) + Vector3(0, 0.05, 0.72)) + Vector2(0, 2)
+
+
+## Centro del corpo della creatura (per numeri dei colpi e raggi delle abilità).
+func body_point(p: int, i: int) -> Vector2:
 	var a: Node3D = creature_sprites[p][i]
 	var h := 0.9
 	if a and is_instance_valid(a):
-		h = float(a.get_meta("height", 0.9)) + 0.15
-	return project(_creature_pos(p, i) + Vector3(0, h, 0))
+		h = float(a.get_meta("height", 0.9))
+	return project(_creature_pos(p, i) + Vector3(0, h * 0.6, 0))
 
 
 # --- Stato del tavolo ------------------------------------------------------------
@@ -709,6 +887,7 @@ func _process(delta: float) -> void:
 						s3.frame = (f + int(a.get_meta("phase", 0.0))) % s3.hframes
 				elif not reduce_motion and arr == creature_sprites:
 					var ph: float = a.get_meta("phase", 0.0)
+					Kit.idle_life(c as Node3D, tsec, ph)
 					(c as Node3D).scale = Vector3.ONE * float(a.get_meta("model_scale", MODEL_SCALE)) * Vector3(1.0 + 0.02 * sin(tsec * 2.6 + ph), 1.0 - 0.025 * sin(tsec * 2.6 + ph), 1.0)
 	if _trauma > 0.0:
 		_trauma = maxf(_trauma - 1.6 * delta, 0.0)

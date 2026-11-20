@@ -3,3 +3,4 @@ build/
 # Pacchetti grafici di riferimento: licenza che vieta la ridistribuzione (docs/art/design-system.md)
 art/reference/
 art/vendor/
+game/data/supabase.local.json

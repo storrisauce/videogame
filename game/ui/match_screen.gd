@@ -121,7 +121,9 @@ func _build() -> void:
 	for l: Label in [caos_label, info_label, opp_label]:
 		l.visible = false   # sostituite dai contatori con icona
 		add_child(l)
-	for chip in [my_deck, my_discard, my_caos, opp_hand, opp_deck, opp_caos]:
+	for chip: StatChip in [my_deck, my_discard, my_caos, opp_hand, opp_deck, opp_caos]:
+		chip.mine = chip in [my_deck, my_discard, my_caos]
+		chip.tapped.connect(_explain_chip)
 		add_child(chip)
 	for l: Label in [log_label, banner]:
 		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -264,20 +266,21 @@ func _layout() -> void:
 	hero_views[HUMAN].size = Vector2(hero_w, hero_h)
 	hero_views[AI].position = Vector2(W - hero_w - 8, 6)
 	hero_views[AI].size = Vector2(hero_w, hero_h)
-	# sotto il ritratto avversario: la sua mano, il suo mazzo e il suo Caos
-	var oc := (hero_w - 4) / 3.0
+	# sotto il ritratto avversario: tre righe con nome (Caos, Mano, Mazzo)
+	var row_h := clampf((y_hand - hero_h - 12) / 3.0 - 2.0, 17.0, 24.0)
 	for k in 3:
-		var chip: StatChip = [opp_hand, opp_deck, opp_caos][k]
-		chip.position = Vector2(W - hero_w - 8 + k * (oc + 2), hero_h + 8)
-		chip.size = Vector2(oc, oc + 12)
+		var chip: StatChip = [opp_caos, opp_hand, opp_deck][k]
+		chip.position = Vector2(W - hero_w - 8, hero_h + 6 + k * (row_h + 2))
+		chip.size = Vector2(hero_w, row_h)
 	# terzo inferiore: mazzo e Letamaio a sinistra, mano al centro, Caos e Fine turno a destra
 	var bottom := H - y_hand
 	var side_w := clampf(W * 0.17, 118.0, 170.0)
-	var chip_s := minf(bottom - 16, side_w / 2.0 - 6)
-	my_deck.position = Vector2(8, H - chip_s - 8)
-	my_deck.size = Vector2(chip_s, chip_s)
-	my_discard.position = Vector2(8 + chip_s + 4, H - chip_s - 8)
-	my_discard.size = Vector2(chip_s, chip_s)
+	# in basso a sinistra: il tuo mazzo e il Letamaio, in righe con nome
+	var mrow := 26.0
+	my_deck.position = Vector2(8, H - 2 * mrow - 12)
+	my_deck.size = Vector2(side_w, mrow)
+	my_discard.position = Vector2(8, H - mrow - 8)
+	my_discard.size = Vector2(side_w, mrow)
 	menu_button.position = Vector2(8, y_hand - 8 - 44) if y_hand > hero_h + 60 else Vector2(8, hero_h + 10)
 	menu_button.size = Vector2(44, 44)
 	# Caos e Fine turno: il gettone del Caos grande, il bottone evidente ma non più grande della mano
@@ -899,6 +902,22 @@ func _place_detail() -> void:
 
 func _shrink_detail() -> void:
 	detail.size = Vector2(detail.custom_minimum_size.x, 0)
+
+
+## Tocco su un contatore: una frase che spiega cos'è, che sparisce da sola dopo qualche secondo.
+var _explain_tw: Tween
+func _explain_chip(chip: StatChip) -> void:
+	if state == "over":
+		return
+	Sfx.play("tap")
+	_show_detail(chip.explain(), [])
+	if _explain_tw:
+		_explain_tw.kill()
+	_explain_tw = create_tween()
+	_explain_tw.tween_interval(5.0)
+	_explain_tw.tween_callback(func():
+		if detail_text.text == chip.explain():
+			detail.visible = false)
 
 
 func _show_card_detail(c: CardInst) -> void:

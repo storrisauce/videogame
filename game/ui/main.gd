@@ -6,7 +6,6 @@ var db: CardDB
 var profile: Profile
 var safe := Control.new()
 var current: Control
-var _bg := TerrainBG.new("erba", 0.35)   ## sfondo del menu; nascosto in partita, dove sotto c'è il tavolo 3D
 var rng := RandomNumberGenerator.new()
 var test_mode := false   ## test: partite istantanee giocate dall'IA anche per il giocatore
 
@@ -14,7 +13,6 @@ var test_mode := false   ## test: partite istantanee giocate dall'IA anche per i
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = Ui.theme()
-	add_child(_bg)
 	safe.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(safe)
 	db = CardDB.load_default()
@@ -109,7 +107,6 @@ func _swap(screen: Control) -> void:
 
 
 func show_menu() -> void:
-	_bg.visible = true
 	var menu := MenuScreen.new()
 	menu.setup(db, profile)
 	menu.play.connect(start_match)
@@ -117,7 +114,6 @@ func show_menu() -> void:
 
 
 func start_match(hero: String, bands: Array) -> void:
-	_bg.visible = false
 	var ms := MatchScreen.new()
 	_swap(ms)
 	if test_mode:

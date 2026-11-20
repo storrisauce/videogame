@@ -128,7 +128,7 @@ Riassumi lo stato in 3 righe e proponi le opzioni di §9 ("Prossimi passi"), con
 | Percorso | Cosa contiene |
 |---|---|
 | `CLAUDE.md` | questa memoria |
-| `docs/GDD.md` | il gioco in una pagina: pilastri, ciclo, **indice delle funzionalità con stati**, tappe M1–M5, **decisioni D-001…D-018**, domande aperte, storico |
+| `docs/GDD.md` | il gioco in una pagina: pilastri, ciclo, **indice delle funzionalità con stati**, tappe M1–M5, **decisioni D-001…D-019**, domande aperte, storico |
 | `docs/features/partita/` | regole e numeri della partita (`design.md`), codice (`implementation.md`), test (`testing.md`) |
 | `docs/features/carte-e-bande/design.md` | bande, sopravvissuti, formato delle carte, budget statistiche, carte d'esempio |
 | `docs/features/schermo-di-gioco/` | layout orizzontale iPhone, gesti, misure; implementazione e test |
@@ -148,7 +148,8 @@ Riassumi lo stato in 3 righe e proponi le opzioni di §9 ("Prossimi passi"), con
 | `docs/art/design-system.md` | **regole grafiche**: palette, scala, contorni, luce, ombre, animazione, bande, tavolo, interfaccia |
 | `art/palette/`, `art/sprites/`, `art/tools/pixel.py` | palette (.json/.gpl/.hex), sprite in testo (.pxl), strumento render/controllo |
 | `game/assets/cards/`, `game/assets/heroes/`, `game/assets/board/` | sprite delle carte e dei sopravvissuti, terreni (PNG generati da `art/gen/`) |
-| `game/ui/art.gd`, `board_view.gd`, `sprite_view.gd`, `terrain_bg.gd` | disegno in pixel art: colori per nome, fotogrammi, terreni, consolle, ritratti |
+| `game/ui/art.gd` | colori della palette per nome, illustrazioni 3D delle carte (`draw_art`), vecchie figure pixel di riserva |
+| `game/ui/menu_stage.gd`, `bunker_set.gd` | scena 3D della home; scenografia del bunker (luci, tavolo, oggetti) |
 | `game/models/` (`kit.gd`, `models.gd`, `recipes_*.gd`), `game/shaders/` | modelli 3D cartoon delle carte e degli eroi; shader toon e contorno |
 | `game/ui/ui_kit.gd`, `stat_chip.gd` | linguaggio dell'interfaccia cartoon; contatori con icona |
 | `game/assets/models/` (Kenney CC0), `game/assets/fonts/` (OFL), `game/assets/art3d/` | oggetti di scena e ortaggi, font con licenze, foto dei modelli per le carte |
@@ -222,7 +223,7 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
 ## 7. Stato (2026-11-20)
 - ✅ **Analisi** del gioco originale dall'APK: regole, formule, IA, meta, 239 famiglie di abilità.
 - ✅ **GDD 0.4** + note: `partita` (implemented), `schermo-di-gioco` (implemented, grafica provvisoria), `ia-avversaria`
-  (implemented), `carte-e-bande` (designed). Decisioni D-001…D-018.
+  (implemented), `carte-e-bande` (designed). Decisioni D-001…D-019.
 - ✅ **Gioco giocabile** su computer (e pronto per l'esportazione):
   - menu: sopravvissuto, 2 bande per il mazzo, mirino automatico, statistiche e scatolette;
   - partita contro l'IA in orizzontale: tocca una carta e poi un recinto per giocarla; tocca una tua creatura per **Scuoterla**;
@@ -248,6 +249,13 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
   (`godot --path game --script res://tools/render_models.gd -- <cartella> --bake` → `assets/art3d/`); **effetti delle
   abilità**: confronto del tavolo prima/dopo ogni Scuotere/eroe/evento/struttura → raggio verde dalla fonte ai bersagli e
   numeri (danno, cura, ±DEF, ±ATK, Caos, carte).
+- ✅ **D-019, revisione completa:** home come scena 3D del bunker (`ui/menu_stage.gd`: sopravvissuto su un piedistallo sotto
+  la lampada; sopra solo logo, nome/soprannome/abilità, frecce tonde, bande come gettoni, "Gioca", scatolette, rotellina con
+  le impostazioni); interfaccia di gioco minimal (niente etichette sotto le icone, scheda solo per le azioni, tondo
+  dell'abilità sull'angolo del ritratto, gettoni attacco/vita sopra le creature), mirino Geiger tondo, fine partita con
+  titolo colorato e bottone principale, animazioni 3D con preparazione, salto ad arco, onde d'urto, rinculo, pausa
+  d'impatto e colpo di telecamera sulla Botta Atomica, morte con capriola e scintille; mano che non copre mai i nomi;
+  rimossi `board_view.gd`, `terrain_bg.gd`, `sprite_view.gd` (non più usati).
 - ✅ **D-018, atmosfera del bunker** (`game/ui/bunker_set.gd`): lampada calda sopra il tabellone (bordi in ombra), luce verde
   attorno a barile e uranio, ombre e cadute di luce "a gradini" nello shader, tavolo di lamiera con giunture, bulloni, graffi,
   cavi e mappa; oggetti raggruppati con contorni spessi (barile con melma, scatoletta rovesciata, maschera antigas, santuario

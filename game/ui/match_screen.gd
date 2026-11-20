@@ -33,7 +33,6 @@ var hand_layer := Control.new()
 var caos_label := Label.new()
 var info_label := Label.new()
 var opp_label := Label.new()
-var board := BoardView.new()      ## consolle laterali e vassoio (2D)
 var board3d := Board3D.new()      ## il tavolo in 3D
 var fx := FxLayer.new()
 var my_deck := StatChip.new("deck")
@@ -91,8 +90,6 @@ func start_match(card_db: CardDB, prof: Profile, hero: String, bands: Array, opp
 # --- Costruzione dell'interfaccia --------------------------------------------
 
 func _build() -> void:
-	board.visible = false   # il fondo è il tavolo 3D, disegnato sotto l'interfaccia
-	add_child(board)
 	add_child(board3d)
 	board3d.framed.connect(_place_lanes)
 	for p in 2:
@@ -239,9 +236,6 @@ func _layout() -> void:
 	board3d.focus = Rect2(4, 0, W - 8, y_hand + 16)
 	var hh := minf(hero_w + 84.0, y_hand - 6)
 	board3d.avoid = [Rect2(0, 0, hero_w + 16, hh + 52), Rect2(W - hero_w - 16, 0, hero_w + 16, hh + 52)]
-	board.y_near = 0.0
-	board.panels = []
-	board.tray = Rect2()
 	_place_lanes()
 	_place_lanes.call_deferred()
 	# sopravvissuti negli angoli in alto
@@ -283,7 +277,6 @@ func _layout() -> void:
 	_place_detail()
 	over_panel.custom_minimum_size = Vector2(320, 0)
 	over_panel.position = Vector2(W / 2 - 160, H * 0.18)
-	board.queue_redraw()
 	_layout_hand()
 
 
@@ -317,7 +310,9 @@ func _layout_hand() -> void:
 	var mid := (n - 1) / 2.0
 	var arc := 1.4
 	var ch := minf(hand_layer.size.y - 20.0 - mid * mid * arc, 160.0)   # resta spazio per la rotazione del ventaglio
-	var cw := roundf(ch * 0.74)
+	# le carte si sovrappongono al massimo del 6%: con tante carte o schermi stretti diventano più piccole, mai coperte
+	var cw := roundf(minf(ch * 0.74, hand_layer.size.x / (n - (n - 1) * 0.06)))
+	ch = roundf(cw / 0.74)
 	var step := minf(cw * 0.94, (hand_layer.size.x - cw) / maxf(n - 1, 1))
 	var total := step * (n - 1) + cw
 	var start := (hand_layer.size.x - total) / 2.0
@@ -416,7 +411,6 @@ func refresh() -> void:
 	fx.reduce_motion = board3d.reduce_motion
 	board3d.refresh(m)
 	_place_lanes()
-	board.queue_redraw()
 	end_button.disabled = state != "play"
 	_end_pulse(state == "play" and GreedyAI.choose(m, HUMAN).is_empty())
 	_snap = _snapshot()

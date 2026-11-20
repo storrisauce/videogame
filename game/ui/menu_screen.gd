@@ -1,9 +1,9 @@
 class_name MenuScreen
 extends Control
-## Menu iniziale, pensato per capirsi al primo sguardo (skill game-ui-ux, frontend-design):
-## a destra il protagonista, cioè il tuo sopravvissuto grande e animato, che scorri con le frecce, e sotto le
-## tue due bande, che cambi toccandole; a sinistra il titolo, i tuoi numeri e un solo pulsante principale, Gioca.
-## Tutto entra in sequenza (30–80 ms di sfalsamento), solo all'apertura.
+## Home (D-019): scena 3D del bunker con il sopravvissuto scelto su un piedistallo sotto la lampada (MenuStage),
+## e sopra pochissimo: logo, nome e abilità in una riga, frecce tonde ai lati del personaggio, le due bande come
+## gettoni (tocca per cambiare), un grande "Gioca", scatolette e rotellina delle impostazioni in alto a destra.
+## Un solo elemento memorabile (il personaggio), niente testi di troppo (frontend-design, game-ui-ux).
 
 signal play(hero: String, bands: Array)
 
@@ -12,15 +12,20 @@ var profile: Profile
 var hero_ids: Array = []
 var hero_index := 0
 var band_sel := [0, 1]
-var hero_portrait := SpriteView.new(null, 4)
+var stage := MenuStage.new()
+var logo := Label.new()
 var hero_name := Label.new()
+var hero_epithet := Label.new()
 var hero_desc := Label.new()
-var band_buttons: Array[Button] = [Button.new(), Button.new()]
+var arrow_l := Button.new()
+var arrow_r := Button.new()
+var band_tokens: Array = []
+var play_button := Button.new()
+var wallet := Wallet.new()
+var gear := Button.new()
+var settings := PanelContainer.new()
 var auto_check := CheckBox.new()
 var motion_check := CheckBox.new()
-var stats := Label.new()
-var play_button := Button.new()
-var deck_row := HBoxContainer.new()
 
 
 func setup(card_db: CardDB, prof: Profile) -> void:
@@ -30,123 +35,73 @@ func setup(card_db: CardDB, prof: Profile) -> void:
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(TerrainBG.new("erba", 0.25))
-	var margin := MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 20 if side in ["left", "right"] else 12)
-	add_child(margin)
-	var cols := HBoxContainer.new()
-	cols.add_theme_constant_override("separation", 20)
-	margin.add_child(cols)
-
-	# --- colonna sinistra: chi sei e il pulsante per giocare ---
-	var left := VBoxContainer.new()
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.size_flags_stretch_ratio = 0.9
-	left.add_theme_constant_override("separation", 8)
-	cols.add_child(left)
-	var title := Label.new()
-	title.text = "Fattoria Nucleare"
-	title.add_theme_font_size_override("font_size", 44)
-	title.add_theme_color_override("font_color", Art.c("radio_1"))
-	title.add_theme_color_override("font_outline_color", Art.c("verde_0"))
-	title.add_theme_constant_override("outline_size", 14)
-	title.add_theme_color_override("font_outline_color", Art.c("inchiostro"))
-	left.add_child(title)
-	var sub := Label.new()
-	sub.text = "Animali mutanti. Recinti contesi.\nVince chi fa perdere la Pazienza all'altro."
-	sub.add_theme_font_size_override("font_size", Ui.SMALL)
-	sub.add_theme_color_override("font_color", Art.c("legno_9"))
-	left.add_child(sub)
-	stats.add_theme_font_size_override("font_size", Ui.SMALL)
-	stats.add_theme_color_override("font_color", Art.c("bianco"))
-	left.add_child(_panel(stats))
-	left.add_child(_section("Nel tuo mazzo"))
-	deck_row.add_theme_constant_override("separation", 6)
-	for k in 6:
-		var sv := SpriteView.new(null, 2)
-		sv.custom_minimum_size = Vector2(66, 66)
-		deck_row.add_child(sv)
-	left.add_child(deck_row)
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	left.add_child(spacer)
+	stage.calm = profile.meno_movimento
+	add_child(stage)
+	logo.text = "Fattoria Nucleare"
+	logo.add_theme_font_size_override("font_size", 44)
+	logo.add_theme_color_override("font_color", Art.c("radio_1"))
+	logo.add_theme_constant_override("outline_size", 16)
+	add_child(logo)
+	hero_name.add_theme_font_size_override("font_size", Ui.BIG)
+	hero_name.add_theme_color_override("font_color", Art.c("giallo_2"))
+	hero_epithet.add_theme_font_size_override("font_size", Ui.SMALL)
+	hero_epithet.add_theme_color_override("font_color", Art.c("legno_9"))
+	hero_desc.add_theme_font_override("font", Ui.body())
+	hero_desc.add_theme_font_size_override("font_size", Ui.BODY + 2)
+	hero_desc.add_theme_constant_override("outline_size", 6)
+	hero_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	for l in [hero_name, hero_epithet, hero_desc]:
+		add_child(l)
+	for b: Button in [arrow_l, arrow_r]:
+		b.text = "‹" if b == arrow_l else "›"
+		b.add_theme_font_size_override("font_size", Ui.BIG)
+		b.custom_minimum_size = Vector2(48, 48)
+		_round(b, "ferro_2")
+		Juice.press(b)
+		add_child(b)
+	arrow_l.pressed.connect(func(): _cycle_hero(-1))
+	arrow_r.pressed.connect(func(): _cycle_hero(1))
+	for k in 2:
+		var t := BandToken.new()
+		t.pressed.connect(_cycle_band.bind(k))
+		band_tokens.append(t)
+		add_child(t)
 	play_button.text = "Gioca"
-	play_button.custom_minimum_size = Vector2(0, 62)
-	play_button.add_theme_font_size_override("font_size", Ui.BIG)
-	for k in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		play_button.add_theme_color_override(k, Art.c("bianco"))
-	play_button.add_theme_constant_override("outline_size", 10)
+	play_button.add_theme_font_size_override("font_size", 34)
 	for st in ["normal", "hover", "pressed", "focus"]:
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = Art.c({"normal": "radio_1", "hover": "radio_2", "pressed": "verde_4", "focus": "radio_1"}[st])
 		sb.border_color = Art.c("inchiostro")
 		sb.set_border_width_all(4)
-		sb.set_corner_radius_all(16)
+		sb.set_corner_radius_all(30)
 		sb.shadow_color = Art.c("inchiostro")
-		sb.shadow_offset = Vector2(0, 0 if st == "pressed" else 5)
+		sb.shadow_offset = Vector2(0, 0 if st == "pressed" else 6)
 		sb.shadow_size = 1
 		play_button.add_theme_stylebox_override(st, sb)
 	play_button.pressed.connect(_on_play)
 	Juice.press(play_button)
-	left.add_child(play_button)
-	var toggles := HBoxContainer.new()
-	toggles.add_theme_constant_override("separation", 14)
+	add_child(play_button)
+	add_child(wallet)
+	gear.text = "⚙"
+	gear.add_theme_font_size_override("font_size", 22)
+	gear.custom_minimum_size = Vector2(44, 44)
+	_round(gear, "ferro_2")
+	gear.pressed.connect(func(): settings.visible = not settings.visible)
+	Juice.press(gear)
+	add_child(gear)
+	var vb := VBoxContainer.new()
 	auto_check.text = "Mirino automatico"
 	auto_check.button_pressed = profile.mirino_automatico
 	auto_check.toggled.connect(func(on: bool): profile.mirino_automatico = on; profile.save())
 	motion_check.text = "Meno movimento"
 	motion_check.button_pressed = profile.meno_movimento
-	motion_check.toggled.connect(func(on: bool): profile.meno_movimento = on; profile.save())
+	motion_check.toggled.connect(func(on: bool): profile.meno_movimento = on; stage.calm = on; profile.save())
 	for cb in [auto_check, motion_check]:
-		cb.add_theme_font_size_override("font_size", 12)
 		cb.custom_minimum_size = Vector2(0, 44)
-		toggles.add_child(cb)
-	left.add_child(toggles)
-
-	# --- colonna destra: il tuo sopravvissuto (protagonista) e le tue bande ---
-	var right := VBoxContainer.new()
-	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right.add_theme_constant_override("separation", 6)
-	cols.add_child(right)
-	right.add_child(_section("Il tuo sopravvissuto"))
-	var carousel := HBoxContainer.new()
-	carousel.alignment = BoxContainer.ALIGNMENT_CENTER
-	carousel.add_theme_constant_override("separation", 10)
-	carousel.add_child(_arrow("‹", func(): _cycle_hero(-1)))
-	hero_portrait.custom_minimum_size = Vector2(136, 136)
-	carousel.add_child(hero_portrait)
-	carousel.add_child(_arrow("›", func(): _cycle_hero(1)))
-	right.add_child(carousel)
-	var who := VBoxContainer.new()
-	who.add_theme_constant_override("separation", 0)
-	hero_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hero_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hero_name.add_theme_font_size_override("font_size", Ui.MID)
-	hero_name.add_theme_color_override("font_color", Art.c("giallo_2"))
-	hero_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	who.add_child(hero_name)
-	hero_desc.add_theme_font_size_override("font_size", Ui.BODY + 1)
-	hero_desc.add_theme_font_override("font", Ui.body())
-	hero_desc.add_theme_constant_override("outline_size", 0)
-	hero_desc.add_theme_color_override("font_color", Art.c("bianco"))
-	hero_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	who.add_child(hero_desc)
-	right.add_child(who)
-	right.add_child(_section("Le tue due bande (tocca per cambiare)"))
-	var chips := HBoxContainer.new()
-	chips.add_theme_constant_override("separation", 10)
-	for k in 2:
-		var b := band_buttons[k]
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, 48)
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.add_theme_font_size_override("font_size", 13)
-		b.pressed.connect(_cycle_band.bind(k))
-		Juice.press(b)
-		chips.add_child(b)
-	right.add_child(chips)
+		vb.add_child(cb)
+	settings.add_child(vb)
+	settings.visible = false
+	add_child(settings)
 
 	hero_ids = db.heroes.keys()
 	hero_index = maxi(hero_ids.find(profile.hero), 0)
@@ -154,57 +109,77 @@ func _ready() -> void:
 		band_sel[k] = maxi(DeckFactory.BANDS.find(profile.bands[k]), 0)
 	if band_sel[0] == band_sel[1]:
 		band_sel[1] = (band_sel[0] + 1) % DeckFactory.BANDS.size()
-	_update()
+	_layout()
+	_update(0)
 	play_button.grab_focus()
-	# entrata: titolo, protagonista, bande, pulsante (sfalsati)
-	var order: Array[Control] = [title, sub, stats.get_parent(), deck_row, hero_portrait, who, chips, play_button, toggles]
+	var order: Array[Control] = [logo, hero_name, hero_epithet, hero_desc, band_tokens[0], band_tokens[1], play_button, wallet, gear]
 	for i in order.size():
-		Juice.enter(order[i], 0.04 * i)
+		Juice.enter(order[i], 0.05 * i)
 
 
-func _section(t: String) -> Label:
-	var l := Label.new()
-	l.text = t
-	l.add_theme_font_size_override("font_size", Ui.SMALL)
-	l.add_theme_color_override("font_color", Art.c("legno_9"))
-	return l
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED and is_inside_tree() and logo.get_parent() == self:
+		_layout()
 
 
-func _panel(inner: Control) -> PanelContainer:
-	var p := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Art.c("ferro_1")
-	sb.border_color = Art.c("inchiostro")
-	sb.set_border_width_all(4)
-	sb.set_corner_radius_all(12)
-	sb.set_content_margin_all(8)
-	p.add_theme_stylebox_override("panel", sb)
-	p.add_child(inner)
-	return p
+func _round(b: Button, fill: String) -> void:
+	for st in ["normal", "hover", "pressed", "focus"]:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Art.c(fill) if st != "pressed" else Art.c(fill).darkened(0.2)
+		sb.border_color = Art.c("inchiostro")
+		sb.set_border_width_all(3)
+		sb.set_corner_radius_all(30)
+		sb.shadow_color = Art.c("inchiostro")
+		sb.shadow_offset = Vector2(0, 0 if st == "pressed" else 3)
+		sb.shadow_size = 1
+		b.add_theme_stylebox_override(st, sb)
 
 
-func _arrow(t: String, cb: Callable) -> Button:
-	var b := Button.new()
-	b.text = t
-	b.custom_minimum_size = Vector2(48, 56)
-	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	b.add_theme_font_size_override("font_size", 26)
-	b.pressed.connect(cb)
-	Juice.press(b)
-	return b
+func _layout() -> void:
+	var W := size.x
+	var H := size.y
+	if W <= 0:
+		return
+	var m := 18.0
+	logo.position = Vector2(m, 6)
+	logo.size = Vector2(W * 0.6, 56)
+	hero_name.position = Vector2(m, 70)
+	hero_name.size = Vector2(W * 0.45, 36)
+	hero_epithet.position = Vector2(m, 104)
+	hero_epithet.size = Vector2(W * 0.45, 20)
+	hero_desc.position = Vector2(m, 128)
+	hero_desc.custom_minimum_size = Vector2(W * 0.4, 0)
+	hero_desc.size = Vector2(W * 0.4, 0)
+	var tok := clampf(H * 0.24, 72.0, 96.0)
+	for k in 2:
+		var t: BandToken = band_tokens[k]
+		t.position = Vector2(m + k * (tok + 14), H - tok - 26)
+		t.size = Vector2(tok, tok + 18)
+	play_button.size = Vector2(clampf(W * 0.26, 180.0, 240.0), 66)
+	play_button.position = Vector2(W - play_button.size.x - m, H - 66 - m)
+	gear.size = Vector2(44, 44)
+	gear.position = Vector2(W - 44 - m, 10)
+	wallet.size = Vector2(150, 44)
+	wallet.position = Vector2(W - 44 - m - 10 - 150, 10)
+	settings.position = Vector2(W - 240 - m, 60)
+	settings.size = Vector2(240, 0)
+	_place_arrows.call_deferred()
+
+
+func _place_arrows() -> void:
+	var r := stage.hero_screen_rect()
+	if r.size.x <= 0:
+		return
+	var cy := r.position.y + r.size.y * 0.55
+	arrow_l.position = Vector2(r.position.x - 70, cy - 24)
+	arrow_r.position = Vector2(r.end.x + 22, cy - 24)
+	arrow_l.size = Vector2(48, 48)
+	arrow_r.size = Vector2(48, 48)
 
 
 func _cycle_hero(d: int) -> void:
 	hero_index = posmod(hero_index + d, hero_ids.size())
-	_update()
-	# il nuovo ritratto entra dal lato della freccia
-	hero_portrait.offset_transform_enabled = true
-	hero_portrait.offset_transform_pivot = hero_portrait.size / 2.0
-	hero_portrait.offset_transform_position = Vector2(14 * d, 0)
-	hero_portrait.modulate.a = 0.4
-	var tw := hero_portrait.create_tween().set_parallel(true)
-	tw.tween_property(hero_portrait, "offset_transform_position", Vector2.ZERO, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tw.tween_property(hero_portrait, "modulate:a", 1.0, 0.15)
+	_update(d)
 
 
 func _cycle_band(k: int) -> void:
@@ -213,36 +188,29 @@ func _cycle_band(k: int) -> void:
 	if v == band_sel[1 - k]:
 		v = (v + 1) % n
 	band_sel[k] = v
-	_update()
+	_update(0, false)
 
 
-func _update() -> void:
+func _update(dir: int, hero_changed := true) -> void:
 	var h: Dictionary = db.heroes[hero_ids[hero_index]]
-	hero_name.text = "%s\n%s" % [h["name"], h.get("epithet", "")]
+	hero_name.text = h["name"]
+	hero_epithet.text = h.get("epithet", "")
 	hero_desc.text = Abilities.describe_hero(h)
-	hero_portrait.art_id = h["id"]
-	hero_portrait.art_hero = true
-	hero_portrait.set_texture(Art.hero_tex(h["id"]))
+	if hero_changed:
+		stage.show_hero(h["id"], dir)
 	for k in 2:
 		var band: String = DeckFactory.BANDS[band_sel[k]]
-		band_buttons[k].text = Pal.BAND_NAME[band]
-		band_buttons[k].icon = Art.terrain_tex(band)
-	# anteprima: tre creature per banda, sul terreno della loro banda
-	var views := deck_row.get_children()
-	var slot := 0
-	for k in 2:
-		var band: String = DeckFactory.BANDS[band_sel[k]]
-		var n := 0
-		for id: String in db.cards:
-			var c: Dictionary = db.cards[id]
-			if c["band"] == band and c["type"] == "creature" and n < 3 and slot < views.size():
-				var sv := views[slot] as SpriteView
-				sv.terrain = band
-				sv.art_id = id
-				sv.set_texture(Art.card_tex(id))
-				n += 1
-				slot += 1
-	stats.text = "%d scatolette di fagioli   %d di tonno\n%d vittorie   %d sconfitte" % [profile.fagioli, profile.tonno, profile.vittorie, profile.sconfitte]
+		var t: BandToken = band_tokens[k]
+		t.set_band(band, _first_creature(band))
+	wallet.set_values(profile.fagioli, profile.tonno)
+
+
+func _first_creature(band: String) -> String:
+	for id: String in db.cards:
+		var c: Dictionary = db.cards[id]
+		if c["band"] == band and c["type"] == "creature":
+			return id
+	return ""
 
 
 func _on_play() -> void:
@@ -251,3 +219,71 @@ func _on_play() -> void:
 	profile.bands = bands
 	profile.save()
 	play.emit(profile.hero, bands)
+
+
+## Gettone di una banda: tondo del colore della banda con la sua creatura, nome breve sotto. Tocca = cambia.
+class BandToken extends Control:
+	signal pressed
+	var band := ""
+	var art := ""
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_STOP
+
+	func set_band(b: String, art_id: String) -> void:
+		band = b
+		art = art_id
+		queue_redraw()
+		if is_inside_tree():
+			pivot_offset = size / 2.0
+			scale = Vector2(0.9, 0.9)
+			create_tween().tween_property(self, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+	func _gui_input(e: InputEvent) -> void:
+		if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and not e.pressed:
+			pressed.emit()
+			accept_event()
+
+	func _draw() -> void:
+		var d := minf(size.x, size.y - 18)
+		var c := Vector2(size.x / 2.0, d / 2.0)
+		var col := Art.c(CardView.BAND_FRAME.get(band, "legno_5"))
+		draw_circle(c + Vector2(0, 4), d / 2.0, Ui.ink())
+		draw_circle(c, d / 2.0, Ui.ink())
+		draw_circle(c, d / 2.0 - 4, col)
+		draw_circle(c + Vector2(0, d * 0.12), d / 2.0 - 10, col.lightened(0.25))
+		if art != "":
+			Art.draw_art(self, art, false, Rect2(c - Vector2(d, d) * 0.36, Vector2(d, d) * 0.72))
+		var short: String = Pal.BAND_NAME.get(band, band).split(" ")[0]
+		Ui.text(self, Vector2(0, size.y - 2), short, Ui.SMALL, Art.c("bianco"), HORIZONTAL_ALIGNMENT_CENTER, size.x, 3.0)
+
+
+## Scatolette di fagioli (moneta) e di tonno, come icone con numero.
+class Wallet extends Control:
+	var fagioli := 0
+	var tonno := 0
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func set_values(f: int, t: int) -> void:
+		fagioli = f
+		tonno = t
+		queue_redraw()
+
+	func _draw() -> void:
+		_can(Vector2(14, size.y / 2.0), Art.c("rosso_2"))
+		Ui.text(self, Vector2(30, size.y / 2.0 + 7), str(fagioli), Ui.MID, Art.c("bianco"))
+		var x := 30.0 + Ui.display().get_string_size(str(fagioli), 0, -1, Ui.MID).x + 16.0
+		_can(Vector2(x, size.y / 2.0), Art.c("acqua_4"))
+		Ui.text(self, Vector2(x + 16, size.y / 2.0 + 7), str(tonno), Ui.MID, Art.c("bianco"))
+
+	func _can(c: Vector2, col: Color) -> void:
+		var r := Rect2(c - Vector2(10, 12), Vector2(20, 24))
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Art.c("ferro_4")
+		sb.border_color = Ui.ink()
+		sb.set_border_width_all(3)
+		sb.set_corner_radius_all(5)
+		draw_style_box(sb, r)
+		draw_rect(Rect2(r.position.x + 3, r.position.y + 8, r.size.x - 6, 9), col)

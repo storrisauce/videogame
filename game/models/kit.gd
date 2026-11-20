@@ -15,11 +15,13 @@ const OUTLINE := preload("res://shaders/outline.gdshader")
 const OUT_W := 0.028
 
 static var _mats: Dictionary = {}
+## Spessore del contorno per i prossimi materiali (gli oggetti di scena grandi lo vogliono più spesso).
+static var outline_w := OUT_W
 
 
 ## Materiale cartoon (condiviso per colore). `glow` > 1 accende il bagliore (bloom).
 static func mat(color: Color, glow := 0.0, outline := true) -> ShaderMaterial:
-	var key := "%s|%.2f|%s" % [color.to_html(), glow, outline]
+	var key := "%s|%.2f|%s|%.3f" % [color.to_html(), glow, outline, outline_w]
 	if _mats.has(key):
 		return _mats[key]
 	var m := ShaderMaterial.new()
@@ -31,7 +33,7 @@ static func mat(color: Color, glow := 0.0, outline := true) -> ShaderMaterial:
 	if outline:
 		var o := ShaderMaterial.new()
 		o.shader = OUTLINE
-		o.set_shader_parameter("width", OUT_W)
+		o.set_shader_parameter("width", outline_w)
 		m.next_pass = o
 	_mats[key] = m
 	return m

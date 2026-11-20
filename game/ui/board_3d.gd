@@ -72,23 +72,23 @@ var _rng := RandomNumberGenerator.new()
 func _build_world() -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Art.c("notte")
+	env.background_color = Art.c("inchiostro")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.62, 0.66, 0.85)
-	env.ambient_light_energy = 0.6
+	env.ambient_light_color = Color(0.5, 0.56, 0.85)
+	env.ambient_light_energy = 0.48
 	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	env.glow_enabled = true
-	env.glow_hdr_threshold = 1.05
-	env.glow_intensity = 0.7
+	env.glow_hdr_threshold = 1.15
+	env.glow_intensity = 0.45
 	env.glow_bloom = 0.0
 	var we := WorldEnvironment.new()
 	we.environment = env
 	world.add_child(we)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-55, -32, 0)
-	sun.light_energy = 1.25
-	sun.light_color = Color(1.0, 0.96, 0.88)
-	sun.shadow_enabled = true
+	sun.light_energy = 0.35       # solo un riempimento freddo: la luce vera è la lampada del bunker
+	sun.light_color = Color(0.7, 0.78, 1.0)
+	sun.shadow_enabled = false
 	sun.directional_shadow_max_distance = 40.0
 	world.add_child(sun)
 	cam.fov = 40.0
@@ -98,12 +98,6 @@ func _build_world() -> void:
 
 	var bw := COL_W * 4.0
 	var bd := ROW_D * 2.0 + MID
-	# tavolo di lamiera del bunker, con bulloni sul bordo e una macchia di ruggine
-	_box(Vector3(0, -0.35, 0), Vector3(bw + 9.0, 0.5, bd + 7.0), Art.c("ferro_2"), 0.0)
-	for k in 9:
-		for side in [-1.0, 1.0]:
-			_ball(Vector3(-bw / 2.0 - 4.2 + k * (bw + 8.4) / 8.0, -0.08, side * (bd / 2.0 + 3.3)), 0.09, Art.c("ferro_4"), false)
-	_disc(Vector3(bw / 2.0 + 3.4, -0.09, 1.2), 0.6, Art.c("ruggine_1"), 0.02)
 	# vassoio di legno del tabellone
 	_box(Vector3(0, 0.0, 0), Vector3(bw + 0.7, 0.36, bd + 0.7), Art.c("legno_5"))
 	_box(Vector3(0, SURF - 0.06, 0), Vector3(bw + 0.1, 0.1, bd + 0.1), Art.c("legno_3"), 0.0)
@@ -121,8 +115,8 @@ func _build_world() -> void:
 		var x := -bw / 2.0 + i * COL_W
 		for zr in [[-bd / 2.0, -MID / 2.0], [MID / 2.0, bd / 2.0]]:
 			_fence(x, zr[0], zr[1])
-	# oggetti di scena sul tavolo
-	_props(bw, bd)
+	# il bunker: luce della lampada, tavolo di lamiera, oggetti di scena, polvere (ui/bunker_set.gd)
+	BunkerSet.build(world, bw, bd, reduce_motion)
 
 
 
@@ -217,165 +211,6 @@ func _model(path: String, pos: Vector3, s := 1.0, rot := 0.0, glow_tint := Color
 			var col: Color = orig.albedo_color if orig else Color.WHITE
 			mi.set_surface_override_material(si, _outlined(_toon(col, tex), 0.02 / s))
 	return n
-
-
-## Oggetti di scena: scatolette, radio, maschera antigas, nano da giardino, barile, lampada.
-func _props(bw: float, bd: float) -> void:
-	var L := -bw / 2.0 - 2.4
-	var R := bw / 2.0 + 2.4
-	# scatolette di fagioli (Kenney Food Kit) e una che brilla
-	_model("res://assets/models/props/can.glb", Vector3(L - 0.4, -0.1, 1.6), 1.6, 0.4)
-	_model("res://assets/models/props/can-open.glb", Vector3(L + 0.5, -0.1, 2.3), 1.6, -0.7)
-	_model("res://assets/models/props/can-small.glb", Vector3(R + 0.6, -0.1, 2.6), 1.7, 0.3)
-	_model("res://assets/models/props/soda-can.glb", Vector3(R - 0.2, -0.1, -2.9), 1.5, 1.1)
-
-	# barile radioattivo e cassa degli attrezzi (Kenney Survival Kit)
-	_model("res://assets/models/survival/barrel.glb", Vector3(R + 0.9, -0.1, -0.6), 1.5, 0.2)
-	_model("res://assets/models/survival/chest.glb", Vector3(L - 0.6, -0.1, -2.4), 1.4, 0.5)
-	# radio a transistor
-	var radio := Node3D.new()
-	radio.position = Vector3(R + 0.4, -0.1, 1.0)
-	radio.rotation.y = -0.4
-	world.add_child(radio)
-	_box(Vector3(0, 0.45, 0), Vector3(1.3, 0.8, 0.5), Art.c("rosso_2"), 0.04, radio)
-	_box(Vector3(-0.25, 0.48, 0.26), Vector3(0.62, 0.5, 0.04), Art.c("legno_9"), 0.02, radio)
-	_cyl(Vector3(0.38, 0.5, 0.27), 0.18, 0.06, Art.c("ferro_5"), radio).rotation.x = PI / 2.0
-	_cyl(Vector3(0.45, 1.25, -0.1), 0.025, 1.0, Art.c("ferro_4"), radio, 0.015).rotation.z = 0.35
-	# maschera antigas
-	var mask := Node3D.new()
-	mask.position = Vector3(L + 0.2, -0.1, 0.0)
-	mask.rotation = Vector3(-1.1, 0.5, 0)
-	world.add_child(mask)
-	_ball(Vector3(0, 0.35, 0), 0.5, Art.c("verde_1"), true, mask)
-	for sx in [-0.22, 0.22]:
-		_cyl(Vector3(sx, 0.55, 0.38), 0.16, 0.08, Art.c("acqua_5"), mask).rotation.x = PI / 2.0
-	_cyl(Vector3(0, 0.2, 0.5), 0.17, 0.3, Art.c("ferro_2"), mask).rotation.x = PI / 2.0
-	# nano da giardino
-	var gnome := Node3D.new()
-	gnome.position = Vector3(L - 0.1, -0.1, -1.0)
-	world.add_child(gnome)
-	_cyl(Vector3(0, 0.35, 0), 0.32, 0.6, Art.c("acqua_3"), gnome)
-	_ball(Vector3(0, 0.82, 0), 0.26, Art.c("pelle_4"), true, gnome)
-	_ball(Vector3(0, 0.7, 0.15), 0.2, Art.c("bianco"), true, gnome)
-	var hat := CylinderMesh.new()
-	hat.top_radius = 0.0
-	hat.bottom_radius = 0.3
-	hat.height = 0.6
-	hat.radial_segments = 8
-	_mesh(hat, Vector3(0, 1.25, 0), Art.c("rosso_2"), 0.03, 0.0, gnome)
-	_nuclear_props(bw, bd)
-	# lampada da bunker che illumina il tavolo
-	var lamp := OmniLight3D.new()
-	lamp.position = Vector3(0, 6.0, -2.0)
-	lamp.light_color = Art.c("giallo_2")
-	lamp.light_energy = 0.6
-	lamp.omni_range = 14.0
-	world.add_child(lamp)
-
-
-## Roba nucleare sul tavolo (tutta costruita col kit cartoon): barile con il simbolo radioattivo e melma verde,
-## torre di raffreddamento in miniatura che fuma, contatore Geiger, cassetta di barre di uranio che pulsano,
-## fungo mutante, cartello "zona contaminata". Alcune parti si muovono piano (vapore, barre) per dare vita al tavolo.
-func _nuclear_props(bw: float, bd: float) -> void:
-	var L := -bw / 2.0 - 1.1
-	var R := bw / 2.0 + 1.1
-	var y0 := -0.1
-	# barile giallo con trifoglio e melma che cola
-	var barrel := Node3D.new()
-	barrel.position = Vector3(L - 0.3, y0, 2.6)
-	barrel.rotation.y = 0.5
-	world.add_child(barrel)
-	Kit.cyl(barrel, Vector3(0, 0.55, 0), 0.42, 1.1, Art.c("giallo_2"))
-	for yy in [0.2, 0.9]:
-		Kit.cyl(barrel, Vector3(0, yy, 0), 0.44, 0.06, Art.c("arancio_1"))
-	_trefoil(barrel, Vector3(0, 0.56, 0.43), 0.2)
-	Kit.blob(barrel, Vector3(0.1, 1.12, 0.05), Vector3(0.6, 0.12, 0.6), Art.c("radio_1"), Vector3.ZERO, 2.4)
-	Kit.blob(barrel, Vector3(0.3, 0.8, 0.3), Vector3(0.1, 0.45, 0.1), Art.c("radio_1"), Vector3.ZERO, 2.4)
-	_disc(barrel.position + Vector3(0.5, -0.06, 0.6), 0.4, Art.c("radio_1"), 0.03, null, 1.6)
-	# torre di raffreddamento in miniatura con il vapore
-	var tower := Node3D.new()
-	tower.position = Vector3(R + 1.6, y0, -3.9)
-	tower.scale = Vector3.ONE * 0.62
-	world.add_child(tower)
-	var rs := [0.95, 0.8, 0.66, 0.6, 0.66, 0.74]
-	for k in rs.size():
-		Kit.cyl(tower, Vector3(0, 0.22 + k * 0.38, 0), rs[k], 0.4, Art.c("ferro_6") if k != 4 else Art.c("rosso_2"), Vector3.ZERO, rs[mini(k + 1, rs.size() - 1)])
-	for k in 4:
-		var puff := Kit.blob(tower, Vector3(0, 2.5 + k * 0.45, 0), Vector3.ONE * (0.55 + k * 0.18), Art.c("bianco"))
-		_steam(puff, 2.5 + k * 0.45, k)
-	# contatore Geiger
-	var geiger := Node3D.new()
-	geiger.position = Vector3(R + 0.2, y0, 2.9)
-	geiger.rotation.y = -0.6
-	world.add_child(geiger)
-	Kit.box(geiger, Vector3(0, 0.3, 0), Vector3(0.9, 0.5, 0.55), Art.c("arancio_4"))
-	Kit.cyl(geiger, Vector3(-0.15, 0.36, 0.29), 0.17, 0.04, Art.c("bianco"), Vector3(PI / 2.0, 0, 0))
-	Kit.box(geiger, Vector3(-0.1, 0.4, 0.32), Vector3(0.14, 0.02, 0.02), Art.c("rosso_2"), Vector3(0, 0, 0.6))
-	Kit.torus(geiger, Vector3(0, 0.62, 0), 0.04, 0.2, Art.c("notte"), Vector3(PI / 2.0, 0, 0))
-	Kit.cyl(geiger, Vector3(0.75, 0.12, 0.25), 0.07, 0.6, Art.c("ferro_4"), Vector3(0, 0, PI / 2.0))
-	Kit.blob(geiger, Vector3(0.22, 0.38, 0.29), Vector3(0.08, 0.08, 0.04), Art.c("radio_1"), Vector3.ZERO, 2.5)
-	# cassetta di barre di uranio
-	var crate := Node3D.new()
-	crate.position = Vector3(L - 0.2, y0, -2.7)
-	crate.rotation.y = 0.3
-	world.add_child(crate)
-	Kit.box(crate, Vector3(0, 0.3, 0), Vector3(1.0, 0.6, 0.7), Art.c("legno_5"))
-	Kit.box(crate, Vector3(0, 0.3, 0.36), Vector3(1.0, 0.1, 0.02), Art.c("legno_3"))
-	for k in 4:
-		var rod := Kit.cyl(crate, Vector3(-0.33 + k * 0.22, 0.75, 0.0), 0.07, 0.7, Art.c("radio_1"), Vector3(0.15 * (k % 2 * 2 - 1), 0, 0.12 * (k - 1.5)))
-		(rod as MeshInstance3D).material_override = Kit.mat(Art.c("radio_1"), 2.8)
-		_pulse(rod, k)
-	_trefoil(crate, Vector3(0, 0.3, 0.37), 0.13)
-	# fungo mutante con le macchie che brillano
-	var shroom := Node3D.new()
-	shroom.position = Vector3(L + 0.2, y0, 0.5)
-	world.add_child(shroom)
-	Kit.cyl(shroom, Vector3(0, 0.35, 0), 0.16, 0.7, Art.c("legno_9"))
-	Kit.blob(shroom, Vector3(0, 0.78, 0), Vector3(0.95, 0.5, 0.95), Art.c("viola_3"))
-	for v in [Vector3(0.22, 0.95, 0.15), Vector3(-0.2, 0.92, 0.2), Vector3(0.05, 1.0, -0.2), Vector3(-0.25, 0.85, -0.15)]:
-		Kit.blob(shroom, v, Vector3(0.14, 0.06, 0.14), Art.c("radio_2"), Vector3.ZERO, 2.6)
-	Kit.eyes(shroom, Vector3(0, 0.5, 0.15), 0.14, 0.06)
-	# cartello di pericolo
-	var sign := Node3D.new()
-	sign.position = Vector3(R + 0.1, y0, 0.6)
-	sign.rotation.y = -0.4
-	world.add_child(sign)
-	Kit.cyl(sign, Vector3(0, 0.6, 0), 0.04, 1.2, Art.c("ferro_3"))
-	var tri := Kit.cone(sign, Vector3(0, 1.25, 0.04), 0.42, 0.06, Art.c("giallo_2"), Vector3(PI / 2.0, 0, 0))
-	(tri.mesh as CylinderMesh).radial_segments = 3   # triangolo di pericolo
-	_trefoil(sign, Vector3(0, 1.2, 0.09), 0.1)
-
-
-## Simbolo radioattivo (trifoglio nero) disegnato su una superficie rivolta verso +Z, centro `pos`.
-func _trefoil(parent: Node3D, pos: Vector3, r: float) -> void:
-	Kit.cyl(parent, pos, r * 0.22, 0.02, Art.c("inchiostro"), Vector3(PI / 2.0, 0, 0))
-	for k in 3:
-		var ang := k * TAU / 3.0 + PI / 2.0
-		var c := pos + Vector3(cos(ang), sin(ang), 0) * r * 0.62
-		var w := Kit.cone(parent, c, r * 0.42, 0.02, Art.c("inchiostro"), Vector3(PI / 2.0, 0, 0))
-		w.scale = Vector3(1.0, 1.0, 1.0)
-
-
-## Vapore che sale e si dissolve in loop (la torre "fuma").
-func _steam(puff: Node3D, base_y: float, k: int) -> void:
-	if reduce_motion:
-		return
-	var tw := puff.create_tween().set_loops()
-	tw.tween_interval(k * 0.35)
-	tw.tween_property(puff, "position:y", base_y + 0.6, 1.4).set_trans(Tween.TRANS_SINE)
-	tw.parallel().tween_property(puff, "scale", puff.scale * 1.25, 1.4)
-	tw.tween_property(puff, "position:y", base_y, 0.01)
-	tw.parallel().tween_property(puff, "scale", puff.scale, 0.01)
-
-
-## Barra che pulsa piano su e giù.
-func _pulse(n: Node3D, k: int) -> void:
-	if reduce_motion:
-		return
-	var y := n.position.y
-	var tw := n.create_tween().set_loops()
-	tw.tween_property(n, "position:y", y + 0.06, 0.8 + k * 0.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(n, "position:y", y, 0.8 + k * 0.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
 ## Terreno e decorazioni di un recinto, ben distinti per banda.

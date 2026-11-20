@@ -22,8 +22,10 @@ void fragment() {
 }
 
 void light() {
+	// ombre a gradini sia sull'angolo della luce sia sulla distanza (pozze di luce a "cerchi" come in un cartone)
 	float ndl = dot(NORMAL, LIGHT);
-	float lit = ndl > 0.45 ? 1.0 : (ndl > 0.05 ? 0.62 : 0.32);
-	float sh = ATTENUATION > 0.5 ? 1.0 : 0.55;
-	DIFFUSE_LIGHT += lit * sh * LIGHT_COLOR / 3.14159;
+	float lit = ndl > 0.45 ? 1.0 : (ndl > 0.05 ? 0.62 : 0.3);
+	float a = ATTENUATION;
+	float band = a > 0.55 ? 1.0 : (a > 0.22 ? 0.62 : (a > 0.05 ? 0.3 : 0.0));
+	DIFFUSE_LIGHT += lit * band * LIGHT_COLOR / 3.14159;
 }

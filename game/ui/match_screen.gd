@@ -90,6 +90,7 @@ func start_match(card_db: CardDB, prof: Profile, hero: String, bands: Array, opp
 # --- Costruzione dell'interfaccia --------------------------------------------
 
 func _build() -> void:
+	board.visible = false   # il fondo è il tavolo 3D, disegnato sotto l'interfaccia
 	add_child(board)
 	add_child(board3d)
 	board3d.framed.connect(_place_lanes)
@@ -211,7 +212,10 @@ func _layout() -> void:
 	var hero_w := clampf(W * 0.13, 88.0, 120.0)
 	board3d.position = Vector2.ZERO
 	board3d.size = Vector2(W, H)
-	board3d.focus = Rect2(hero_w + 14, 4, W - 2 * hero_w - 28, y_hand + 6)
+	# il tabellone usa tutta la larghezza: solo il fondo (stretto, in prospettiva) passa tra i due ritratti
+	board3d.focus = Rect2(6, 2, W - 12, y_hand + 4)
+	var hh := minf(hero_w + 96.0, y_hand - 6)
+	board3d.avoid = [Rect2(0, 0, hero_w + 16, hh + 52), Rect2(W - hero_w - 16, 0, hero_w + 16, hh + 52)]
 	board.y_near = 0.0
 	board.panels = []
 	board.tray = Rect2()
@@ -245,7 +249,7 @@ func _layout() -> void:
 	end_button.size = Vector2(side_w - chip_s * 0.8 - 6, bottom - 22)
 	hand_layer.position = Vector2(side_w + 16, y_hand)
 	hand_layer.size = Vector2(W - 2 * side_w - 32, bottom)
-	var mid_y := board3d.project(Vector3(0, 0, 0)).y if board3d.vp.size.x > 0 else y_hand * 0.45
+	var mid_y := board3d.project(Vector3(0, 0, 0)).y if board3d.has_view() else y_hand * 0.45
 	banner.position = Vector2(hero_w + 16, mid_y - 20)
 	banner.size = Vector2(W - 2 * hero_w - 32, 40)
 	log_label.position = Vector2(W / 2.0 - 180, 6)
@@ -261,7 +265,7 @@ func _layout() -> void:
 
 ## Mette i livelli 2D dei recinti sopra i trapezi del tavolo 3D.
 func _place_lanes() -> void:
-	if lane_views[0].is_empty() or board3d.vp.size.x <= 0:
+	if lane_views[0].is_empty() or not board3d.has_view():
 		return
 	for p in 2:
 		for i in 4:

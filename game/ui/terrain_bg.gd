@@ -10,6 +10,7 @@ func _init(b: String = "erba", s: float = 0.0) -> void:
 	band = b
 	shade = s
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 

@@ -1,5 +1,5 @@
 class_name Board3D
-extends SubViewportContainer
+extends Control
 ## Il tavolo in 3D vero (D-015): un altopiano di fattoria inclinato verso il giocatore, come nei giochi a corsie,
 ## con le creature pixel art in piedi (Sprite3D rivolti alla telecamera). Le superfici usano i colori esatti della
 ## palette (materiali "unshaded"); solo siepe e steccati prendono la luce del sole per dare volume.
@@ -16,7 +16,6 @@ const STRUCT_SCALE := 0.8   ## le strutture stanno dietro, un po' più piccole
 const CAM_TARGET := Vector3(0, 0, 0.35)
 const CAM_DIR := Vector3(0, 0.76, 0.65)   ## inclinazione fissa (~50 gradi); la distanza si adatta allo schermo
 
-var vp := SubViewport.new()
 var cam := Camera3D.new()
 var world := Node3D.new()
 var creature_sprites := [[null, null, null, null], [null, null, null, null]]
@@ -29,18 +28,29 @@ var _cam_rest := Transform3D()
 var _t := 0.0
 var reduce_motion := false
 var focus := Rect2()     ## zona dello schermo (coordinate del controllo) in cui il tabellone deve stare
+var avoid: Array[Rect2] = []   ## zone da non coprire (i ritratti negli angoli): il fondo del tabellone, più stretto, ci passa in mezzo
 
 
+## Il mondo 3D sta direttamente nella finestra principale (niente riquadro intermedio): così è disegnato alla
+## risoluzione vera dello schermo, con l'anti-aliasing del progetto, sotto tutta l'interfaccia 2D.
 func _init() -> void:
-	stretch = true
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	vp.own_world_3d = true
-	vp.msaa_3d = Viewport.MSAA_DISABLED
-	vp.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
-	vp.handle_input_locally = false
-	add_child(vp)
-	vp.add_child(world)
+	add_child(world)
 	_build_world()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED and is_inside_tree():
+		_fit_camera.call_deferred()
+
+
+## Dimensione della vista (unità dell'interfaccia, come le coordinate di `project`).
+func _vsize() -> Vector2:
+	return get_viewport().get_visible_rect().size if is_inside_tree() else Vector2.ZERO
+
+
+func has_view() -> bool:
+	return is_inside_tree() and cam.is_inside_tree() and _vsize().x > 16
 
 
 # --- Costruzione ---------------------------------------------------------------
@@ -84,7 +94,6 @@ func _build_world() -> void:
 	cam.fov = 40.0
 	cam.look_at_from_position(CAM_TARGET + CAM_DIR * 10.0, CAM_TARGET, Vector3.UP)
 	world.add_child(cam)
-	vp.size_changed.connect(_fit_camera)
 	_rng.seed = 7
 
 	var bw := COL_W * 4.0
@@ -313,7 +322,7 @@ func _build_cell(p: int, i: int, band: String) -> void:
 				(b.material_override as ShaderMaterial).set_shader_parameter("emission_energy", 2.4)
 
 
-const MODEL_SCALE := COL_W / 2.0 * 0.92   ## 1 unità del kit = mezzo recinto
+const MODEL_SCALE := COL_W / 2.0 * 1.3    ## 1 unità del kit ≈ due terzi di recinto: figure ben visibili
 
 
 ## Attore di un recinto: un Node3D con dentro il modello 3D della carta (models/), o la vecchia figura pixel art
@@ -363,8 +372,9 @@ func _set_param(a: Node3D, param: String, v: float) -> void:
 
 ## Avvicina la telecamera finché il tavolo (siepe e scogliera comprese) riempie lo schermo senza uscire.
 func _fit_camera() -> void:
-	if vp.size.x <= 16 or vp.size.y <= 16 or not cam.is_inside_tree():
+	if not has_view():
 		return
+	var vs := _vsize()
 	var bw := COL_W * 4.0
 	var bd := ROW_D * 2.0 + MID
 	var pts := [Vector3(-bw / 2.0, 0.3, -bd / 2.0 - 0.6), Vector3(bw / 2.0, 0.3, -bd / 2.0 - 0.6),
@@ -374,18 +384,23 @@ func _fit_camera() -> void:
 	var dir := CAM_DIR.normalized()
 	var lo := 3.0
 	var hi := 40.0
-	var area := Rect2(Vector2(4, 4), Vector2(vp.size) - Vector2(8, 8))
+	var area := Rect2(Vector2(4, 4), vs - Vector2(8, 8))
 	if focus.size.x > 0:
-		var k := Vector2(vp.size) / size
-		area = Rect2(focus.position * k, focus.size * k)
+		area = Rect2(global_position + focus.position, focus.size)
 	for k in 24:
 		var d := (lo + hi) / 2.0
 		cam.look_at_from_position(CAM_TARGET + dir * d, CAM_TARGET, Vector3.UP)
 		cam.v_offset = _v_offset_for(d, area)
 		var ok := true
 		for v in pts:
-			if cam.is_position_behind(v) or not area.has_point(cam.unproject_position(v)):
+			var sp := cam.unproject_position(v)
+			if cam.is_position_behind(v) or not area.has_point(sp):
 				ok = false
+				break
+			for r in avoid:
+				if r.has_point(sp - global_position):
+					ok = false
+			if not ok:
 				break
 		if ok:
 			hi = d
@@ -399,8 +414,9 @@ func _fit_camera() -> void:
 
 ## Spostamento verticale dell'inquadratura perché il centro del tabellone cada al centro della zona `area`.
 func _v_offset_for(d: float, area: Rect2) -> float:
-	var dy := vp.size.y / 2.0 - area.get_center().y
-	return -dy * 2.0 * d * tan(deg_to_rad(cam.fov) / 2.0) / float(vp.size.y)
+	var vs := _vsize()
+	var dy := vs.y / 2.0 - area.get_center().y
+	return -dy * 2.0 * d * tan(deg_to_rad(cam.fov) / 2.0) / vs.y
 
 
 # --- Geometria -----------------------------------------------------------------
@@ -421,9 +437,9 @@ func _structure_pos(p: int, i: int) -> Vector3:
 
 ## Punto dello schermo (coordinate di questo controllo) di un punto del mondo.
 func project(v: Vector3) -> Vector2:
-	if not is_inside_tree() or vp.size.x <= 0:
+	if not has_view():
 		return Vector2.ZERO
-	return cam.unproject_position(v) * (size / Vector2(vp.size))
+	return cam.unproject_position(v) - global_position
 
 
 ## I 4 angoli di un recinto sullo schermo.

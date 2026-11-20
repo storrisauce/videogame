@@ -32,7 +32,9 @@ var hand_layer := Control.new()
 var caos_label := Label.new()
 var info_label := Label.new()
 var opp_label := Label.new()
-var board := BoardView.new()
+var board := BoardView.new()      ## consolle laterali e vassoio (2D)
+var board3d := Board3D.new()      ## il tavolo in 3D
+var fx := FxLayer.new()
 var log_label := Label.new()
 var end_button := Button.new()
 var menu_button := Button.new()
@@ -80,6 +82,8 @@ func start_match(card_db: CardDB, prof: Profile, hero: String, bands: Array, opp
 
 func _build() -> void:
 	add_child(board)
+	add_child(board3d)
+	board3d.framed.connect(_place_lanes)
 	for p in 2:
 		for i in 4:
 			var lv := LaneView.new(p, i)
@@ -105,21 +109,30 @@ func _build() -> void:
 	log_label.add_theme_font_size_override("font_size", 10)
 	log_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	log_label.clip_text = true
-	banner.add_theme_font_size_override("font_size", 16)
+	banner.add_theme_font_size_override("font_size", 22)
+	banner.add_theme_constant_override("outline_size", 7)
+	banner.add_theme_color_override("font_outline_color", Art.c("inchiostro"))
 	banner.add_theme_color_override("font_color", Pal.YELLOW)
 	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	end_button.text = "Fine\nturno"
 	end_button.pressed.connect(_on_end_turn)
+	end_button.add_theme_font_size_override("font_size", 16)
+	Juice.press(end_button)
+	Juice.press(menu_button)
 	add_child(end_button)
 	menu_button.text = "Menu"
 	menu_button.pressed.connect(func(): exit_to_menu.emit())
 	add_child(menu_button)
 	# pannello dettagli e azioni
-	var vb := VBoxContainer.new()
+	# scheda compatta in alto: testo a sinistra, azioni a destra (non copre i recinti da cui dipende la scelta)
+	var vb := HBoxContainer.new()
+	vb.add_theme_constant_override("separation", 8)
 	detail_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail_text.add_theme_font_size_override("font_size", 11)
+	detail_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vb.add_child(detail_text)
 	detail_buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	detail_buttons.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	vb.add_child(detail_buttons)
 	detail.add_child(vb)
 	detail.visible = false
@@ -141,6 +154,7 @@ func _build() -> void:
 	over_panel.add_child(ob)
 	over_panel.visible = false
 	add_child(over_panel)
+	add_child(fx)
 	dial.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(dial)
 	_layout()
@@ -158,35 +172,15 @@ func _layout() -> void:
 	var H := size.y
 	if W <= 0 or H <= 0:
 		return
-	# tavolo in prospettiva tra le due consolle laterali; la mano su un vassoio sotto
-	var x0 := SIDE + 6
-	var x1 := W - SIDE - 6
+	# tavolo 3D tra le due consolle laterali; la mano su un vassoio sotto
+	var x0 := SIDE + 4
+	var x1 := W - SIDE - 4
 	var y_hand := H - HAND_H
-	var y_far := 12.0
-	var y_near := y_hand - 18.0
-	var rows := y_near - y_far - MID_H
-	var far_h := roundf(rows * 0.45)
-	board.y_far = y_far
-	board.y_mid0 = y_far + far_h
-	board.y_mid1 = board.y_mid0 + MID_H
-	board.y_near = y_near
-	board.near_x = Vector2(x0, x1)
-	var inset := roundf((x1 - x0) * 0.09) if BoardView.PERSPECTIVE else 0.0
-	board.far_x = Vector2(x0 + inset, x1 - inset)
-	for p in 2:
-		for i in 4:
-			var lv: LaneView = lane_views[p][i]
-			var poly := board.cell_poly(p, i)
-			var bb := Rect2(poly[0], Vector2.ZERO)
-			for v in poly:
-				bb = bb.expand(v)
-			lv.position = bb.position
-			lv.size = bb.size
-			var local := PackedVector2Array()
-			for v in poly:
-				local.append(v - bb.position)
-			lv.poly = local
-			lv.sprite_scale = (3 if p == HUMAN else 2) if BoardView.PERSPECTIVE else Art.SCALE
+	board3d.position = Vector2(x0, 0)
+	board3d.size = Vector2(x1 - x0, y_hand + 2)
+	board.y_near = 0.0   # il tavolo 2D disegna solo consolle e vassoio
+	_place_lanes()
+	_place_lanes.call_deferred()
 	# consolle: a sinistra il tuo sopravvissuto e il tuo Caos, a destra l'avversario e Fine turno
 	var col_h := y_hand - 8
 	board.panels = [Rect2(4, 4, SIDE - 4, col_h), Rect2(W - SIDE, 4, SIDE - 4, col_h)]
@@ -208,18 +202,40 @@ func _layout() -> void:
 	end_button.size = Vector2(SIDE - 12, HAND_H - 14)
 	hand_layer.position = Vector2(SIDE + 12, y_hand + 8)
 	hand_layer.size = Vector2(W - 2 * SIDE - 24, HAND_H - 12)
-	log_label.position = Vector2(x0, board.y_mid0 + 1)
-	log_label.size = Vector2(x1 - x0, MID_H - 2)
-	banner.position = Vector2(x0, board.y_mid0 - 22)
-	banner.size = Vector2(x1 - x0, 24)
+	var mid_y := (board3d.project(Vector3(0, 0, 0)).y if board3d.vp.size.x > 0 else y_hand * 0.45)
+	log_label.position = Vector2(x0, y_hand - 18)
+	log_label.size = Vector2(x1 - x0, 16)
+	banner.position = Vector2(x0, mid_y - 14)
+	banner.size = Vector2(x1 - x0, 28)
 	var lanes_w := x1 - x0
-	_detail_rect = Rect2(x0 + 10, y_far + 4, lanes_w - 20, far_h - 8)
-	_detail_strip = Rect2(x0 + 60, board.y_mid0 - 22, lanes_w - 120, MID_H + 44)
+	_detail_rect = Rect2(x0 + 4, 2, lanes_w - 8, 0)
+	_detail_strip = Rect2(x0 + 4, 2, lanes_w - 8, 0)
 	_place_detail()
 	over_panel.position = Vector2(W / 2 - 170, H / 2 - 80)
 	over_panel.custom_minimum_size = Vector2(340, 0)
 	board.queue_redraw()
 	_layout_hand()
+
+
+## Mette i livelli 2D dei recinti sopra i trapezi del tavolo 3D.
+func _place_lanes() -> void:
+	if lane_views[0].is_empty() or board3d.vp.size.x <= 0:
+		return
+	for p in 2:
+		for i in 4:
+			var lv: LaneView = lane_views[p][i]
+			var poly := board3d.cell_poly(p, i)
+			var bb := Rect2(poly[0], Vector2.ZERO)
+			for v in poly:
+				bb = bb.expand(v)
+			lv.position = board3d.position + bb.position
+			lv.size = bb.size
+			var local := PackedVector2Array()
+			for v in poly:
+				local.append(v - bb.position)
+			lv.poly = local
+			lv.head = board3d.head_point(p, i) - bb.position
+			lv.queue_redraw()
 
 
 func _layout_hand() -> void:
@@ -234,7 +250,12 @@ func _layout_hand() -> void:
 	for i in n:
 		var v := hand_layer.get_child(i) as CardView
 		v.size = Vector2(cw, ch)
-		v.position = Vector2(start + i * step, 0 if i != selected_hand else -10)
+		v.position = Vector2(start + i * step, 0)
+		if i == selected_hand:
+			if speed > 0.0 and is_inside_tree():
+				create_tween().tween_property(v, "position:y", -14.0, 0.16).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			else:
+				v.position.y = -14
 
 
 # --- Aggiornamento ------------------------------------------------------------
@@ -284,8 +305,10 @@ func refresh() -> void:
 	caos_label.text = "Caos\n%d" % me.caos
 	info_label.text = "Mazzo %d\nLetamaio %d" % [me.deck.size(), me.discard.size()]
 	opp_label.text = "Mano %d · Mazzo %d\nCaos %d" % [m.players[AI].hand.size(), m.players[AI].deck.size(), m.players[AI].caos]
-	for p in 2:
-		board.zones[p] = m.players[p].lanes.map(func(l): return l.zone)
+	board3d.reduce_motion = speed <= 0.0 or (profile != null and profile.meno_movimento)
+	fx.reduce_motion = board3d.reduce_motion
+	board3d.refresh(m)
+	_place_lanes()
 	board.queue_redraw()
 	end_button.disabled = state != "play"
 	log_label.text = "  ·  ".join(PackedStringArray(log_lines.slice(maxi(0, log_lines.size() - 2))))
@@ -298,6 +321,16 @@ func _playable_anywhere(c: CardInst) -> bool:
 		if m.can_play(HUMAN, c, i):
 			return true
 	return false
+
+
+## Il numero compare quando il colpo arriva (lo scatto in avanti dura ~0,2 s).
+func _delayed_pop(text: String, at: Vector2, color: Color, big: bool, shake_target: Control = null) -> void:
+	if speed <= 0.0 or not is_inside_tree():
+		return
+	await get_tree().create_timer(0.19).timeout
+	fx.pop_number(text, at, color, big)
+	if shake_target:
+		fx.shake_control(shake_target, 8.0 if big else 5.0)
 
 
 func _log(t: String) -> void:
@@ -313,12 +346,22 @@ func _on_event(kind: String, d: Dictionary) -> void:
 			_log("%s: %s" % [who, db.card(d["card"]).get("name", "?")])
 		"scuoti":
 			_log("%s scuote %s" % [who, db.card(d["card"]).get("name", "?")])
+			board3d.wiggle(d["player"], d["lane"])
 		"hero":
 			_log("%s: %s!" % [who, m.players[d["player"]].hero["ability_name"]])
+			var hv := hero_views[d["player"]]
+			if speed > 0.0:
+				fx.pop_number(m.players[d["player"]].hero["ability_name"], hv.position + Vector2(hv.size.x / 2.0, hv.size.y * 0.35), Art.c("giallo_2"))
 		"attack":
 			_log("%s colpisce %s: -%d%s" % [db.card(d["card"])["name"], db.card(d["target"])["name"], d["damage"], " BOTTA ATOMICA!" if d["crit"] else ""])
+			board3d.attack(d["player"], d["lane"], true, d["crit"])
+			var at := board3d.position + board3d.head_point(1 - d["player"], d["lane"])
+			_delayed_pop("-%d" % d["damage"], at, Art.c("allarme") if d["crit"] else Art.c("rosso_3"), d["crit"])
 		"attack_hero":
 			_log("%s colpisce la Pazienza: -%d%s" % [db.card(d["card"])["name"], d["damage"], " BOTTA ATOMICA!" if d["crit"] else ""])
+			board3d.attack(d["player"], d["lane"], false, d["crit"])
+			var hv2 := hero_views[1 - d["player"]]
+			_delayed_pop("-%d" % d["damage"], hv2.position + Vector2(hv2.size.x / 2.0, hv2.size.y * 0.4), Art.c("allarme") if d["crit"] else Art.c("rosso_3"), d["crit"], hv2)
 		"death":
 			_log("%s finisce nel Letamaio" % db.card(d["card"])["name"])
 		"empty_deck":
@@ -346,7 +389,8 @@ func _on_hand_tapped(v: CardView) -> void:
 			buttons.append(["Gioca (%d Caos)" % m.cost_of(HUMAN, c), _play_event.bind(idx)])
 		_show_detail(_card_text(c), buttons)
 	else:
-		_show_detail(_card_text(c) + "\nTocca un recinto illuminato per giocarla.", [])
+		_show_detail(_card_text(c), [])
+		_flash("Scegli un recinto illuminato")
 	refresh()
 
 
@@ -361,6 +405,9 @@ func _on_lane_tapped(p: int, i: int) -> void:
 	if selected_hand >= 0 and p == HUMAN:
 		var c := m.players[HUMAN].hand[selected_hand]
 		if c.type() != "event" and m.can_play(HUMAN, c, i):
+			var hv_card := hand_layer.get_child(selected_hand) as CardView if selected_hand < hand_layer.get_child_count() else null
+			if hv_card and speed > 0.0:
+				fx.fly_card(c, m, Rect2(hv_card.global_position - global_position, hv_card.size), board3d.position + board3d.project(board3d.cell_center(HUMAN, i)))
 			m.play_card(HUMAN, selected_hand, i)
 			_deselect()
 			_check_over()
@@ -478,8 +525,9 @@ func _show_detail(text: String, buttons: Array) -> void:
 		b.text = spec[0]
 		b.custom_minimum_size = Vector2(0, 36)
 		b.pressed.connect(spec[1])
+		Juice.press(b)
 		detail_buttons.add_child(b)
-	if state != "target":
+	if state != "target" and not buttons.is_empty():
 		var close := Button.new()
 		close.text = "Chiudi"
 		close.custom_minimum_size = Vector2(0, 36)
@@ -494,7 +542,8 @@ func _place_detail() -> void:
 	# Scelta del bersaglio: una striscia al centro, così si vedono entrambe le file.
 	var r := _detail_strip if state == "target" else _detail_rect
 	detail.position = r.position
-	detail_text.custom_minimum_size = Vector2(r.size.x - 20, 0)
+	var bw := detail_buttons.get_combined_minimum_size().x + 12.0 if detail_buttons.get_child_count() > 0 else 0.0
+	detail_text.custom_minimum_size = Vector2(maxf(r.size.x - 24.0 - bw, 120.0), 0)
 	detail.custom_minimum_size = Vector2(r.size.x, 0)
 	detail.size = Vector2(r.size.x, 0)
 	_shrink_detail.call_deferred()
@@ -511,10 +560,12 @@ func _show_card_detail(c: CardInst) -> void:
 
 func _card_text(c: CardInst) -> String:
 	var d := c.def
-	var head := "%s  ·  %s %s  ·  costo %d" % [d["name"], Pal.TYPE_NAME.get(c.type(), ""), Pal.BAND_NAME.get(c.band(), "").split(" ")[0], c.cost()]
+	var head := "%s  (%s %s, costo %d" % [d["name"], Pal.TYPE_NAME.get(c.type(), "").to_lower(), Pal.BAND_NAME.get(c.band(), "").split(" ")[0], c.cost()]
 	if c.type() == "creature":
-		head += "  ·  ATK %d / DEF %d" % [m.atk_of(c), m.def_of(c)] if m.lane_of(c) >= 0 else "  ·  ATK %d / DEF %d" % [c.base_atk(), c.base_def()]
-	return "%s\n%s\n«%s»" % [head, Abilities.describe(d, c.level), d.get("flavor", "")]
+		head += ", attacco %d, vita %d)" % [m.atk_of(c), m.def_of(c)] if m.lane_of(c) >= 0 else ", attacco %d, vita %d)" % [c.base_atk(), c.base_def()]
+	else:
+		head += ")"
+	return "%s\n%s  «%s»" % [head, Abilities.describe(d, c.level), d.get("flavor", "")]
 
 
 # --- Turni --------------------------------------------------------------------
@@ -554,7 +605,7 @@ func _on_end_turn() -> void:
 			refresh()
 			if _check_over():
 				return
-			await _wait(0.25)
+			await _wait(0.55)
 	else:
 		_flash("Primo turno: niente attacchi")
 		await _wait(0.6)
@@ -589,7 +640,7 @@ func _ai_turn() -> void:
 			refresh()
 			if _check_over():
 				return
-			await _wait(0.3)
+			await _wait(0.55)
 	_finish_ai_turn()
 
 
@@ -616,13 +667,25 @@ func _wait(t: float) -> void:
 		await get_tree().create_timer(t / speed).timeout
 
 
+var _banner_tw: Tween
+
+
+## Avviso al centro del tavolo: entra scivolando e ingrandendosi appena (ease-out), resta, svanisce più in fretta.
 func _flash(t: String) -> void:
 	banner.text = t
 	banner.modulate.a = 1.0
+	banner.pivot_offset = banner.size / 2.0
 	if speed > 0.0 and is_inside_tree():
-		var tw := create_tween()
-		tw.tween_interval(0.8 / speed)
-		tw.tween_property(banner, "modulate:a", 0.0, 0.4 / speed)
+		if _banner_tw:
+			_banner_tw.kill()
+		banner.scale = Vector2(0.92, 0.92)
+		banner.modulate.a = 0.0
+		_banner_tw = create_tween()
+		_banner_tw.set_parallel(true)
+		_banner_tw.tween_property(banner, "modulate:a", 1.0, 0.16)
+		_banner_tw.tween_property(banner, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_banner_tw.chain().tween_interval(0.9 / speed)
+		_banner_tw.chain().tween_property(banner, "modulate:a", 0.0, 0.25 / speed)
 
 
 # --- Fine partita --------------------------------------------------------------

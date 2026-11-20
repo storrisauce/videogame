@@ -53,7 +53,8 @@ func cell_poly(p: int, i: int) -> PackedVector2Array:
 
 func _draw() -> void:
 	Art.draw_terrain(self, "erba", Rect2(Vector2.ZERO, size))
-	if y_near <= y_far:
+	if y_near <= y_far:   # tavolo 3D attivo: qui solo consolle e vassoio
+		_draw_consoles()
 		return
 	var nl := at(0, y_near)
 	var nr := at(1, y_near)
@@ -101,6 +102,10 @@ func _draw() -> void:
 		sx += 21
 		row += 1
 	draw_polyline(PackedVector2Array([fl, nl, nl + Vector2(0, depth), nr + Vector2(0, depth), nr, fr, fl]), Art.c("legno_1"), 2.0)
+	_draw_consoles()
+
+
+func _draw_consoles() -> void:
 	# consolle laterali e vassoio della mano
 	for pr in panels:
 		_console(pr)

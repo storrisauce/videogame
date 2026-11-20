@@ -9,7 +9,10 @@ La partita si gioca **solo in orizzontale**, con due pollici, prima su iPhone e 
    - Disposizione "da console" (D-014): a sinistra una consolle di legno con il **tuo** sopravvissuto (ritratto animato, Pazienza, abilità), mazzo e Letamaio, e in basso il contatore del **Caos** e il Menu; a destra la consolle dell'**avversario** (ritratto, Pazienza, mano, mazzo, Caos) e in basso il grande pulsante **Fine turno**.
    - Centro: il tavolo è un altopiano di fattoria visto dall'alto (siepe in fondo, scogliera davanti, steccati tra i recinti). In fondo la fila dei 4 recinti avversari, poi un sentiero di terra, poi la fila dei tuoi 4. Ogni recinto mostra il terreno della sua banda; la creatura sta in piedi con **ATK** (tondo rosso) e **Vita** (barra verde con i numeri) sopra la testa, e la struttura dietro di lei.
    - Bordo inferiore: la mano su un vassoio di legno, carte con lo sprite animato, costo, nome, ATK e Vita.
-   - Grafica: pixel art secondo il [design system](../../art/design-system.md). Prospettiva leggera già pronta ma spenta (`BoardView.PERSPECTIVE`): l'utente ha chiesto di finire prima tutto in 2D.
+   - Grafica: pixel art secondo il [design system](../../art/design-system.md). Il tavolo è in **3D vero** (D-015): altopiano inclinato verso di te, figure pixel art in piedi rivolte alla telecamera, steccati, siepe e alberi in 3D; la telecamera si avvicina da sola finché il tavolo riempie lo spazio tra le consolle. Vita, attacco, evidenziazioni e tocchi sono un livello 2D sopra (il tocco vale dentro il trapezio del recinto).
+   - Scheda della carta: una striscia compatta in alto (nome e numeri, abilità e battuta, azioni a destra), così i recinti restano visibili.
+   - Movimento (skill game-feel, animate): la carta vola dalla mano al recinto e la creatura cade con un rimbalzo; all'attacco scatta in avanti, chi è colpito lampeggia e trema, il danno salta fuori come numero (più grande con la Botta Atomica, che fa tremare anche la telecamera); chi muore si schiaccia in una nuvoletta; l'avviso del turno entra con una leggera crescita; i pulsanti si abbassano al tocco. Entrate in ease-out, 150–400 ms. "Meno movimento" nel menu toglie scosse e salti.
+   - Menu: titolo e un solo pulsante principale (Gioca) a sinistra, con i tuoi numeri e l'anteprima delle creature del mazzo; a destra il sopravvissuto grande e animato da scorrere con le frecce e le due bande da cambiare con un tocco.
 2. **Giocare una carta:** trascina dalla mano a un recinto. I recinti validi si illuminano del colore della banda; quelli non validi si scuriscono. Se lasci la carta fuori da un recinto valido, torna in mano.
 3. **Scuotere:** tocca una tua creatura. Compare il pulsante "Scuoti (costo)". Se l'effetto chiede un bersaglio, i bersagli validi pulsano.
 4. **Vedere una carta:** tieni premuto su qualsiasi carta, in mano o in campo, per vederla ingrandita con il testo intero. Rilasci per chiudere.
@@ -46,3 +49,4 @@ La partita si gioca **solo in orizzontale**, con due pollici, prima su iPhone e 
 - 2026-11-20: passato a solo orizzontale (D-006).
 - 2026-11-20: implemented con grafica provvisoria; carte giocate a tocco invece che a trascinamento (D-010).
 - 2026-11-20: grafica in pixel art (D-013) e disposizione da console con tavolo-altopiano (D-014).
+- 2026-11-20: tavolo 3D, animazioni, scheda compatta, menu nuovo (D-015).

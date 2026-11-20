@@ -86,11 +86,25 @@ func _apply_safe_area() -> void:
 	safe.offset_bottom = -(win.end.y - area.end.y) * k.y
 
 
+var _curtain := ColorRect.new()
+
+
+## Cambio schermata: la nuova appare subito sotto un velo scuro che si dissolve (dissolvenza, 280 ms).
 func _swap(screen: Control) -> void:
 	if current:
 		current.queue_free()
 	current = screen
 	safe.add_child(screen)
+	if test_mode or not is_inside_tree():
+		return
+	if _curtain.get_parent() == null:
+		_curtain.color = Art.c("notte")
+		_curtain.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_curtain.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(_curtain)
+	move_child(_curtain, -1)
+	_curtain.modulate.a = 1.0
+	create_tween().tween_property(_curtain, "modulate:a", 0.0, 0.28).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 func show_menu() -> void:

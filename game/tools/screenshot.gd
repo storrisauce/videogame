@@ -9,6 +9,8 @@ func _initialize() -> void:
 	root.add_child(main)
 	for i in 10:
 		await process_frame
+	for i in 60:   # lascia finire l'entrata del menu
+		await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(out.path_join("menu.png"))
 	main.test_mode = false
@@ -31,7 +33,7 @@ func _initialize() -> void:
 		for i in 5:
 			await process_frame
 	ms.refresh()
-	for i in 6:
+	for i in 50:   # lascia finire le animazioni d'arrivo
 		await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(out.path_join("tavolo.png"))

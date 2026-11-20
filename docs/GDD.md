@@ -1,6 +1,6 @@
 # Fattoria Nucleare — Game Design Document
 
-**Version:** 0.6 · **Updated:** 2026-11-20 · [Features](#feature-index) · [Decisions](#decisions) · [Change log](#change-log)
+**Version:** 0.7 · **Updated:** 2026-11-20 · [Features](#feature-index) · [Decisions](#decisions) · [Change log](#change-log)
 
 ## Summary
 Gioco di carte a turni per telefono. Ogni giocatore schiera animali e ortaggi mutanti in **4 recinti** davanti a quelli avversari.
@@ -86,6 +86,7 @@ pesca → spendi Caos (gioca carte, scuoti creature) → attacca col mirino → 
 | D-012 | 2026-11-20 | Chi gioca per secondo ha +1 Caos nel suo primo turno; prima taratura di sopravvissuti e carte | Lasciare il vantaggio del primo (D-005); più Caos iniziale o più Pazienza per tutti | Nelle simulazioni chi inizia vinceva il 65%; Caos iniziale e Pazienza non lo cambiavano. Eccezione a D-005 decisa dall'utente | partita, carte-e-bande |
 | D-013 | 2026-11-20 | Grafica in **pixel art 2D**, motore sempre Godot; sprite disegnati con Aseprite (Pixel Plugin) | Passare a Phaser o PixiJS; illustrazioni da Blender | Scelta dell'utente: gioco 2D. Godot fa già il 2D ed esporta su iPhone; cambiare motore vorrebbe dire riscrivere regole, IA, schermate e test | schermo-di-gioco, carte-e-bande |
 | D-014 | 2026-11-20 | Disposizione "da console": ritratti e contatori in due consolle laterali, tavolo-altopiano al centro, mano su un vassoio, creature in piedi nei recinti con ATK e Vita sopra la testa | Tavolo a carte piatte (prima versione) | Richiesta dell'utente, sul modello della disposizione tipica del genere; grafica tutta nostra. Prospettiva leggera pronta ma spenta finché tutto il 2D non è finito | schermo-di-gioco |
+| D-015 | 2026-11-20 | Tavolo in **3D vero** (altopiano inclinato, telecamera che si adatta allo schermo) con figure pixel art in piedi; interfaccia 2D sopra; animazioni di arrivo, attacco, colpo, morte, numeri di danno, scosse; menu rifatto; opzione "Meno movimento" | Restare piatti (D-014); falsa prospettiva 2D | Richiesta dell'utente ("dare tridimensionalità e vita"), regole delle skill game-feel, game-ui-ux, animate | schermo-di-gioco |
 
 ## Open questions
 - **Assumptions to confirm:** tutti i numeri segnati `[ASSUMPTION]` nelle note delle feature; l'abbinamento banda→stile di gioco; i 6 sopravvissuti come rosa di lancio.
@@ -94,6 +95,7 @@ pesca → spendi Caos (gioca carte, scuoti creature) → attacca col mirino → 
 
 ## Change log
 **0.1 (2026-11-20):** prima stesura; partita, carte e bande, schermo di gioco progettati; D-001…D-005.
+**0.7 (2026-11-20):** tavolo 3D, animazioni e menu nuovo ([schermo di gioco](features/schermo-di-gioco/design.md)); D-015.
 **0.6 (2026-11-20):** pixel art in tutto il gioco: 31 carte, 6 sopravvissuti, terreni, tavolo e interfaccia ([design system](art/design-system.md)); D-013, D-014.
 **0.5 (2026-11-20):** prima taratura dei numeri con le simulazioni ([partita](features/partita/design.md)); D-012.
 **0.4 (2026-11-20):** gioco giocabile: menu, partita orizzontale con mirino, fine partita, rialzarsi, profilo locale, preset di esportazione iOS/Android; [IA avversaria](features/ia-avversaria/design.md) documentata; D-010, D-011.

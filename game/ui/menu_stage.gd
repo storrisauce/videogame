@@ -38,11 +38,9 @@ func _init() -> void:
 	var ped := Node3D.new()
 	ped.position = SPOT
 	world.add_child(ped)
-	Kit.outline_w = 0.05
 	Kit.box(ped, Vector3(0, 0.25, 0), Vector3(1.6, 0.5, 1.6), Art.c("legno_5"))
 	Kit.box(ped, Vector3(0, 0.52, 0), Vector3(1.7, 0.08, 1.7), Art.c("legno_3"))
 	BunkerSet.trefoil(ped, Vector3(0, 0.26, 0.81), 0.16)
-	Kit.outline_w = Kit.OUT_W
 	_hero_root.position = SPOT + Vector3(0, 0.56, 0)
 	world.add_child(_hero_root)
 	# luce sul personaggio

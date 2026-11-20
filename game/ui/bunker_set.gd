@@ -5,11 +5,9 @@ extends RefCounted
 ## graffi, cavi e una mappa sotto il tabellone; oggetti raggruppati in piccole scene ai lati, con contorni spessi.
 ## bw, bd = larghezza e profondità del tabellone; il tabellone è centrato nell'origine, la sua superficie a y ≈ 0,2.
 
-const OUT := 0.055     ## contorno degli oggetti di scena (più spesso di quello delle creature, sono più lontani)
 
 
 static func build(world: Node3D, bw: float, bd: float, calm: bool) -> void:
-	Kit.outline_w = OUT
 	_lights(world, bw, bd)
 	_table(world, bw, bd)
 	var L := -bw / 2.0
@@ -24,7 +22,6 @@ static func build(world: Node3D, bw: float, bd: float, calm: bool) -> void:
 	_tower(world, Vector3(R + 3.2, 0, -4.6), calm)
 	_mushrooms(world, Vector3(L - 0.6, 0, 3.9))
 	_dust(world, bw, bd, calm)
-	Kit.outline_w = Kit.OUT_W
 
 
 # --- luce e tavolo -------------------------------------------------------------

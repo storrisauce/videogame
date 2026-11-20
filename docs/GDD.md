@@ -91,6 +91,7 @@ pesca → spendi Caos (gioca carte, scuoti creature) → attacca col mirino → 
 | D-017 | 2026-11-20 | Carte in stile C "targa di lamiera" (proposta https://claude.ai/artifact/GMV1gWEBoAWpuAFsouyKeE); sopravvissuti con nome proprio e soprannome (Gertrude, Gianni, Ermenegildo, Dottor Tremolo, Brigadiere, Ruggero); oggetti nucleari sul tavolo | Stili A e B; nomi solo descrittivi | Scelta dell'utente; i nomi rendono i personaggi meno anonimi | carte-e-bande, schermo-di-gioco |
 | D-018 | 2026-11-20 | Atmosfera del bunker: lampada calda sul tabellone, buio ai bordi, luci verdi radioattive, tavolo di lamiera dettagliato, oggetti di scena nucleari raggruppati con contorni spessi, polvere nell'aria | Luce uniforme e oggetti sparsi (D-017) | L'utente: "le cose sul tavolo sono poco definite e non fanno ambient" | schermo-di-gioco |
 | D-019 | 2026-11-20 | Revisione completa: home 3D minimal, testi e etichette ridotti al necessario, mirino e fine partita nello stile, animazioni 3D più espressive | — | L'utente: "rendi tutto minimal", "la home fa schifo", "animazioni banali" | schermo-di-gioco |
+| D-020 | 2026-11-20 | Contorni 3D uniformi: spessore misurato sullo schermo, spinta dal centro dell'oggetto per le forme del kit | — | L'utente: contorni "staccati", "disallineati", "deve essere compatto" | schermo-di-gioco |
 
 ## Open questions
 - **Assumptions to confirm:** tutti i numeri segnati `[ASSUMPTION]` nelle note delle feature; l'abbinamento banda→stile di gioco; i 6 sopravvissuti come rosa di lancio.

@@ -12,16 +12,16 @@ extends RefCounted
 
 const TOON := preload("res://shaders/toon.gdshader")
 const OUTLINE := preload("res://shaders/outline.gdshader")
-const OUT_W := 0.028
+## Spessore del contorno, come frazione dell'altezza dello schermo: uguale per tutto (D-020).
+## Lo strumento delle foto lo alza un po', perché le foto delle carte vengono rimpicciolite.
+static var outline_thickness := 0.0058
 
 static var _mats: Dictionary = {}
-## Spessore del contorno per i prossimi materiali (gli oggetti di scena grandi lo vogliono più spesso).
-static var outline_w := OUT_W
 
 
 ## Materiale cartoon (condiviso per colore). `glow` > 1 accende il bagliore (bloom).
-static func mat(color: Color, glow := 0.0, outline := true) -> ShaderMaterial:
-	var key := "%s|%.2f|%s|%.3f" % [color.to_html(), glow, outline, outline_w]
+static func mat(color: Color, glow := 0.0, outline := true, radial := 1.0) -> ShaderMaterial:
+	var key := "%s|%.2f|%s|%.4f|%.1f" % [color.to_html(), glow, outline, outline_thickness, radial]
 	if _mats.has(key):
 		return _mats[key]
 	var m := ShaderMaterial.new()
@@ -33,7 +33,8 @@ static func mat(color: Color, glow := 0.0, outline := true) -> ShaderMaterial:
 	if outline:
 		var o := ShaderMaterial.new()
 		o.shader = OUTLINE
-		o.set_shader_parameter("width", outline_w)
+		o.set_shader_parameter("thickness", outline_thickness)
+		o.set_shader_parameter("radial", radial)
 		m.next_pass = o
 	_mats[key] = m
 	return m
@@ -45,7 +46,8 @@ static func _add(parent: Node3D, mesh: Mesh, pos: Vector3, color: Color, scl := 
 	mi.position = pos
 	mi.scale = scl
 	mi.rotation = rot
-	mi.material_override = mat(color, glow, outline)
+	# le forme del kit sono centrate: contorno spinto dal centro (compatto agli spigoli); le ciambelle no
+	mi.material_override = mat(color, glow, outline, 0.0 if mesh is TorusMesh else 1.0)
 	parent.add_child(mi)
 	return mi
 
@@ -163,7 +165,8 @@ static func food(parent: Node3D, name: String, pos: Vector3, s := 1.0, rot := Ve
 				m.set_shader_parameter("use_tex", true)
 			var o := ShaderMaterial.new()
 			o.shader = OUTLINE
-			o.set_shader_parameter("width", OUT_W / maxf(s, 0.01))
+			o.set_shader_parameter("thickness", outline_thickness)
+			o.set_shader_parameter("radial", 0.0)   # mesh importate: non centrate
 			m.next_pass = o
 			mi.set_surface_override_material(si, m)
 	return n

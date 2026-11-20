@@ -249,6 +249,9 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
   (`godot --path game --script res://tools/render_models.gd -- <cartella> --bake` → `assets/art3d/`); **effetti delle
   abilità**: confronto del tavolo prima/dopo ogni Scuotere/eroe/evento/struttura → raggio verde dalla fonte ai bersagli e
   numeri (danno, cura, ±DEF, ±ATK, Caos, carte).
+- ✅ **D-020, contorni uniformi** (`shaders/outline.gdshader`): spessore fisso sullo schermo (`Kit.outline_thickness`, 0,0058
+  dell'altezza; 0,009 nelle foto delle carte), spinta dal centro (`radial = 1`) per le forme del kit, normale (`radial = 0`)
+  per modelli importati e ciambelle. Niente più contorni staccati agli spigoli.
 - ✅ **D-019, revisione completa:** home come scena 3D del bunker (`ui/menu_stage.gd`: sopravvissuto su un piedistallo sotto
   la lampada; sopra solo logo, nome/soprannome/abilità, frecce tonde, bande come gettoni, "Gioca", scatolette, rotellina con
   le impostazioni); interfaccia di gioco minimal (niente etichette sotto le icone, scheda solo per le azioni, tondo

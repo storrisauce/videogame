@@ -134,10 +134,13 @@ func _toon(color: Color, tex: Texture2D = null, glow := 0.0) -> ShaderMaterial:
 	return m
 
 
-func _outlined(m: ShaderMaterial, width := 0.035) -> ShaderMaterial:
+## Contorno uniforme (D-020). `width` resta per compatibilità ma non conta più: lo spessore è sullo schermo.
+## radial = 1 per le forme centrate (casse, vassoio, steccati), 0 per le mesh importate o le ciambelle.
+func _outlined(m: ShaderMaterial, width := 0.035, radial := 1.0) -> ShaderMaterial:
 	var o := ShaderMaterial.new()
 	o.shader = OUTLINE
-	o.set_shader_parameter("width", width)
+	o.set_shader_parameter("thickness", Kit.outline_thickness)
+	o.set_shader_parameter("radial", radial)
 	m.next_pass = o
 	return m
 
@@ -209,7 +212,7 @@ func _model(path: String, pos: Vector3, s := 1.0, rot := 0.0, glow_tint := Color
 			var orig := mi.mesh.surface_get_material(si) as BaseMaterial3D
 			var tex: Texture2D = orig.albedo_texture if orig else null
 			var col: Color = orig.albedo_color if orig else Color.WHITE
-			mi.set_surface_override_material(si, _outlined(_toon(col, tex), 0.02 / s))
+			mi.set_surface_override_material(si, _outlined(_toon(col, tex), 0.02, 0.0))
 	return n
 
 

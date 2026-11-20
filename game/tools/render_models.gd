@@ -49,6 +49,7 @@ func _initialize() -> void:
 	cam.fov = 30.0
 	vp.add_child(cam)
 	await process_frame
+	Kit.outline_thickness = 0.009   # le foto vengono rimpicciolite nelle carte: contorno un po' più spesso
 	var done := 0
 	for id: String in ids:
 		var model := Models.build(id)

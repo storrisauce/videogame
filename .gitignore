@@ -1,2 +1,4 @@
 build/
 .DS_Store
+# Pacchetti grafici di riferimento: licenza che vieta la ridistribuzione (docs/art/design-system.md)
+art/reference/

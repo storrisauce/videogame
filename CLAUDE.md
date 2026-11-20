@@ -145,7 +145,11 @@ Riassumi lo stato in 3 righe e proponi le opzioni di §9 ("Prossimi passi"), con
 | `game/tests/` | `test_runner.gd` (regole), `test_ui.gd` (partite intere dall'interfaccia + layout a 3 misure) |
 | `game/tools/` | `simulate.gd` (partite IA contro IA con statistiche), `screenshot.gd` (immagini di menu, partita, mirino) |
 | `game/export_presets.cfg` | preset **iOS** e **Android** minimi (includono `data/*.json`); Godot li completa all'apertura |
-| `art/blender/nano_da_giardino_sacro.py` | prova di illustrazione con Blender da script (Cycles + contorni cartoon) |
+| `docs/art/design-system.md` | **regole grafiche**: palette, scala, contorni, luce, ombre, animazione, bande, tavolo, interfaccia |
+| `art/palette/`, `art/sprites/`, `art/tools/pixel.py` | palette (.json/.gpl/.hex), sprite in testo (.pxl), strumento render/controllo |
+| `game/assets/cards/` | sprite delle carte (PNG a strisce generati dai .pxl) |
+| `art/reference/` | pacchetto di riferimento, **solo in locale** (licenza: niente ridistribuzione) |
+| `art/blender/nano_da_giardino_sacro.py` | vecchia prova con Blender (non più la strada principale) |
 
 ## 6. Come si lavora
 
@@ -176,6 +180,11 @@ Android (più avanti): preset **Android** già presente; servono Android Studio,
 - **Cosa sono le texture:** semplicemente **immagini** (PNG) usate dal gioco: illustrazioni delle carte, sfondi, icone.
   In Godot basta metterle nella cartella del progetto: Godot le importa da solo. Oggi il gioco **non ne usa**: carte e tavolo
   sono disegnati con rettangoli e testo (grafica provvisoria).
+- **Design system grafico: `docs/art/design-system.md` — leggilo prima di disegnare qualunque cosa.** Stile ispirato a
+  Sunnyside World (solo riferimento, in `art/reference/`, ignorato da git: non si usano i suoi elementi, si disegna tutto da
+  zero alla stessa scala del mondo). Palette unica di 63 colori in `art/palette/`. Sprite come testo in `art/sprites/*.pxl`,
+  strumento `art/tools/pixel.py` (solo Python standard): `render`, `render-all`, `check` (colori fuori palette), `preview`.
+  Godot usa il filtro *Nearest* per tutto il progetto.
 - **Piano per l'arte (D-013): pixel art 2D, motore sempre Godot** (Phaser e PixiJS scartati: andrebbe riscritto tutto).
   Sprite delle creature in `game/assets/cards/<id-carta>.png`, sfondi in `game/assets/board/`; `CardView` li mostra quando
   esistono, altrimenti resta il rettangolo. In Godot la pixel art vuole il filtro *Nearest* e scale intere. Stile da decidere con
@@ -236,8 +245,9 @@ M1 regole senza grafica ✅ → **M2 vertical slice su iPhone** (gioco fatto; ma
    Rinforzare un po' Patate e Cane. Rifare la taratura quando arriva il set di lancio.
 3. **Contenuti:** scrivere il set di lancio (~15 carte per banda + 15 Cratere) seguendo il DNA tematico e il catalogo delle famiglie;
    implementare in `abilities.gd` le famiglie nuove che servono (con test).
-4. **Arte in pixel art 2D (D-013), in corso:** decidere lo stile con l'utente, installare Aseprite e Pixel Plugin (§6.4),
-   risolvere la licenza Cainos, primo sprite di prova, `CardView` che mostra le immagini, sfondo del tavolo.
+4. **Arte in pixel art 2D (D-013), in corso:** design system e palette fatti; prima prova `rana_a_due_teste` da far
+   approvare all'utente. Poi: gli sprite delle 31 carte e dei 6 sopravvissuti, `CardView` che mostra le immagini
+   (con animazione idle), tavolo con i recinti, carattere pixel con accenti. Aseprite e Pixel Plugin facoltativi (§6.4).
 5. **Rifiniture dello schermo:** trascinamento delle carte, vibrazioni e scuotimento con la Botta Atomica (`game-feel`), suoni
    (`godot-audio`), tutorial alla prima partita.
 6. **Meta e Supabase (M4):** costruzione del mazzo, campagna, profilo sul server, dati delle carte scaricati.

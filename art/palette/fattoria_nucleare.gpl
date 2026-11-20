@@ -1,0 +1,67 @@
+GIMP Palette
+Name: Fattoria Nucleare
+Columns: 10
+#
+ 24  20  37	inchiostro
+ 38  43  68	notte
+ 58  68 102	ferro_1
+ 90 105 136	ferro_2
+116 132 158	ferro_3
+139 155 180	ferro_4
+192 203 220	ferro_5
+222 227 235	ferro_6
+255 255 255	bianco
+ 62  39  49	legno_0
+ 90  55  55	legno_1
+ 98  53  48	legno_2
+115  62  57	legno_3
+148  85  66	legno_4
+174 105  78	legno_5
+178 119  96	legno_6
+197 138  99	legno_7
+209 179 146	legno_8
+234 212 170	legno_9
+148  70  39	ruggine_1
+190  74  47	ruggine_2
+211  99  73	ruggine_3
+215 118  67	ruggine_4
+184 111  80	pelle_1
+194 133 105	pelle_2
+228 166 114	pelle_3
+232 173 125	pelle_4
+232 183 150	pelle_5
+224 115  23	arancio_1
+247 118  34	arancio_2
+239 151  52	arancio_3
+254 174  52	arancio_4
+228 213 114	giallo_1
+254 231  97	giallo_2
+ 25  60  62	verde_0
+ 38  92  66	verde_1
+ 62 137  72	verde_2
+ 97 144  75	salvia
+ 83 166  65	verde_3
+ 99 199  77	verde_4
+144 191  93	verde_5
+163 224  72	radio_1
+212 242  94	radio_2
+ 18  78 137	acqua_1
+ 30 109 213	acqua_2
+  0 139 199	acqua_3
+  0 153 219	acqua_4
+ 50 184 232	acqua_5
+ 44 232 245	acqua_6
+162  38  51	rosso_1
+228  59  68	rosso_2
+237  82  89	rosso_3
+246 117 122	rosso_4
+255   0  68	allarme
+183  72  81	rosa_1
+206  92  99	rosa_2
+225 114 118	rosa_3
+255 151 155	rosa_4
+ 93  59  74	prugna
+104  56 108	viola_1
+158  71 126	viola_2
+181  80 136	viola_3
+183 107 170	viola_4

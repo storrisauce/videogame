@@ -15,6 +15,7 @@ var target_mark := false
 var creature: CardInst
 var structure: CardInst
 var m: Match
+var vs := {}                       ## valori mostrati (atk, hp, max, scossa, helpless, protected): dalla coda di presentazione
 var _press_time := -1.0
 var poly := PackedVector2Array()   ## i 4 angoli del recinto in prospettiva, in coordinate locali
 var head := Vector2.ZERO           ## punto sopra la testa della creatura (coordinate locali), dal tavolo 3D
@@ -32,6 +33,17 @@ func refresh(match_ref: Match) -> void:
 	zone = l.zone
 	creature = l.creature
 	structure = l.structure
+	vs = {}
+	queue_redraw()
+
+
+## Mostra il recinto come lo racconta la coda di presentazione (non per forza lo stato finale del Match).
+func show_lane(match_ref: Match, l: Dictionary) -> void:
+	m = match_ref
+	zone = l["zone"]
+	creature = l["c"]
+	structure = l["s"]
+	vs = l
 	queue_redraw()
 
 
@@ -72,9 +84,9 @@ func _draw() -> void:
 ## Attacco e vita sopra la testa della creatura: due gettoni come sulle carte (tondo rosso, cuore verde).
 ## Il cuore diventa arancione quando la creatura è ferita. Gli stati (scossa, inerme, protetta) sono piccole icone.
 func _draw_stats(at: Vector2) -> void:
-	var atk := m.atk_of(creature)
-	var hp := m.health_of(creature)
-	var mx := maxi(m.def_of(creature), 1)
+	var atk: int = vs.get("atk", m.atk_of(creature))
+	var hp: int = maxi(vs.get("hp", m.health_of(creature)), 0)
+	var mx: int = maxi(vs.get("def", m.def_of(creature)), 1)
 	var r := 13.0
 	var ac := (at + Vector2(-r - 2, 0)).round()
 	draw_circle(ac + Vector2(0, 2), r, Ui.ink())
@@ -86,11 +98,11 @@ func _draw_stats(at: Vector2) -> void:
 	Ui.heart(self, hc + Vector2(0, 1), r * 2.5, Art.c("verde_4") if hp >= mx else Art.c("arancio_3"))
 	Ui.text(self, Vector2(hc.x - r, hc.y + 6), str(hp), Ui.SMALL + 3, Art.c("bianco"), HORIZONTAL_ALIGNMENT_CENTER, r * 2.0, 3.0)
 	var icons := []
-	if creature.scossa:
+	if vs.get("scossa", creature.scossa):
 		icons.append(["radio_1", "✓"])
-	if creature.helpless:
+	if vs.get("helpless", creature.helpless):
 		icons.append(["ferro_2", "z"])
-	if creature.protected:
+	if vs.get("protected", creature.protected):
 		icons.append(["acqua_4", "+"])
 	for k in icons.size():
 		var c := at + Vector2(-8 + k * 16, -r - 8)

@@ -301,6 +301,11 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
   Correzioni dopo la prova: vignettatura su tutto lo schermo (non solo nei margini sicuri), rotellina disegnata (⚙ manca
   nei font iOS: niente simboli speciali nei testi), ritmo più lento (`MatchScreen.PACE`), carta dell'avversario mostrata
   prima di ogni sua mossa (`_reveal_ai_action`), recinto che si illumina prima di ogni attacco, opzione "Animazioni rapide".
+- ✅ **D-024, coda di presentazione** (`match_screen.gd`: `_on_event` → `_steps` → `_present()`): il Match calcola subito,
+  lo schermo racconta un evento alla volta con la foto dello stato di quel momento (`_view_snapshot`, `_disp`); tavolo
+  (`Board3D.refresh_view`), gettoni (`LaneView.show_lane`), Pazienza (`HeroView.disp_hp`) e contatori cambiano solo al
+  loro turno; chi muore resta a vita 0 finché non tocca alla sua morte. Nel Match Scuotere, abilità ed eventi si
+  annunciano prima dei loro effetti. Ogni mutazione del Match va seguita da `await _present()` prima di `_check_over()`.
 - ❌ Non ancora fatto: trascinamento delle carte (D-010), tutorial, set di lancio (~90 carte),
   costruzione libera del mazzo, campagna, casse/collezione, Supabase, build su iPhone reale, Android.
 

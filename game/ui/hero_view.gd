@@ -10,6 +10,7 @@ var m: Match
 var highlighted := false
 var _last_frame := -1
 var _shown_hp := -1.0
+var disp_hp := -1000                ## Pazienza mostrata (coda di presentazione); -1000 = quella vera
 
 
 func _init(p: int) -> void:
@@ -20,8 +21,12 @@ func _init(p: int) -> void:
 func refresh(match_ref: Match) -> void:
 	m = match_ref
 	if _shown_hp < 0.0:
-		_shown_hp = m.players[player].hp
+		_shown_hp = _hp()
 	queue_redraw()
+
+
+func _hp() -> int:
+	return disp_hp if disp_hp > -1000 else m.players[player].hp
 
 
 func _gui_input(e: InputEvent) -> void:
@@ -35,7 +40,7 @@ func _process(delta: float) -> void:
 		return
 	var redraw := false
 	# la barra scende verso il valore vero (si vede il colpo)
-	var hp := float(m.players[player].hp)
+	var hp := float(_hp())
 	if absf(_shown_hp - hp) > 0.01:
 		_shown_hp = move_toward(_shown_hp, hp, maxf(absf(_shown_hp - hp) * 6.0, 4.0) * delta)
 		redraw = true
@@ -78,8 +83,8 @@ func _draw() -> void:
 	# Pazienza: cuore + numero grande + barra
 	var y := por.end.y + 34
 	Ui.heart(self, Vector2(14, y + 14), 26, Art.c("rosso_2"))
-	Ui.text(self, Vector2(30, y + 24), str(maxi(ps.hp, 0)), Ui.BIG, Art.c("bianco"))
-	Ui.text(self, Vector2(30 + Ui.display().get_string_size(str(maxi(ps.hp, 0)), 0, -1, Ui.BIG).x + 3, y + 24), "/%d" % ps.max_hp, Ui.SMALL, Art.c("legno_9"))
+	Ui.text(self, Vector2(30, y + 24), str(maxi(_hp(), 0)), Ui.BIG, Art.c("bianco"))
+	Ui.text(self, Vector2(30 + Ui.display().get_string_size(str(maxi(_hp(), 0)), 0, -1, Ui.BIG).x + 3, y + 24), "/%d" % ps.max_hp, Ui.SMALL, Art.c("legno_9"))
 	var bar := Rect2(2, y + 32, w - 4, 10)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Art.c("rosso_1")

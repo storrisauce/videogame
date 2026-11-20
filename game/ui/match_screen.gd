@@ -45,7 +45,13 @@ var opp_hand := StatChip.new("hand")
 var opp_deck := StatChip.new("deck")
 var opp_caos := StatChip.new("caos")
 var _log_tw: Tween
-var _snap: Dictionary = {}       ## stato del tavolo all'ultimo aggiornamento (per mostrare cosa cambia un'abilità)
+## Coda di presentazione (D-024): il Match calcola tutto subito, lo schermo lo racconta UNA COSA ALLA VOLTA.
+## Ogni evento del Match finisce in `_steps` con la foto dello stato in quel momento; `_present()` li mostra in
+## ordine (carta giocata → effetto → colpo → morte...) e tavolo, numeri e Pazienza cambiano solo quando tocca a loro.
+var _steps: Array = []
+var _disp: Dictionary = {}       ## stato MOSTRATO (può essere indietro rispetto al Match mentre la coda scorre)
+var _presenting := false
+signal presented
 var log_label := Label.new()
 var end_button := Button.new()
 var menu_button := Button.new()
@@ -82,9 +88,11 @@ func start_match(card_db: CardDB, prof: Profile, hero: String, bands: Array, opp
 	if speed > 0.0 and profile and profile.veloce:
 		speed = 1.6
 	Sfx.music("match")
+	_disp = _view_snapshot()
 	m.start()
 	_log("Inizia %s." % ("tu" if m.first_player == HUMAN else "l'avversario"))
 	refresh()
+	await _present()
 	if _check_over():
 		return
 	if m.current == AI:
@@ -370,13 +378,18 @@ func _hover_card(v: CardView, on: bool) -> void:
 func refresh() -> void:
 	if m == null:
 		return
+	if speed <= 0.0:
+		_steps.clear()
+	if not _presenting and _steps.is_empty():
+		_disp = _view_snapshot()
 	for p in 2:
 		for i in 4:
 			var lv: LaneView = lane_views[p][i]
-			lv.refresh(m)
+			lv.show_lane(m, _disp["lanes"][p][i])
 			lv.highlighted = false
 			lv.target_mark = false
 		hero_views[p].refresh(m)
+		hero_views[p].disp_hp = _disp["hp"][p]
 		hero_views[p].highlighted = false
 	# carte selezionabili e bersagli
 	if state == "play" and selected_hand >= 0 and selected_hand < m.players[HUMAN].hand.size():
@@ -411,23 +424,17 @@ func refresh() -> void:
 		hand_layer.add_child(v)
 	_layout_hand()
 	var me := m.players[HUMAN]
-	my_deck.set_value(me.deck.size())
-	my_discard.set_value(me.discard.size())
-	my_caos.set_value(me.caos)
-	opp_hand.set_value(m.players[AI].hand.size())
-	opp_deck.set_value(m.players[AI].deck.size())
-	opp_caos.set_value(m.players[AI].caos)
+	_render_chips()
 	caos_label.text = "Caos\n%d" % me.caos
 	info_label.text = "Mazzo %d\nLetamaio %d" % [me.deck.size(), me.discard.size()]
 	opp_label.text = "Mano %d · Mazzo %d\nCaos %d" % [m.players[AI].hand.size(), m.players[AI].deck.size(), m.players[AI].caos]
 	hand_layer.modulate.a = 0.3 if state == "target" else 1.0
 	board3d.reduce_motion = speed <= 0.0 or (profile != null and profile.meno_movimento)
 	fx.reduce_motion = board3d.reduce_motion
-	board3d.refresh(m)
+	board3d.refresh_view(_disp)
 	_place_lanes()
 	end_button.disabled = state != "play"
 	_end_pulse(state == "play" and GreedyAI.choose(m, HUMAN).is_empty())
-	_snap = _snapshot()
 
 
 func _playable_anywhere(c: CardInst) -> bool:
@@ -439,25 +446,158 @@ func _playable_anywhere(c: CardInst) -> bool:
 	return false
 
 
-# --- Effetti delle abilità ------------------------------------------------------
-## Ogni abilità (Scuotere, eroe, evento, struttura) mostra cosa ha cambiato davvero: si confronta il tavolo prima
-## (ultimo refresh) e dopo. Un raggio verde va dalla fonte a ogni bersaglio, poi compaiono i numeri:
-## danno rosso, cura verde, +DEF azzurro, ±ATK arancio, Caos e carte pescate. Funziona per tutte le famiglie.
+# --- Coda di presentazione ------------------------------------------------------
+## Regola (card-game, game-ui-ux): una cosa alla volta, nell'ordine in cui è successa, e ogni numero cambia
+## nel momento in cui si vede la sua causa. I numeri delle abilità (danno rosso, cura verde, ±DEF azzurro,
+## ±ATK arancio, Caos, carte) vengono dal confronto tra lo stato mostrato e quello dopo l'effetto.
 
-func _snapshot() -> Dictionary:
-	var s := {}
+## Foto dello stato del Match, con i riferimenti alle carte (restano validi anche dopo che una carta muore).
+func _view_snapshot() -> Dictionary:
+	var lanes := [[], []]
+	var v := {"lanes": lanes, "hp": [0, 0], "caos": [0, 0], "deck": [0, 0], "hand": [0, 0], "discard": [0, 0]}
 	if m == null:
-		return s
+		return v
 	for p in 2:
 		var ps := m.players[p]
-		s["hp%d" % p] = ps.hp
-		s["caos%d" % p] = ps.caos
-		s["hand%d" % p] = ps.hand.size()
+		v["hp"][p] = ps.hp
+		v["caos"][p] = ps.caos
+		v["deck"][p] = ps.deck.size()
+		v["hand"][p] = ps.hand.size()
+		v["discard"][p] = ps.discard.size()
 		for i in 4:
-			var c := ps.lanes[i].creature
+			var l := ps.lanes[i]
+			var c := l.creature
+			var e := {"c": c, "s": l.structure, "zone": l.zone}
 			if c:
-				s["c%d_%d" % [p, i]] = [c.get_instance_id(), m.atk_of(c), m.def_of(c), m.health_of(c)]
-	return s
+				e["atk"] = m.atk_of(c)
+				e["hp"] = m.health_of(c)
+				e["def"] = m.def_of(c)
+				e["scossa"] = c.scossa
+				e["helpless"] = c.helpless
+				e["protected"] = c.protected
+			lanes[p].append(e)
+	return v
+
+
+func _on_event(kind: String, d: Dictionary) -> void:
+	_steps.append({"kind": kind, "d": d, "snap": _view_snapshot()})
+
+
+## Racconta tutti gli eventi in coda, uno alla volta. Chi la chiama aspetta la fine (e solo dopo controlla
+## se la partita è finita): così l'ultimo colpo si vede prima della schermata di fine.
+func _present() -> void:
+	if speed <= 0.0 or not is_inside_tree():
+		_steps.clear()
+		refresh()
+		return
+	if _presenting:
+		await presented
+		return
+	_presenting = true
+	while not _steps.is_empty():
+		var st: Dictionary = _steps.pop_front()
+		var after: Dictionary = _steps[0]["snap"] if not _steps.is_empty() else _view_snapshot()
+		await _present_step(st, after)
+	_presenting = false
+	_disp = _view_snapshot()
+	refresh()
+	presented.emit()
+
+
+func _present_step(st: Dictionary, after: Dictionary) -> void:
+	var d: Dictionary = st["d"]
+	var p: int = d.get("player", 0)
+	var who := "Tu" if p == HUMAN else "Avversario"
+	match st["kind"]:
+		"play":
+			var def := db.card(d["card"])
+			_log("%s: %s" % [who, def.get("name", "?")])
+			if def.get("type", "") == "event":
+				Sfx.play("zap")
+				await _fx_diff(p, board3d.position + board3d.project(Vector3(0, 0.6, 0)), after)
+			else:
+				_apply(after)   # arriva sul tavolo (salto, tonfo, polvere)
+				await _wait(0.6)
+		"scuoti":
+			_log("%s scuote %s" % [who, db.card(d["card"]).get("name", "?")])
+			board3d.wiggle(p, d["lane"])
+			await _wait(0.45)
+			await _fx_diff(p, _lane_point(p, d["lane"]), after)
+		"hero":
+			var hname: String = m.players[p].hero.get("ability_name", "")
+			_log("%s: %s!" % [who, hname])
+			var hv := hero_views[p]
+			Sfx.play("hero_power")
+			Sfx.buzz("hit")
+			fx.pop_number(hname, hv.position + Vector2(hv.size.x / 2.0, hv.size.y * 0.35), Art.c("giallo_2"))
+			await _wait(0.5)
+			await _fx_diff(p, _hero_point(p), after)
+		"attack":
+			_log("%s colpisce %s: -%d%s" % [db.card(d["card"])["name"], db.card(d["target"])["name"], d["damage"], " BOTTA ATOMICA!" if d["crit"] else ""])
+			board3d.attack(p, d["lane"], true, d["crit"])
+			await _wait(0.3)   # il salto arriva sul bersaglio
+			_apply(after)
+			fx.pop_number("-%d" % d["damage"], _lane_point(1 - p, d["lane"]), Art.c("allarme") if d["crit"] else Art.c("rosso_3"), d["crit"])
+			await _wait(0.75 if d["crit"] else 0.55)
+		"attack_hero":
+			_log("%s colpisce la Pazienza: -%d%s" % [db.card(d["card"])["name"], d["damage"], " BOTTA ATOMICA!" if d["crit"] else ""])
+			board3d.attack(p, d["lane"], false, d["crit"])
+			await _wait(0.3)
+			_apply(after)
+			var hv2 := hero_views[1 - p]
+			fx.pop_number("-%d" % d["damage"], hv2.position + Vector2(hv2.size.x / 2.0, hv2.size.y * 0.4), Art.c("allarme") if d["crit"] else Art.c("rosso_3"), d["crit"])
+			fx.shake_control(hv2, 8.0 if d["crit"] else 5.0)
+			await _wait(0.75 if d["crit"] else 0.55)
+		"death":
+			_log("%s finisce nel Letamaio" % db.card(d["card"])["name"])
+			_apply(after)   # la figura si ribalta e scoppia
+			await _wait(0.65)
+		"empty_deck":
+			_log("%s: mazzo finito!" % who)
+			_apply(after)
+			await _wait(0.4)
+		"resurrect":
+			_log("Ti rialzi!")
+			_apply(after)
+			await _wait(0.4)
+		_:
+			_apply(after)
+
+
+## Mostra lo stato `snap`. Una creatura che sta per morire (c'è ancora il suo evento "death" in coda) resta
+## sul tavolo con vita 0 finché non tocca alla sua morte: prima il colpo, poi la caduta.
+func _apply(snap: Dictionary) -> void:
+	var s := snap.duplicate(true)
+	if not _disp.is_empty():
+		for p in 2:
+			for i in 4:
+				var old: Dictionary = _disp["lanes"][p][i]
+				var nw: Dictionary = s["lanes"][p][i]
+				if old["c"] != null and nw["c"] != old["c"] and _death_pending(p, i):
+					var keep := old.duplicate()
+					keep["hp"] = 0
+					keep["s"] = nw["s"]
+					s["lanes"][p][i] = keep
+	_disp = s
+	refresh()
+
+
+func _death_pending(p: int, i: int) -> bool:
+	for st in _steps:
+		if st["kind"] == "death" and st["d"].get("player", -1) == p and st["d"].get("lane", -1) == i:
+			return true
+	return false
+
+
+func _render_chips() -> void:
+	if _disp.is_empty():
+		return
+	my_deck.set_value(_disp["deck"][HUMAN])
+	my_discard.set_value(_disp["discard"][HUMAN])
+	my_caos.set_value(_disp["caos"][HUMAN])
+	opp_hand.set_value(_disp["hand"][AI])
+	opp_deck.set_value(_disp["deck"][AI])
+	opp_caos.set_value(_disp["caos"][AI])
 
 
 func _lane_point(p: int, i: int) -> Vector2:
@@ -469,87 +609,67 @@ func _hero_point(p: int) -> Vector2:
 	return hv.position + hv.size * Vector2(0.5, 0.3)
 
 
-func _ability_fx(p: int, src: Vector2, card_name: String) -> void:
-	if speed <= 0.0 or not is_inside_tree() or _snap.is_empty():
-		return
-	var after := _snapshot()
-	var before := _snap
-	_snap = after
+## Effetto di un'abilità: raggio dalla fonte a ogni cosa cambiata, poi lo stato nuovo e i numeri.
+func _fx_diff(p: int, src: Vector2, after: Dictionary) -> void:
+	var before := _disp
 	var hits: Array = []   # [punto, testo, colore, grande, controllo da scuotere, lane]
 	for q in 2:
 		for i in 4:
-			var k := "c%d_%d" % [q, i]
-			var b: Array = before.get(k, [])
-			var a: Array = after.get(k, [])
-			if b.is_empty() or a.is_empty() or b[0] != a[0]:
+			var b: Dictionary = before["lanes"][q][i]
+			var a: Dictionary = after["lanes"][q][i]
+			if b["c"] == null or b["c"] != a["c"] and not (a["c"] == null and _death_pending(q, i)):
 				continue
 			var at := _lane_point(q, i)
-			if a[3] < b[3]:
-				hits.append([at, "-%d" % (b[3] - a[3]), Art.c("rosso_3"), true, null, [q, i]])
-			elif a[3] > b[3] and a[2] == b[2]:
-				hits.append([at, "+%d" % (a[3] - b[3]), Art.c("verde_4"), false, null, [q, i]])
-			if a[2] != b[2]:
-				hits.append([at + Vector2(0, -22), "%+d DEF" % (a[2] - b[2]), Art.c("acqua_5"), false, null, [q, i]])
-			if a[1] != b[1]:
-				hits.append([at + Vector2(0, -44), "%+d ATK" % (a[1] - b[1]), Art.c("arancio_4"), false, null, [q, i]])
-		var dh: int = after.get("hp%d" % q, 0) - before.get("hp%d" % q, 0)
+			var a_hp: int = a.get("hp", 0) if a["c"] != null else 0
+			var a_def: int = a.get("def", b["def"]) if a["c"] != null else b["def"]
+			var a_atk: int = a.get("atk", b["atk"]) if a["c"] != null else b["atk"]
+			if a_hp < b["hp"]:
+				hits.append([at, "-%d" % (b["hp"] - a_hp), Art.c("rosso_3"), true, null, [q, i]])
+			elif a_hp > b["hp"] and a_def == b["def"]:
+				hits.append([at, "+%d" % (a_hp - b["hp"]), Art.c("verde_4"), false, null, [q, i]])
+			if a_def != b["def"]:
+				hits.append([at + Vector2(0, -22), "%+d DEF" % (a_def - b["def"]), Art.c("acqua_5"), false, null, [q, i]])
+			if a_atk != b["atk"]:
+				hits.append([at + Vector2(0, -44), "%+d ATK" % (a_atk - b["atk"]), Art.c("arancio_4"), false, null, [q, i]])
+		var dh: int = after["hp"][q] - before["hp"][q]
 		if dh != 0:
 			hits.append([_hero_point(q), "%+d" % dh, Art.c("rosso_3") if dh < 0 else Art.c("verde_4"), dh < 0, hero_views[q], null])
-		var dc: int = after.get("caos%d" % q, 0) - before.get("caos%d" % q, 0)
+		var dc: int = after["caos"][q] - before["caos"][q]
 		if dc != 0 and not (q == p and dc < 0):   # il costo pagato non è un effetto
 			var chip := my_caos if q == HUMAN else opp_caos
 			hits.append([chip.position + chip.size / 2.0, "%+d Caos" % dc, Art.c("radio_2"), false, null, null])
-		var dd: int = after.get("hand%d" % q, 0) - before.get("hand%d" % q, 0)
+		var dd: int = after["hand"][q] - before["hand"][q]
 		if dd > 0 and q == p:
 			var chip2 := my_deck if q == HUMAN else opp_hand
 			hits.append([chip2.position + chip2.size / 2.0, "+%d carte" % dd, Art.c("legno_9"), false, null, null])
-	_play_ability_fx(src, hits)
-
-
-func _play_ability_fx(src: Vector2, hits: Array) -> void:
 	var t := 0.0
 	for h in hits:
 		t = maxf(t, fx.beam(src, h[0], Art.c("radio_2")))
 	if t > 0.0:
-		Sfx.play("zap")
 		await get_tree().create_timer(t).timeout
-	# un suono per tipo di effetto (non uno per bersaglio): cura/+, -, Caos, carte
+	_apply(after)
 	var kinds := {}
-	for h in hits:
-		var txt: String = h[1]
-		if txt.ends_with("Caos"):
-			kinds["caos"] = true
-		elif txt.ends_with("carte"):
-			kinds["card_pick"] = true
-		elif h[2] == Art.c("rosso_3"):
-			kinds["hit_hero" if h[4] else "hit"] = true
-		elif txt.begins_with("-"):
-			kinds["debuff"] = true
-		else:
-			kinds["buff"] = true
-	for k: String in kinds:
-		if k != "hit":   # il colpo sulla creatura suona già in board3d.hit
-			Sfx.play(k)
 	for h in hits:
 		fx.pop_number(h[1], h[0], h[2], h[3])
 		if h[4]:
 			fx.shake_control(h[4], 7.0 if h[3] else 4.0)
+		var txt: String = h[1]
 		if h[5] is Array:
 			var lane: Array = h[5]
 			if h[2] == Art.c("rosso_3"):
 				board3d.hit(lane[0], lane[1], false)
 			else:
 				board3d.glow(lane[0], lane[1], h[2])
-
-
-## Il numero compare quando il colpo arriva (lo scatto in avanti dura ~0,2 s).
-func _delayed_pop(text: String, at: Vector2, color: Color, big: bool, shake_target: Control = null) -> void:
-	if speed <= 0.0 or not is_inside_tree():
-		return
-	await get_tree().create_timer(0.19).timeout
-	fx.pop_number(text, at, color, big)
-	if shake_target:
-		fx.shake_control(shake_target, 8.0 if big else 5.0)
+				kinds["debuff" if txt.begins_with("-") else "buff"] = true
+		elif txt.ends_with("Caos"):
+			kinds["caos"] = true
+		elif txt.ends_with("carte"):
+			kinds["card_pick"] = true
+		elif h[4]:
+			kinds["hit_hero"] = true
+	for k: String in kinds:
+		Sfx.play(k)
+	await _wait(0.7 if not hits.is_empty() else 0.3)
 
 
 ## "Fine turno" pulsa quando non restano mosse utili.
@@ -581,46 +701,6 @@ func _log(t: String) -> void:
 		_log_tw.tween_property(log_label, "modulate:a", 0.0, 0.3)
 	if log_lines.size() > 50:
 		log_lines.remove_at(0)
-
-
-func _on_event(kind: String, d: Dictionary) -> void:
-	var who := "Tu" if d.get("player", 0) == HUMAN else "Avversario"
-	match kind:
-		"play":
-			_log("%s: %s" % [who, db.card(d["card"]).get("name", "?")])
-			var ctype: String = db.card(d["card"]).get("type", "")
-			if ctype != "creature":
-				var src := _lane_point(d["player"], d["lane"]) if d["lane"] >= 0 else board3d.project(Vector3(0, 0.6, 0))
-				_ability_fx(d["player"], src, db.card(d["card"]).get("name", ""))
-		"scuoti":
-			_log("%s scuote %s" % [who, db.card(d["card"]).get("name", "?")])
-			board3d.wiggle(d["player"], d["lane"])
-			_ability_fx(d["player"], _lane_point(d["player"], d["lane"]), db.card(d["card"]).get("name", ""))
-		"hero":
-			_log("%s: %s!" % [who, m.players[d["player"]].hero["ability_name"]])
-			if speed > 0.0:
-				Sfx.play("hero_power")
-				Sfx.buzz("hit")
-			var hv := hero_views[d["player"]]
-			if speed > 0.0:
-				fx.pop_number(m.players[d["player"]].hero["ability_name"], hv.position + Vector2(hv.size.x / 2.0, hv.size.y * 0.35), Art.c("giallo_2"))
-			_ability_fx(d["player"], hv.position + hv.size * Vector2(0.5, 0.3), "")
-		"attack":
-			_log("%s colpisce %s: -%d%s" % [db.card(d["card"])["name"], db.card(d["target"])["name"], d["damage"], " BOTTA ATOMICA!" if d["crit"] else ""])
-			board3d.attack(d["player"], d["lane"], true, d["crit"])
-			var at := board3d.position + board3d.body_point(1 - d["player"], d["lane"])
-			_delayed_pop("-%d" % d["damage"], at, Art.c("allarme") if d["crit"] else Art.c("rosso_3"), d["crit"])
-		"attack_hero":
-			_log("%s colpisce la Pazienza: -%d%s" % [db.card(d["card"])["name"], d["damage"], " BOTTA ATOMICA!" if d["crit"] else ""])
-			board3d.attack(d["player"], d["lane"], false, d["crit"])
-			var hv2 := hero_views[1 - d["player"]]
-			_delayed_pop("-%d" % d["damage"], hv2.position + Vector2(hv2.size.x / 2.0, hv2.size.y * 0.4), Art.c("allarme") if d["crit"] else Art.c("rosso_3"), d["crit"], hv2)
-		"death":
-			_log("%s finisce nel Letamaio" % db.card(d["card"])["name"])
-		"empty_deck":
-			_log("%s: mazzo finito!" % who)
-		"resurrect":
-			_log("Ti rialzi!")
 
 
 # --- Input del giocatore ------------------------------------------------------
@@ -666,8 +746,7 @@ func _on_lane_tapped(p: int, i: int) -> void:
 			if hv_card and speed > 0.0:
 				fx.fly_card(c, m, Rect2(hv_card.global_position - global_position, hv_card.size), board3d.position + board3d.project(board3d.cell_center(HUMAN, i)))
 			m.play_card(HUMAN, selected_hand, i)
-			_deselect()
-			_check_over()
+			_after_action()
 			return
 		elif c.type() != "event" and m.players[p].lanes[i].creature == null:
 			Sfx.play("deny")
@@ -766,9 +845,15 @@ func _resolve_pending(t: Dictionary) -> void:
 	_after_action()
 
 
+## Dopo ogni tua mossa: la si racconta (coda di presentazione), intanto niente tocchi; poi tocca di nuovo a te.
 func _after_action() -> void:
+	state = "busy"
 	_deselect()
-	_check_over()
+	await _present()
+	if _check_over():
+		return
+	state = "play"
+	refresh()
 
 
 func _deselect() -> void:
@@ -857,6 +942,9 @@ func _on_end_turn() -> void:
 	state = "busy"
 	_deselect()
 	if m.can_attack_this_turn(HUMAN):
+		if _any_attack(HUMAN):
+			_flash("All'attacco!")
+			await _wait(0.9)
 		for i in 4:
 			if not m.attack_needs_dial(HUMAN, i):
 				continue
@@ -865,6 +953,7 @@ func _on_end_turn() -> void:
 			var res := await _dial(att.def["name"], m.lane_undefended(HUMAN, i))
 			m.attack_lane(HUMAN, i, res == "botta")
 			refresh()
+			await _present()
 			if _check_over():
 				return
 			await _wait(PACE["attack_after"])
@@ -873,6 +962,7 @@ func _on_end_turn() -> void:
 		await _wait(0.6)
 	m.end_turn(HUMAN)
 	refresh()
+	await _present()
 	if _check_over():
 		return
 	await _ai_turn()
@@ -893,10 +983,14 @@ func _ai_turn() -> void:
 		if not m.apply(AI, a):
 			break
 		refresh()
+		await _present()
 		if _check_over():
 			return
 		await _wait(PACE["ai_action"])
 	if m.can_attack_this_turn(AI):
+		if _any_attack(AI):
+			_flash("L'avversario attacca!")
+			await _wait(0.9)
 		for i in 4:
 			if not m.attack_needs_dial(AI, i):
 				continue
@@ -906,6 +1000,7 @@ func _ai_turn() -> void:
 				await _dial("Para!", false)
 			m.attack_lane(AI, i, false)
 			refresh()
+			await _present()
 			if _check_over():
 				return
 			await _wait(PACE["attack_after"])
@@ -915,6 +1010,7 @@ func _ai_turn() -> void:
 func _finish_ai_turn() -> void:
 	m.end_turn(AI)
 	refresh()
+	await _present()
 	if _check_over():
 		return
 	_begin_human_turn()
@@ -1005,6 +1101,13 @@ func _reveal_ai_action(a: Dictionary) -> void:
 
 
 ## Prima di ogni attacco: il recinto che attacca si illumina un attimo (si vede chi colpisce chi).
+func _any_attack(p: int) -> bool:
+	for i in 4:
+		if m.attack_needs_dial(p, i):
+			return true
+	return false
+
+
 func _attack_cue(p: int, i: int) -> void:
 	if speed <= 0.0 or not is_inside_tree():
 		return
@@ -1133,6 +1236,7 @@ func _resurrect() -> void:
 	profile.save()
 	m.resurrect(HUMAN)
 	over_panel.visible = false
+	await _present()
 	Sfx.play("resurrect", 1.0, 0.0)
 	Sfx.music("match")
 	if m.current == AI:

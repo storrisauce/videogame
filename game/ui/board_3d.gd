@@ -626,6 +626,20 @@ func refresh(m: Match) -> void:
 			_sync(p, i, l.structure, false)
 
 
+## Come refresh, ma dallo stato mostrato dalla coda di presentazione (match_screen._view_snapshot).
+func refresh_view(view: Dictionary) -> void:
+	for p in 2:
+		for i in 4:
+			var l: Dictionary = view["lanes"][p][i]
+			if _zones[p].size() <= i or _zones[p][i] != l["zone"]:
+				if _zones[p].size() <= i:
+					_zones[p].resize(4)
+				_zones[p][i] = l["zone"]
+				_build_cell(p, i, l["zone"])
+			_sync(p, i, l["c"], true)
+			_sync(p, i, l["s"], false)
+
+
 func _sync(p: int, i: int, c: CardInst, creature: bool) -> void:
 	var shown: Array = _shown if creature else _shown_s
 	var arr: Array = creature_sprites if creature else structure_sprites

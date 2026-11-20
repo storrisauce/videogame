@@ -248,8 +248,11 @@ func play_card(p: int, hand_index: int, lane: int, target: Variant = null) -> bo
 	ps.caos -= cost_of(p, c)
 	ps.hand.remove_at(hand_index)
 	if c.type() == "event":
+		# l'evento si annuncia prima dei suoi effetti: così chi guarda vede prima la carta, poi cosa fa
+		emit_signal("event", "play", {"player": p, "card": c.id(), "lane": lane})
 		Abilities.resolve(self, p, c, -1, target)
 		ps.discard.append(c.fresh_copy())
+		return true
 	else:
 		var l := ps.lanes[lane]
 		if c.type() == "creature":
@@ -284,8 +287,8 @@ func scuoti(p: int, lane: int, target: Variant = null) -> bool:
 		return false
 	players[p].caos -= c.scuoti_cost()
 	c.scossa = true
+	emit_signal("event", "scuoti", {"player": p, "lane": lane, "card": c.id()})   # prima degli effetti (cronologia)
 	Abilities.resolve(self, p, c, lane, target)
-	emit_signal("event", "scuoti", {"player": p, "lane": lane, "card": c.id()})
 	return true
 
 
@@ -296,9 +299,9 @@ func can_use_hero(p: int) -> bool:
 func use_hero(p: int, target: Variant = null) -> bool:
 	if not can_use_hero(p) or not Abilities.hero_target_ok(self, p, target):
 		return false
+	emit_signal("event", "hero", {"player": p})   # prima degli effetti (cronologia)
 	Abilities.resolve_hero(self, p, target)
 	players[p].cooldown = int(players[p].hero["cooldown"])
-	emit_signal("event", "hero", {"player": p})
 	return true
 
 

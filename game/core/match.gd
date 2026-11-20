@@ -66,6 +66,7 @@ func clone() -> Match:
 	m.round_caos = round_caos
 	m.winner = winner
 	m.allow_replace = allow_replace.duplicate()
+	m.resurrected = resurrected.duplicate()
 	return m
 
 
@@ -101,33 +102,55 @@ func can_attack_this_turn(p: int) -> bool:
 func combat(p: int, crits: Array = []) -> void:
 	if winner >= 0 or not can_attack_this_turn(p):
 		return
-	var o := 1 - p
 	for i in players[p].lanes.size():
 		if winner >= 0:
 			return
-		var att := players[p].lanes[i].creature
-		if att == null or att.cant_attack:
-			continue
-		var atk := atk_of(att)
-		if atk <= 0:
-			continue
-		var crit: bool = crits[i] if i < crits.size() else false
-		var target := players[o].lanes[i].creature
-		if target and not target.helpless:
-			if target.protected:
-				continue
-			var dmg := int(atk + atk * db.advantage(att.band(), target.band()))
-			dmg = maxi(dmg, 0)
-			if crit:
-				dmg = int(dmg * float(db.rule("molt_botta")))
-			emit_signal("event", "attack", {"player": p, "lane": i, "damage": dmg, "crit": crit})
-			take_damage(target, dmg)
-		else:
-			var dmg := atk - players[p].atk_penalty
-			if crit:
-				dmg = int(dmg * float(db.rule("molt_botta")))
-			emit_signal("event", "attack_hero", {"player": p, "lane": i, "damage": dmg, "crit": crit})
-			damage_hero(o, dmg)
+		attack_lane(p, i, crits[i] if i < crits.size() else false)
+
+
+## La creatura del recinto i attacca. Non controlla il primo turno (lo fa combat()).
+## Restituisce "creatura", "pazienza" o "" se non c'è stato attacco.
+func attack_lane(p: int, i: int, crit: bool) -> String:
+	if winner >= 0:
+		return ""
+	var o := 1 - p
+	var att := players[p].lanes[i].creature
+	if att == null or att.cant_attack:
+		return ""
+	var atk := atk_of(att)
+	if atk <= 0:
+		return ""
+	var target := players[o].lanes[i].creature
+	if target and not target.helpless:
+		if target.protected:
+			return ""
+		var dmg := int(atk + atk * db.advantage(att.band(), target.band()))
+		dmg = maxi(dmg, 0)
+		if crit:
+			dmg = int(dmg * float(db.rule("molt_botta")))
+		emit_signal("event", "attack", {"player": p, "lane": i, "damage": dmg, "crit": crit, "card": att.id(), "target": target.id()})
+		take_damage(target, dmg)
+		return "creatura"
+	var dmg := atk - players[p].atk_penalty
+	if crit:
+		dmg = int(dmg * float(db.rule("molt_botta")))
+	emit_signal("event", "attack_hero", {"player": p, "lane": i, "damage": dmg, "crit": crit, "card": att.id()})
+	damage_hero(o, dmg)
+	return "pazienza"
+
+
+## Il mirino compare per questo attacco? (no se non attacca o se il bersaglio è protetto)
+func attack_needs_dial(p: int, i: int) -> bool:
+	var att := players[p].lanes[i].creature
+	if att == null or att.cant_attack or atk_of(att) <= 0:
+		return false
+	var target := players[1 - p].lanes[i].creature
+	return not (target and not target.helpless and target.protected)
+
+
+func lane_undefended(p: int, i: int) -> bool:
+	var target := players[1 - p].lanes[i].creature
+	return target == null or target.helpless
 
 
 func end_turn(p: int) -> void:
@@ -313,6 +336,35 @@ func apply(p: int, a: Dictionary) -> bool:
 		"hero":
 			return use_hero(p, a["target"])
 	return false
+
+
+# --- Rialzarsi (regola 13) -------------------------------------------------
+
+var resurrected := [false, false]
+
+
+## Chi ha appena perso può rialzarsi una volta per partita (il costo in scatolette lo paga il profilo).
+func can_resurrect(p: int) -> bool:
+	return winner == 1 - p and not resurrected[p]
+
+
+func resurrect(p: int) -> bool:
+	if not can_resurrect(p):
+		return false
+	var ps := players[p]
+	resurrected[p] = true
+	winner = -1
+	ps.hp = ps.max_hp
+	while not ps.hand.is_empty():
+		ps.deck.append(ps.hand.pop_back().fresh_copy())
+	for c in ps.discard:
+		ps.deck.append(c.fresh_copy())
+	ps.discard.clear()
+	_shuffle(ps.deck)
+	for i in db.rule_i("starting_hand"):
+		draw(p)
+	emit_signal("event", "resurrect", {"player": p})
+	return true
 
 
 # --- Statistiche, danni, cure ----------------------------------------------

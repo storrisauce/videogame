@@ -11,7 +11,7 @@ const TESTS := [
 	"test_combat_advantage", "test_botta_atomica", "test_hero_damage", "test_first_turn_no_combat",
 	"test_death_and_on_death", "test_scuoti", "test_structure_aura", "test_empty_deck",
 	"test_level_scaling", "test_hand_limit", "test_hero_cooldown", "test_reduce_action_points",
-	"test_return_to_hand", "test_clone_independent", "test_full_game",
+	"test_return_to_hand", "test_clone_independent", "test_resurrect", "test_full_game",
 ]
 
 
@@ -313,6 +313,27 @@ func test_clone_independent() -> bool:
 	k.players[0].caos = 0
 	check(c.damage, 0, "il clone non tocca l'originale")
 	check(m.players[0].caos, 10, "Caos originale intatto")
+	return true
+
+
+func test_resurrect() -> bool:
+	var m := new_match()
+	for i in 6:
+		m.players[0].deck.append(CardInst.new(db.card("rapa_rancorosa"), 1, 0))
+	m.players[0].hand.append(CardInst.new(db.card("gallo_sentinella"), 1, 0))
+	m.players[0].discard.append(CardInst.new(db.card("gallo_sentinella"), 1, 0))
+	put(m, 0, 0, "maialino_di_scorta")
+	check(m.can_resurrect(0), false, "non si rialza chi non ha perso")
+	m.damage_hero(0, 999)
+	check(m.winner, 1, "il giocatore 0 ha perso")
+	check(m.resurrect(0), true, "si rialza")
+	check(m.winner, -1, "la partita continua")
+	check(m.players[0].hp, m.players[0].max_hp, "Pazienza al massimo")
+	check(m.players[0].hand.size(), 5, "ripesca 5 carte")
+	check(m.players[0].deck.size() + m.players[0].hand.size(), 8, "mano e Letamaio tornati nel mazzo")
+	check(m.players[0].lanes[0].creature != null, true, "le carte in campo restano")
+	m.damage_hero(0, 999)
+	check(m.resurrect(0), false, "una sola volta per partita")
 	return true
 
 

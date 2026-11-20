@@ -3,6 +3,7 @@ config_version=5
 
 [application]
 config/name="Fattoria Nucleare"
+run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 
 [display]
@@ -15,3 +16,8 @@ window/stretch/aspect="expand"
 [rendering]
 renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
+
+[input_devices]
+
+; I tocchi sul telefono arrivano anche come clic del mouse: l'interfaccia ascolta solo i clic.
+pointing/emulate_mouse_from_touch=true

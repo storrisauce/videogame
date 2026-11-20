@@ -10,5 +10,12 @@
   "molt_botta": 1.5,
   "advantage": 0.25,
   "advantage_cycle": ["porcile", "patate", "stagno", "pollaio", "discarica"],
+  "ring_green": 0.25,
+  "ring_red": 0.08,
+  "ring_spin_min": 1.2,
+  "ring_spin_max": 1.6,
+  "ring_turns": 3,
+  "reward_win_fagioli": 10,
+  "reward_loss_fagioli": 2,
   "max_turns": 200
 }

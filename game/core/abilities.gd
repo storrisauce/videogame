@@ -202,3 +202,56 @@ static func resolve_hero(m: Match, p: int, target: Variant) -> void:
 		"DrawCardsLeader":
 			for i in v:
 				m.draw(p)
+
+
+# --- Testi delle abilità (italiano) ----------------------------------------
+
+const TEXTS := {
+	"DEFBonus": "+{v} DEF a sé",
+	"ATKBonus": "+{v} ATK a sé",
+	"AdjacentDEFBonus": "+{v} DEF alle creature vicine",
+	"AdjacentATKBonus": "+{v} ATK alle creature vicine",
+	"HealSelf": "Cura {v} a sé",
+	"HealAdjacent": "Cura {v} alle creature vicine",
+	"LandscapeDEFBonus": "+{v} DEF per ogni tuo recinto della sua banda",
+	"DamageHero": "{v} danni alla Pazienza avversaria",
+	"DamageOpponent": "{v} danni alla creatura di fronte",
+	"LowerATKOpponent": "-{v} ATK alla creatura di fronte",
+	"ReturnOppnentToHand": "Rimanda in mano all'avversario la creatura di fronte",
+	"DamageAll": "{v} danni a tutte le creature avversarie",
+	"DamageEveryone": "{v} danni a TUTTE le creature in campo",
+	"SwapATKDEFOpponent": "Scambia ATK e DEF di una creatura avversaria",
+	"DrawCards": "Peschi {v} carte",
+	"DrawCardsSpell": "Peschi {v} carte",
+	"SacrificeForMP": "Distruggi la tua struttura in questo recinto: +{v} Caos",
+	"ReduceActionPoints": "L'avversario avrà {v} Caos in meno nel prossimo turno",
+	"ATKBonusBuilding": "La creatura davanti ha +{v} ATK",
+	"DEFBonusBuilding": "La creatura davanti ha +{v} DEF",
+	"DamageHeroOnDeath": "Se la creatura davanti muore: {v} danni alla Pazienza avversaria",
+	"StartTurnHealCreature": "A inizio turno cura {v} alla creatura davanti",
+	"AttackCreature": "{v} danni a una creatura avversaria",
+	"GainActionPointsLeader": "+{v} Caos in questo turno",
+	"DEFBonusAllCreaturesLeader": "+{v} DEF a tutte le tue creature",
+	"HealAllCreaturesLeader": "Cura {v} a tutte le tue creature",
+	"ReduceFactionCreatureCostLeader": "Le creature di una banda costano {v} in meno in questo turno",
+	"DrawCardsLeader": "Peschi {v} carte",
+}
+
+
+static func describe(def: Dictionary, level: int = 1) -> String:
+	var ab: Dictionary = def.get("ability", {})
+	if ab.is_empty():
+		return "Nessuna abilità. Solo carattere."
+	var v := int(ab.get("v1", 0)) * level
+	var t: String = TEXTS.get(String(ab["family"]), String(ab["family"]))
+	t = t.replace("{v}", str(v))
+	if v == 1:
+		t = t.replace("1 carte", "1 carta")
+	if def.get("type", "") == "creature":
+		return "Scuoti (%d Caos): %s" % [int(ab.get("cost", 0)), t]
+	return t
+
+
+static func describe_hero(h: Dictionary) -> String:
+	var t: String = TEXTS.get(String(h["family"]), String(h["family"]))
+	return "%s — %s (ricarica %d turni)" % [h["ability_name"], t.replace("{v}", str(int(h["v1"]))), int(h["cooldown"])]

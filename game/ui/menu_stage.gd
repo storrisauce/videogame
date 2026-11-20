@@ -70,6 +70,7 @@ func show_hero(id: String, dir := 0) -> void:
 	_hero_root.add_child(_hero)
 	if calm or not is_inside_tree():
 		return
+	Sfx.play_at(0.2, "land", 1.15)
 	_hero_root.position.y = SPOT.y + 0.56 + 1.2
 	_hero_root.rotation.y = -1.2 * (1 if dir >= 0 else -1)
 	var tw := _hero_root.create_tween().set_parallel(true)

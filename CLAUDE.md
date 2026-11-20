@@ -113,7 +113,7 @@ Elenco completo dei nomi:
 ```bash
 godot --headless --path game --import                                  # prima volta dopo il clone
 godot --headless --path game --script res://tests/test_runner.gd       # regole: atteso "74 ok, 0 falliti", uscita 0
-godot --headless --path game --script res://tests/test_ui.gd           # interfaccia: atteso "45 ok, 0 falliti" (la fila lontana in prospettiva deve restare toccabile, ≥ 44 pt), uscita 0
+godot --headless --path game --script res://tests/test_ui.gd           # interfaccia: atteso "46 ok, 0 falliti" (la fila lontana in prospettiva deve restare toccabile, ≥ 44 pt), uscita 0
 python3 ~/.claude/skills/game-docs/scripts/check_docs.py docs          # documenti: 0 errori
 ```
 I test escono con codice 1 se qualcosa fallisce. Gli errori di script **non** cambiano il codice d'uscita: cerca anche
@@ -143,6 +143,7 @@ Riassumi lo stato in 3 righe e proponi le opzioni di §9 ("Prossimi passi"), con
 | `game/data/cards.json` | 31 carte di prova (6 per banda + 4 del Cratere) e 6 sopravvissuti; ogni carta = famiglia + valori |
 | `game/data/rules.json` | tutti i numeri (Caos, Pazienza, mirino, vantaggi fra bande, ricompense) |
 | `game/tests/` | `test_runner.gd` (regole), `test_ui.gd` (partite intere dall'interfaccia + layout a 3 misure) |
+| `art/audio/gen_audio.py`, `game/assets/audio/`, `game/ui/sfx.gd` | generatore dei suoni e delle musiche (originali); file audio; suoni, musica e vibrazioni nel gioco |
 | `game/tools/` | `simulate.gd` (partite IA contro IA con statistiche), `screenshot.gd` (immagini di menu, partita, mirino) |
 | `game/export_presets.cfg` | preset **iOS** e **Android** minimi (includono `data/*.json`); Godot li completa all'apertura |
 | `docs/art/design-system.md` | **regole grafiche**: palette, scala, contorni, luce, ombre, animazione, bande, tavolo, interfaccia |
@@ -273,7 +274,10 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
   arrivi/attacchi/colpi/morti, scossa a trauma), `fx_layer.gd` (numeri di danno, carta che vola), `juice.gd` (pressione dei
   pulsanti, entrate sfalsate), menu rifatto, scheda carta compatta, opzione "Meno movimento". Controllo animazioni:
   `godot --path game --resolution 852x393 --script res://tools/anim_check.gd -- <cartella> 20` (foto ogni secondo).
-- ❌ Non ancora fatto: audio, vibrazioni, trascinamento delle carte (D-010), tutorial, set di lancio (~90 carte),
+- ✅ **D-021, suoni e vibrazioni:** 32 effetti e 2 musiche originali sintetizzati da `art/audio/gen_audio.py`
+  (in `game/assets/audio/`), suonati da `ui/sfx.gd` (`Sfx.play`, `Sfx.music`, `Sfx.buzz`, bus Musica/Effetti con limitatore);
+  impostazioni Musica, Effetti sonori, Vibrazione nella rotellina della home (salvate nel profilo). Mancano i versi degli animali.
+- ❌ Non ancora fatto: trascinamento delle carte (D-010), tutorial, set di lancio (~90 carte),
   costruzione libera del mazzo, campagna, casse/collezione, Supabase, build su iPhone reale, Android.
 
 ## 8. Tappe (dal GDD)
@@ -313,12 +317,13 @@ Aggiornala ogni volta che si installa, si scarica o si scarta qualcosa. "Usata" 
 | Blender 5.3 (Homebrew) | modelli 3D e ritocchi degli asset (togliere/aggiungere mutazioni, convertire FBX → GLB) | installato, non ancora collegato a Claude (§4.2.2) |
 | Xcode 27.2 | build iOS | presente |
 | Node 24, Python 3.14, uv | installare skill; strumenti dell'arte; MCP di Blender | presenti |
+| numpy, ffmpeg (con libvorbis) | generare suoni e musiche (`art/audio/gen_audio.py`) | presenti |
 | GitHub Desktop | push su GitHub (il terminale non ha il login: `gh auth login` mai completato) | in uso per i push |
 
 ### 11.2 Skill di Claude Code (in `~/.claude/skills`)
 | Pacchetto | Skill usate e perché | Non usate e perché |
 |---|---|---|
-| gamedev-skills/awesome-gamedev-agent-skills | `game-docs` (GDD), `godot-gdscript-headless-testing` (test), `godot-ui-control` + `game-ui-ux` (gerarchia dell'HUD, tocchi ≥ 44 pt, contrasto, safe area), `game-feel` (tre livelli di impatto, scossa a trauma, numeri, schiacciamento), `card-game` (zone e invarianti), `godot-animation` (Tween), `godot-3d-essentials` (tavolo 3D), `godot-export`, `create-game-assets` | quelle di altri motori (Unity, Unreal, Roblox, Phaser...) |
+| gamedev-skills/awesome-gamedev-agent-skills | `game-docs` (GDD), `godot-gdscript-headless-testing` (test), `godot-ui-control` + `game-ui-ux` (gerarchia dell'HUD, tocchi ≥ 44 pt, contrasto, safe area), `game-feel` (tre livelli di impatto, scossa a trauma, numeri, schiacciamento), `card-game` (zone e invarianti), `godot-animation` (Tween), `godot-3d-essentials` (tavolo 3D), `godot-export`, `create-game-assets`, `godot-audio` + `audio-design` (bus Musica/Effetti, limitatore, livelli, musica abbassata sotto i colpi, variazione di tono) | quelle di altri motori (Unity, Unreal, Roblox, Phaser...) |
 | RobLe3/cc-blender-skill (30) | pronte per quando Blender sarà collegato via MCP | non ancora usate: manca il collegamento |
 | greensock/gsap-skills (8) | `gsap-core`, `gsap-timeline`: principi di sequenze, easing, sfalsamenti, riduzione del movimento, tradotti in Tween di Godot | GSAP è una libreria JavaScript: nel gioco Godot non si usa il codice |
 | majidmanzarpour/threejs-game-skills (9) | `threejs-game-ui-designer`: gerarchia (sopravvivenza → obiettivo → feedback → contorno), niente "cartelle di statistiche" | il resto è per giochi Three.js nel browser |

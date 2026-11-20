@@ -130,7 +130,19 @@ Si parte dall'animale o dall'oggetto **normale e simpatico**, poi si aggiunge **
 5. `python3 art/tools/pixel.py preview <png> <anteprima.png> 8` e **confrontalo affiancato** con gli sprite di
    riferimento della stessa taglia (in `art/reference/`, solo in locale): taglia, luce, contorno e ombra devono tornare.
 
-## 13. Nel gioco
+## 13. Suono e vibrazioni (D-021)
+- **Tutto sintetizzato da noi** con `art/audio/gen_audio.py` (numpy; ffmpeg per le musiche .ogg): nessun campione di altri.
+  Si rigenera con `python3 art/audio/gen_audio.py` (o solo alcuni: `... hit botta music`).
+- **Carattere:** cartone animato post-nucleare. Colpi pieni con il basso che spinge (cassa + schiocco + scricchiolio),
+  molle "boing", fischi che scendono, ottoni buffi, campanelle per le cose buone, crepitio Geiger per il radioattivo.
+- **Gerarchia di volume** (`ui/sfx.gd`, tabella `LEVEL`): Botta Atomica e colpi davanti, poi atterraggi e abilità, poi
+  carte e bottoni, ultimo il ticchettio. La musica sta 9 dB sotto e si abbassa ancora sotto la Botta Atomica.
+- **Musiche:** home a 112 bpm (tuba "oom-pah", marimba, theremin dello scienziato pazzo: un liscio storto);
+  partita a 126 bpm (basso a ottavi, ottoni a contrattempo; a metà entra il theremin). Giri chiusi senza stacco.
+- **Vibrazioni** (`Sfx.buzz`): leggere per tocchi e carte, medie per colpi, lunga per la Botta Atomica e la vittoria.
+- Ogni suono cambia un poco di tono a ogni ripetizione (±6%) per non stancare.
+
+## 14. Nel gioco
 - Carte: `game/assets/cards/<id-carta>.png`; sopravvissuti: `game/assets/heroes/<id>.png`; terreni: `game/assets/board/<banda>.png`
   (generati da `art/gen/board.py`). Il codice è in `game/ui/art.gd` (colori per nome, fotogrammi, terreni, cornici).
 - Tutto si mostra a **×2**; gli sprite grandi vengono tagliati dalla finestra della carta, mai rimpiccioliti.

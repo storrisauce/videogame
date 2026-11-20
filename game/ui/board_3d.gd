@@ -434,6 +434,7 @@ func _sync(p: int, i: int, c: CardInst, creature: bool) -> void:
 	if c == null:
 		return
 	var a := _actor(String(c.def.get("id", "")), p, creature)
+	a.set_meta("creature", creature)
 	var rest := _creature_pos(p, i) if creature else _structure_pos(p, i)
 	a.set_meta("rest", rest)
 	a.set_meta("phase", float(i) * 1.7 + p * 0.9)
@@ -491,6 +492,10 @@ func _cam_kick() -> void:
 
 ## Arrivo: cade ruotando, schiaccia toccando terra, onda d'urto e polvere, poi si rimette in forma.
 func _arrive(a: Node3D, rest: Vector3) -> void:
+	if is_inside_tree():
+		var creature: bool = a.get_meta("creature", true)
+		Sfx.play_at(0.0 if reduce_motion else 0.24, "land" if creature else "clank")
+		Sfx.buzz("land")
 	if reduce_motion or not is_inside_tree():
 		a.position = rest
 		return
@@ -511,6 +516,9 @@ func _arrive(a: Node3D, rest: Vector3) -> void:
 func _die(a: Node3D) -> void:
 	if a == null or not is_instance_valid(a):
 		return
+	if is_inside_tree():
+		Sfx.play_at(0.0 if reduce_motion else 0.2, "death" if a.get_meta("creature", true) else "clank", 1.0 if a.get_meta("creature", true) else 0.8)
+		Sfx.buzz("death")
 	if not is_inside_tree() or reduce_motion:
 		a.queue_free()
 		return
@@ -534,8 +542,12 @@ func attack(p: int, i: int, hit_target: bool, crit: bool) -> void:
 	if a == null or not is_instance_valid(a) or not is_inside_tree():
 		return
 	if reduce_motion:
-		hit(1 - p, i, crit) if hit_target else shake(0.3)
+		if hit_target:
+			hit(1 - p, i, crit)
+		else:
+			_hero_hit_sound(crit)
 		return
+	Sfx.play("jump")
 	var rest: Vector3 = a.get_meta("rest", a.position)
 	var dir := Vector3(0, 0, -1.0 if p == 0 else 1.0)
 	var land := rest + dir * (ROW_D * 0.72 if hit_target else ROW_D * 1.05)
@@ -551,6 +563,7 @@ func attack(p: int, i: int, hit_target: bool, crit: bool) -> void:
 		if hit_target:
 			hit(1 - p, i, crit)
 		else:
+			_hero_hit_sound(crit)
 			shake(0.45 if not crit else 0.85))
 	tw.tween_property(a, "scale", Vector3(1.25, 0.75, 1.25), 0.05)
 	tw.tween_method(func(t: float):
@@ -563,6 +576,13 @@ func attack(p: int, i: int, hit_target: bool, crit: bool) -> void:
 ## pausa d'impatto, colpo di telecamera, scintille verdi radioattive.
 func hit(p: int, i: int, crit: bool) -> void:
 	shake(0.9 if crit else 0.35)
+	if crit:
+		Sfx.play("botta", 1.0, 0.03)
+		Sfx.duck(1.2)
+		Sfx.buzz("crit")
+	else:
+		Sfx.play("hit")
+		Sfx.buzz("hit")
 	if crit:
 		_hit_stop(0.08)
 		_cam_kick()
@@ -583,8 +603,21 @@ func hit(p: int, i: int, crit: bool) -> void:
 	_puff(rest + Vector3(0, h * 0.6, 0), Art.c("radio_2") if crit else Art.c("bianco"), 20 if crit else 10, 0.4)
 
 
+func _hero_hit_sound(crit: bool) -> void:
+	Sfx.play("hit_hero")
+	if crit:
+		Sfx.play("botta", 1.0, 0.03)
+		Sfx.duck(1.2)
+		Sfx.buzz("crit")
+	else:
+		Sfx.buzz("heavy")
+
+
 ## Scuotere: saltello con piroetta e anello verde di Caos.
 func wiggle(p: int, i: int) -> void:
+	if is_inside_tree():
+		Sfx.play("boing")
+		Sfx.buzz("light")
 	var a: Node3D = creature_sprites[p][i]
 	if a == null or not is_instance_valid(a) or reduce_motion:
 		return

@@ -26,6 +26,9 @@ var gear := Button.new()
 var settings := PanelContainer.new()
 var auto_check := CheckBox.new()
 var motion_check := CheckBox.new()
+var music_check := CheckBox.new()
+var sfx_check := CheckBox.new()
+var vibra_check := CheckBox.new()
 
 
 func setup(card_db: CardDB, prof: Profile) -> void:
@@ -96,7 +99,23 @@ func _ready() -> void:
 	motion_check.text = "Meno movimento"
 	motion_check.button_pressed = profile.meno_movimento
 	motion_check.toggled.connect(func(on: bool): profile.meno_movimento = on; stage.calm = on; profile.save())
-	for cb in [auto_check, motion_check]:
+	music_check.text = "Musica"
+	music_check.button_pressed = profile.musica
+	sfx_check.text = "Effetti sonori"
+	sfx_check.button_pressed = profile.effetti
+	vibra_check.text = "Vibrazione"
+	vibra_check.button_pressed = profile.vibrazione
+	for cb: CheckBox in [music_check, sfx_check, vibra_check]:
+		cb.toggled.connect(func(_on: bool):
+			profile.musica = music_check.button_pressed
+			profile.effetti = sfx_check.button_pressed
+			profile.vibrazione = vibra_check.button_pressed
+			Sfx.configure(profile.musica, profile.effetti, profile.vibrazione)
+			if profile.musica:
+				Sfx.music("menu")
+			Sfx.buzz("light")
+			profile.save())
+	for cb in [auto_check, motion_check, music_check, sfx_check, vibra_check]:
 		cb.custom_minimum_size = Vector2(0, 44)
 		vb.add_child(cb)
 	settings.add_child(vb)
@@ -112,6 +131,7 @@ func _ready() -> void:
 	_layout()
 	_update(0)
 	play_button.grab_focus()
+	Sfx.music("menu")
 	var order: Array[Control] = [logo, hero_name, hero_epithet, hero_desc, band_tokens[0], band_tokens[1], play_button, wallet, gear]
 	for i in order.size():
 		Juice.enter(order[i], 0.05 * i)
@@ -179,6 +199,7 @@ func _place_arrows() -> void:
 
 func _cycle_hero(d: int) -> void:
 	hero_index = posmod(hero_index + d, hero_ids.size())
+	Sfx.play("swish")
 	_update(d)
 
 
@@ -188,6 +209,8 @@ func _cycle_band(k: int) -> void:
 	if v == band_sel[1 - k]:
 		v = (v + 1) % n
 	band_sel[k] = v
+	Sfx.play("pop", 1.0 + 0.08 * v)
+	Sfx.buzz("tap")
 	_update(0, false)
 
 
@@ -218,6 +241,8 @@ func _on_play() -> void:
 	profile.hero = hero_ids[hero_index]
 	profile.bands = bands
 	profile.save()
+	Sfx.play("play")
+	Sfx.buzz("heavy")
 	play.emit(profile.hero, bands)
 
 

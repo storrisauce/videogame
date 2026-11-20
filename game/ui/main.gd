@@ -17,6 +17,7 @@ func _ready() -> void:
 	add_child(safe)
 	db = CardDB.load_default()
 	profile = Profile.load_or_new()
+	Sfx.configure(profile.musica, profile.effetti, profile.vibrazione)
 	rng.randomize()
 	_apply_safe_area()
 	get_viewport().size_changed.connect(_apply_safe_area)
@@ -110,10 +111,12 @@ func show_menu() -> void:
 	var menu := MenuScreen.new()
 	menu.setup(db, profile)
 	menu.play.connect(start_match)
+	Sfx.muted = test_mode
 	_swap(menu)
 
 
 func start_match(hero: String, bands: Array) -> void:
+	Sfx.muted = test_mode
 	var ms := MatchScreen.new()
 	_swap(ms)
 	if test_mode:

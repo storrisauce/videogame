@@ -9,6 +9,8 @@ static func press(b: Control) -> void:
 	b.resized.connect(func(): b.offset_transform_pivot = b.size / 2.0)
 	b.offset_transform_pivot = b.size / 2.0
 	var down := func():
+		Sfx.play("tap", 1.0, 0.04)
+		Sfx.buzz("tap")
 		var tw := b.create_tween()
 		tw.tween_property(b, "offset_transform_scale", Vector2(0.97, 0.97), 0.1).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	var up := func():

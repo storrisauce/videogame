@@ -76,6 +76,7 @@ func start_match(card_db: CardDB, prof: Profile, hero: String, bands: Array, opp
 	m.players[HUMAN].empty_deck_rule = "bleed"
 	m.players[AI].empty_deck_rule = "reshuffle"
 	m.event.connect(_on_event)
+	Sfx.music("match")
 	m.start()
 	_log("Inizia %s." % ("tu" if m.first_player == HUMAN else "l'avversario"))
 	refresh()
@@ -130,7 +131,11 @@ func _build() -> void:
 	banner.add_theme_color_override("font_color", Art.c("giallo_2"))
 	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	end_button.text = "Fine\nturno"
-	end_button.pressed.connect(_on_end_turn)
+	end_button.pressed.connect(func():
+		if state == "play":
+			Sfx.play("lever")
+			Sfx.buzz("light")
+		_on_end_turn())
 	end_button.add_theme_font_size_override("font_size", Ui.MID + 2)
 	end_button.add_theme_color_override("font_color", Art.c("bianco"))
 	for st in ["normal", "hover", "pressed", "disabled", "focus"]:
@@ -497,7 +502,25 @@ func _play_ability_fx(src: Vector2, hits: Array) -> void:
 	for h in hits:
 		t = maxf(t, fx.beam(src, h[0], Art.c("radio_2")))
 	if t > 0.0:
+		Sfx.play("zap")
 		await get_tree().create_timer(t).timeout
+	# un suono per tipo di effetto (non uno per bersaglio): cura/+, -, Caos, carte
+	var kinds := {}
+	for h in hits:
+		var txt: String = h[1]
+		if txt.ends_with("Caos"):
+			kinds["caos"] = true
+		elif txt.ends_with("carte"):
+			kinds["card_pick"] = true
+		elif h[2] == Art.c("rosso_3"):
+			kinds["hit_hero" if h[4] else "hit"] = true
+		elif txt.begins_with("-"):
+			kinds["debuff"] = true
+		else:
+			kinds["buff"] = true
+	for k: String in kinds:
+		if k != "hit":   # il colpo sulla creatura suona già in board3d.hit
+			Sfx.play(k)
 	for h in hits:
 		fx.pop_number(h[1], h[0], h[2], h[3])
 		if h[4]:
@@ -566,6 +589,9 @@ func _on_event(kind: String, d: Dictionary) -> void:
 			_ability_fx(d["player"], _lane_point(d["player"], d["lane"]), db.card(d["card"]).get("name", ""))
 		"hero":
 			_log("%s: %s!" % [who, m.players[d["player"]].hero["ability_name"]])
+			if speed > 0.0:
+				Sfx.play("hero_power")
+				Sfx.buzz("hit")
 			var hv := hero_views[d["player"]]
 			if speed > 0.0:
 				fx.pop_number(m.players[d["player"]].hero["ability_name"], hv.position + Vector2(hv.size.x / 2.0, hv.size.y * 0.35), Art.c("giallo_2"))
@@ -597,8 +623,11 @@ func _on_hand_tapped(v: CardView) -> void:
 	if idx < 0:
 		return
 	if idx == selected_hand:
+		Sfx.play("card_drop")
 		_deselect()
 		return
+	Sfx.play("card_pick")
+	Sfx.buzz("tap")
 	selected_hand = idx
 	var c := v.card
 	if c.type() == "event":
@@ -624,11 +653,17 @@ func _on_lane_tapped(p: int, i: int) -> void:
 		var c := m.players[HUMAN].hand[selected_hand]
 		if c.type() != "event" and m.can_play(HUMAN, c, i):
 			var hv_card := hand_layer.get_child(selected_hand) as CardView if selected_hand < hand_layer.get_child_count() else null
+			Sfx.play("whoosh")
 			if hv_card and speed > 0.0:
 				fx.fly_card(c, m, Rect2(hv_card.global_position - global_position, hv_card.size), board3d.position + board3d.project(board3d.cell_center(HUMAN, i)))
 			m.play_card(HUMAN, selected_hand, i)
 			_deselect()
 			_check_over()
+			return
+		elif c.type() != "event" and m.players[p].lanes[i].creature == null:
+			Sfx.play("deny")
+			Sfx.buzz("light")
+			fx.shake_control(board3d, 3.0)
 			return
 	var l := m.players[p].lanes[i]
 	var shown := l.creature if l.creature else l.structure
@@ -787,6 +822,9 @@ func _card_text(c: CardInst) -> String:
 func _begin_human_turn() -> void:
 	state = "play"
 	_flash("Tocca a te!")
+	if speed > 0.0:
+		Sfx.play("turn_you", 1.0, 0.0)
+		Sfx.buzz("light")
 	refresh()
 	if autoplay_human:
 		_auto_human.call_deferred()
@@ -833,6 +871,8 @@ func _on_end_turn() -> void:
 func _ai_turn() -> void:
 	state = "busy"
 	_flash("Turno dell'avversario")
+	if speed > 0.0:
+		Sfx.play("turn_opp", 1.0, 0.0)
 	refresh()
 	await _wait(0.5)
 	for n in 30:
@@ -873,6 +913,8 @@ func _dial(label: String, empty_lane: bool) -> String:
 	dial.start(rng, label, empty_lane, float(db.rule("ring_green")), float(db.rule("ring_red")),
 		float(db.rule("ring_spin_min")), float(db.rule("ring_spin_max")), float(db.rule("ring_turns")))
 	var r: String = await dial.finished
+	Sfx.play("dial_" + r, 1.0, 0.0)
+	Sfx.buzz({"botta": "heavy", "colpo": "light", "normale": "tap"}[r])
 	_flash({"botta": "BOTTA ATOMICA!", "colpo": "Colpito!", "normale": "Colpo normale"}[r])
 	return r
 
@@ -918,6 +960,11 @@ func _check_over() -> bool:
 		over_text.text = "Hai vinto!"
 		over_text.add_theme_color_override("font_color", Art.c("radio_1"))
 		over_sub.text = "+%d scatolette di fagioli" % reward
+		if speed > 0.0:
+			Sfx.music("")
+			Sfx.play("win", 1.0, 0.0)
+			Sfx.play_at(1.3, "coins", 1.0, 0.0)
+			Sfx.buzz("win")
 		if profile:
 			profile.fagioli += reward
 			profile.vittorie += 1
@@ -926,6 +973,10 @@ func _check_over() -> bool:
 		over_text.text = "Hai perso"
 		over_text.add_theme_color_override("font_color", Art.c("rosso_3"))
 		over_sub.text = "Pazienza finita"
+		if speed > 0.0:
+			Sfx.music("")
+			Sfx.play("lose", 1.0, 0.0)
+			Sfx.buzz("heavy")
 		if m.can_resurrect(HUMAN) and profile and profile.tonno > 0:
 			_add_over_button("Rialzati (1 tonno)", _resurrect, true)
 	_add_over_button("Rivincita", _end_and.bind("rematch"), m.winner == HUMAN or not (m.can_resurrect(HUMAN) and profile and profile.tonno > 0))
@@ -984,6 +1035,8 @@ func _resurrect() -> void:
 	profile.save()
 	m.resurrect(HUMAN)
 	over_panel.visible = false
+	Sfx.play("resurrect", 1.0, 0.0)
+	Sfx.music("match")
 	if m.current == AI:
 		_finish_ai_turn()
 	else:

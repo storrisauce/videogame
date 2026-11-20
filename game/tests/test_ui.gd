@@ -21,8 +21,21 @@ func _initialize() -> void:
 	await process_frame
 	await _test_full_game_through_ui()
 	await _test_layout()
+	_test_audio_files()
 	print("Risultati UI: %d ok, %d falliti" % [passed, failed])
 	quit(1 if failed > 0 else 0)
+
+
+## Ogni suono e musica usati dal gioco esiste davvero (Sfx tace senza errori se manca un file).
+func _test_audio_files() -> void:
+	var missing := []
+	for id in Sfx.LEVEL:
+		if not ResourceLoader.exists(Sfx.SFX_DIR + id + ".wav"):
+			missing.append(id)
+	for id in ["menu", "match"]:
+		if not ResourceLoader.exists(Sfx.MUSIC_DIR + id + ".ogg"):
+			missing.append(id)
+	check(missing.is_empty(), "suoni e musiche presenti %s" % [missing])
 
 
 func _test_full_game_through_ui() -> void:

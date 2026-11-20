@@ -31,6 +31,7 @@ func start(rng: RandomNumberGenerator, label: String, empty_lane: bool, green_si
 	_t = 0.0
 	_running = true
 	visible = true
+	Sfx.geiger(true)
 	queue_redraw()
 
 
@@ -59,6 +60,7 @@ func _stop() -> void:
 	if not _running:
 		return
 	_running = false
+	Sfx.geiger(false)
 	var a := _angle_frac()
 	var res := "normale"
 	if _t < spin_time * max_turns:
@@ -73,6 +75,7 @@ func _stop() -> void:
 ## Usato dai test e dal mirino automatico.
 func force(result: String) -> void:
 	_running = false
+	Sfx.geiger(false)
 	visible = false
 	finished.emit(result)
 

@@ -92,6 +92,7 @@ pesca → spendi Caos (gioca carte, scuoti creature) → attacca col mirino → 
 | D-018 | 2026-11-20 | Atmosfera del bunker: lampada calda sul tabellone, buio ai bordi, luci verdi radioattive, tavolo di lamiera dettagliato, oggetti di scena nucleari raggruppati con contorni spessi, polvere nell'aria | Luce uniforme e oggetti sparsi (D-017) | L'utente: "le cose sul tavolo sono poco definite e non fanno ambient" | schermo-di-gioco |
 | D-019 | 2026-11-20 | Revisione completa: home 3D minimal, testi e etichette ridotti al necessario, mirino e fine partita nello stile, animazioni 3D più espressive | — | L'utente: "rendi tutto minimal", "la home fa schifo", "animazioni banali" | schermo-di-gioco |
 | D-020 | 2026-11-20 | Contorni 3D uniformi: spessore misurato sullo schermo, spinta dal centro dell'oggetto per le forme del kit | — | L'utente: contorni "staccati", "disallineati", "deve essere compatto" | schermo-di-gioco |
+| D-021 | 2026-11-20 | Suoni, musiche e vibrazioni originali sintetizzati da noi (`art/audio/gen_audio.py`): 32 effetti, musica della home (tuba "oom-pah" e theremin) e della partita; impostazioni Musica/Effetti/Vibrazione | — | L'utente: "suoni e vibrazioni", "falle bene e gasanti" | schermo-di-gioco |
 
 ## Open questions
 - **Assumptions to confirm:** tutti i numeri segnati `[ASSUMPTION]` nelle note delle feature; l'abbinamento banda→stile di gioco; i 6 sopravvissuti come rosa di lancio.

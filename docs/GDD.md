@@ -1,6 +1,6 @@
 # Fattoria Nucleare — Game Design Document
 
-**Version:** 0.2 · **Updated:** 2026-11-20 · [Features](#feature-index) · [Decisions](#decisions) · [Change log](#change-log)
+**Version:** 0.3 · **Updated:** 2026-11-20 · [Features](#feature-index) · [Decisions](#decisions) · [Change log](#change-log)
 
 ## Summary
 Gioco di carte a turni per telefono. Ogni giocatore schiera animali e ortaggi mutanti in **4 recinti** davanti a quelli avversari.
@@ -38,7 +38,7 @@ pesca → spendi Caos (gioca carte, scuoti creature) → attacca col mirino → 
 
 | Feature | Status | Scope | Summary | Docs |
 |---|---|---|---|---|
-| Partita | designed | MVP | Regole del turno, Caos, recinti, Scuotere, combattimento col mirino Geiger, vittoria | [design](features/partita/design.md) |
+| Partita | in progress | MVP | Regole del turno, Caos, recinti, Scuotere, combattimento col mirino Geiger, vittoria | [design](features/partita/design.md) |
 | Carte e bande | designed | MVP | 5 bande + Cratere, sopravvissuti, formato delle carte, bilanciamento, set di lancio | [design](features/carte-e-bande/design.md) |
 | Schermo di gioco | designed | MVP | Layout orizzontale per iPhone, gesti, feedback, accessibilità | [design](features/schermo-di-gioco/design.md) |
 | IA avversaria | idea | MVP | Valuta ogni mossa col punteggio del tavolo e sceglie la migliore | — |
@@ -89,4 +89,5 @@ pesca → spendi Caos (gioca carte, scuoti creature) → attacca col mirino → 
 
 ## Change log
 **0.1 (2026-11-20):** prima stesura; partita, carte e bande, schermo di gioco progettati; D-001…D-005.
+**0.3 (2026-11-20):** M1: motore delle regole, IA e test in `game/` ([partita](features/partita/implementation.md)).
 **0.2 (2026-11-20):** schermo solo orizzontale ([schermo di gioco](features/schermo-di-gioco/design.md)); D-006…D-009.

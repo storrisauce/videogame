@@ -34,7 +34,7 @@ Tono demenziale post-nucleare cartoon. Engine: **Godot 4.7, GDScript**. Backend:
 | `docs/dna-tematico.md` | Mondo, tono, lessico, formule dei nomi (testo dell'utente) |
 | `docs/analisi-meccaniche-card-wars.md` | Studio delle regole del gioco originale, ricavato dal codice dell'APK |
 | `docs/catalogo-abilita-card-wars.md` | Le 239 famiglie di abilità con trigger ed effetti |
-| `game/` | Progetto Godot (in costruzione, vedi "Stato") |
+| `game/` | Progetto Godot: `core/` regole e IA, `data/` carte e numeri, `tests/` test, `tools/` simulatore |
 
 ## Come si lavora
 - **Documenti di design:** si usa la skill `game-docs`. Ogni feature ha uno stato (`idea` → `designed` → `in progress` → `implemented`)
@@ -54,6 +54,18 @@ Ogni nuova sessione parte da un container pulito: va reinstallato ciò che serve
   ```bash
   mkdir -p /opt/godot && cd /opt/godot && curl -sSL -o g.zip https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip && unzip -o -q g.zip && ln -sf /opt/godot/Godot_v4.7-stable_linux.x86_64 /usr/local/bin/godot && godot --headless --version
   ```
+- **Blender 5.3 (per arte 3D / immagini delle carte):** il sito download.blender.org è bloccato dal proxy; si usa il pacchetto
+  Python ufficiale `bpy` da PyPI, più alcune librerie di sistema per il rendering senza schermo:
+  ```bash
+  apt-get install -y libegl1 libgl1 libxkbcommon0 libsm6 libxi6 libxxf86vm1 libxfixes3 libxrender1
+  python3 -m venv /opt/blender-venv && /opt/blender-venv/bin/pip install bpy
+  /opt/blender-venv/bin/python -I script.py   # dentro: import bpy; motore CYCLES con device CPU (EEVEE/Workbench non vanno senza GPU)
+  ```
+- **Skill Three.js** (chieste dall'utente, utili solo per prototipi web o materiale promozionale, non per il gioco Godot):
+  ```bash
+  npx -y skills add https://github.com/cloudai-x/threejs-skills -a claude-code -g -y
+  npx -y skills add scottstts/Threejs-Awesome-Graphics-Agent-Skills -a claude-code -g -y
+  ```
 - **Supabase:** l'utente sta mettendo nei secret/variabili di GitHub Actions `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`
   (secret) e `SUPABASE_PROJECT_ID`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` (variabili). Da questa sessione non sono leggibili:
   per lavorare sul database da qui serve una credenziale chiesta con il modulo sicuro dell'ambiente. Mai chiedere chiavi in chat;
@@ -61,30 +73,32 @@ Ogni nuova sessione parte da un container pulito: va reinstallato ciò che serve
 
 ## Stato (aggiornato 2026-11-20)
 - ✅ Analisi del gioco originale dall'APK (regole, formule, IA, meta, catalogo abilità).
-- ✅ GDD 0.2 + note di design di `partita`, `carte-e-bande`, `schermo-di-gioco` (stato `designed`). Decisioni D-001…D-009.
-- ✅ Ramo `main` creato e allineato.
-- 🔧 **In corso: M1 "regole senza grafica"** — progetto Godot in `game/` con il motore delle regole in GDScript puro,
-  test automatici senza grafica e partite IA contro IA.
+- ✅ GDD 0.3 + note di design di `partita` (in progress), `carte-e-bande`, `schermo-di-gioco` (designed). Decisioni D-001…D-009.
+- ✅ **M1 quasi finita:** progetto Godot in `game/` (orizzontale, 852×393):
+  - `game/core/`: motore delle regole (`match.gd`), famiglie di abilità (`abilities.gd`), dati (`card_db.gd`), IA (`greedy_ai.gd`), partita IA contro IA (`game_runner.gd`).
+  - `game/data/cards.json`: set di prova di 31 carte (6 per banda + 4 del Cratere) e 6 sopravvissuti; `game/data/rules.json`: numeri.
+  - `game/tests/test_runner.gd`: 64 controlli, tutti verdi; il runner esce con 1 se un controllo fallisce (verificato).
+  - `game/tools/simulate.gd`: 2000 partite in ~4 minuti. Risultati in `docs/features/partita/design.md` (Open questions):
+    chi inizia vince il 64%, Nonna troppo forte (65%), Veterinario e Cane deboli (41%), Discarica debole (44%).
+- ✅ Blender 5.3 (`bpy`) installato e testato: renderizza senza schermo con Cycles su CPU.
+- ✅ Ramo `main` allineato.
 
-## Prossimi passi (M1)
-1. Creare `game/project.godot` (Godot 4.7, orientamento orizzontale `landscape`, finestra 852×393 di riferimento).
-2. Motore delle regole in `game/core/` come classi GDScript **senza nodi** (testabili da terminale):
-   dati delle carte (da `game/data/cards.json`), stato della partita, regole del turno, Caos, giocata, Scuotere,
-   combattimento con risultato del mirino passato come parametro (`colpo` / `botta` / `normale`), danni, vittoria, mazzo finito.
-3. Abilità come piccole classi o funzioni registrate per nome di famiglia (come nel catalogo), così le carte nel JSON
-   dicono solo "famiglia + valori".
-4. IA greedy a una mossa come nell'analisi (§11): punteggio del tavolo e scelta della mossa migliore.
-5. `game/tests/test_runner.gd` (vedi skill `godot-gdscript-headless-testing`): test di Caos, costi, danni, vantaggi fra bande,
-   Botta Atomica, danno alla Pazienza, mazzo finito, vittoria. Uscita 1 se un test fallisce.
-6. `game/tools/simulate.gd`: N partite IA contro IA con statistiche (durata in turni, vincitore per banda) per tarare i numeri.
-7. Comandi:
-   ```bash
-   godot --headless --path game --import
-   godot --headless --path game --script res://tests/test_runner.gd
-   godot --headless --path game --script res://tools/simulate.gd
-   ```
-8. Fine M1: aggiornare stati nel GDD (`partita` → `in progress`/`implemented`), scrivere `implementation.md` e `testing.md`,
-   aggiornare questo file, commit e push anche su `main`.
+## Prossimi passi
+1. **Chiudere M1:** implementare la regola 13 della partita (rialzarsi con 1 scatoletta di tonno); proporre all'utente
+   come tarare i numeri (vantaggio di chi inizia, sopravvissuti, Discarica) e rilanciare le simulazioni. Non cambiare
+   regole del genere senza il suo via libera (D-005): si toccano solo i numeri nostri.
+2. **M2 vertical slice su iPhone:** scena di gioco orizzontale in Godot secondo `docs/features/schermo-di-gioco/design.md`
+   (skill `godot-ui-control`, `game-ui-ux`, `game-feel`), mirino Geiger interattivo, collegata a `Match`.
+   Poi export iOS dal Mac dell'utente (skill `godot-export`) e TestFlight (serve l'Apple Developer Program).
+3. Arte: definire lo stile con la skill `create-game-assets`; Blender può servire per modelli 3D trasformati in immagini 2D.
+
+Comandi utili:
+```bash
+godot --headless --path game --import
+godot --headless --path game --script res://tests/test_runner.gd
+godot --headless --path game --script res://tools/simulate.gd -- 2000 7 0.25   # partite, seme, probabilità di Botta Atomica
+python3 ~/.claude/skills/game-docs/scripts/check_docs.py docs
+```
 
 ## Dopo M1
 M2 vertical slice su iPhone (schermo orizzontale, 2 bande, 2 sopravvissuti, 30 carte, TestFlight) → M3 contenuti → M4 campagna e Supabase → M5 Android.

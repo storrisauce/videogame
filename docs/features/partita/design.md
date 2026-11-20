@@ -1,6 +1,6 @@
 # Partita
 
-**Status:** designed · **Updated:** 2026-11-20 · [GDD](../../GDD.md)
+**Status:** in progress · **Updated:** 2026-11-20 · [GDD](../../GDD.md) · [Implementation](implementation.md) · [Testing](testing.md)
 
 Due sopravvissuti si sfidano con le loro bande su 4 recinti a testa, uno di fronte all'altro. A ogni turno spendi il Caos per giocare carte e scuotere creature, poi le tue creature attaccano il recinto di fronte con il mirino Geiger. Le regole sono quelle del genere a corsie, come le abbiamo studiate ([analisi](../../analisi-meccaniche-card-wars.md)); i numeri sono nostri (D-001, D-005). Serve il pilastro 3: tattica nei recinti, abilità nel mirino.
 
@@ -45,5 +45,8 @@ Due sopravvissuti si sfidano con le loro bande su 4 recinti a testa, uno di fron
 - [ASSUMPTION] Tutti i numeri sopra; da tarare con simulazioni IA contro IA in M1.
 - Proposte di miglioramento escluse per ora (D-005): dare effetto alla parata, togliere la regola del primo turno senza attacco, rendere uguale per l'IA la regola del mazzo finito.
 
+- **Prime simulazioni (2000 partite IA contro IA, set di prova):** circa 16 turni totali (8 a testa); chi inizia vince il **64%**; la Nonna vince il 65%, Veterinario e Cane il 41%; Discarica la banda più debole (44%). La Botta Atomica al 25% accorcia di poco le partite. Da tarare: vantaggio di chi inizia, abilità dei sopravvissuti, carte della Discarica.
+
 ## History
 - 2026-11-20: designed.
+- 2026-11-20: in progress, motore M1 in `game/core/`.

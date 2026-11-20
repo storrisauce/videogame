@@ -111,8 +111,25 @@ func show_menu() -> void:
 	var menu := MenuScreen.new()
 	menu.setup(db, profile)
 	menu.play.connect(start_match)
+	menu.play_online.connect(start_online)
 	Sfx.muted = test_mode
 	_swap(menu)
+
+
+## Partita online con un amico: OnlineGame è già in contatto (codice della stanza), info dal suo ready_to_start.
+func start_online(og: OnlineGame, info: Dictionary) -> void:
+	Sfx.muted = test_mode
+	if og.get_parent() != self:
+		if og.get_parent():
+			og.get_parent().remove_child(og)
+		add_child(og)
+	var ms := MatchScreen.new()
+	_swap(ms)
+	ms.exit_to_menu.connect(func():
+		og.leave()
+		og.queue_free()
+		show_menu())
+	ms.start_online(db, profile, og, info)
 
 
 func start_match(hero: String, bands: Array) -> void:

@@ -52,6 +52,13 @@ var _steps: Array = []
 var _disp: Dictionary = {}       ## stato MOSTRATO (può essere indietro rispetto al Match mentre la coda scorre)
 var _presenting := false
 signal presented
+## Partita online con un amico (D-025): null = contro l'IA. L'avversario (giocatore 1) è l'amico, le sue mosse
+## arrivano dalla rete; le tue partono verso di lui con _do().
+var online: OnlineGame = null
+var them_name := "Avversario"
+var _remote_moves: Array = []
+var _waiting_label := Label.new()
+signal _remote_arrived
 var log_label := Label.new()
 var end_button := Button.new()
 var menu_button := Button.new()
@@ -84,6 +91,38 @@ func start_match(card_db: CardDB, prof: Profile, hero: String, bands: Array, opp
 	m.players[HUMAN].is_human = true
 	m.players[HUMAN].empty_deck_rule = "bleed"
 	m.players[AI].empty_deck_rule = "reshuffle"
+	await _run()
+
+
+## Partita online: stessa partita sui due telefoni (stesso seme); l'ospite la calcola "a specchio".
+func start_online(card_db: CardDB, prof: Profile, og: OnlineGame, info: Dictionary) -> void:
+	db = card_db
+	profile = prof
+	online = og
+	var me: Dictionary = info["me"]
+	var them: Dictionary = info["them"]
+	them_name = String(them.get("name", "Amico"))
+	rng.seed = int(info["seed"]) + (0 if info["host"] else 1)
+	m = Match.new(db)
+	m.setup(int(info["seed"]), [DeckFactory.build(db, me["bands"]), DeckFactory.build(db, them["bands"])],
+		[DeckFactory.zones(me["bands"]), DeckFactory.zones(them["bands"])], [me["hero"], them["hero"]])
+	m.mirrored = not info["host"]
+	m.allow_replace = [true, true]
+	for ps in m.players:
+		ps.is_human = true
+		ps.empty_deck_rule = "bleed"
+	og.move_received.connect(func(a: Dictionary):
+		_remote_moves.append(a)
+		_remote_arrived.emit())
+	og.opponent_lost.connect(func(): _show_waiting("Connessione persa con %s… aspetto" % them_name))
+	og.opponent_back.connect(func(): _waiting_label.visible = false)
+	og.opponent_left.connect(func():
+		if state != "over":
+			_show_waiting("%s ha lasciato la partita" % them_name))
+	await _run()
+
+
+func _run() -> void:
 	m.event.connect(_on_event)
 	if speed > 0.0 and profile and profile.veloce:
 		speed = 1.6
@@ -96,7 +135,7 @@ func start_match(card_db: CardDB, prof: Profile, hero: String, bands: Array, opp
 	if _check_over():
 		return
 	if m.current == AI:
-		await _ai_turn()
+		await _opponent_turn()
 	else:
 		_begin_human_turn()
 
@@ -180,7 +219,10 @@ func _build() -> void:
 		psb.shadow_size = 1
 		menu_button.add_theme_stylebox_override(st, psb)
 	menu_button.tooltip_text = "Menu"
-	menu_button.pressed.connect(func(): exit_to_menu.emit())
+	menu_button.pressed.connect(func():
+		if online:
+			online.leave()
+		exit_to_menu.emit())
 	add_child(menu_button)
 	# pannello dettagli e azioni
 	# scheda compatta in alto: testo a sinistra, azioni a destra (non copre i recinti da cui dipende la scelta)
@@ -748,7 +790,7 @@ func _on_lane_tapped(p: int, i: int) -> void:
 			Sfx.play("whoosh")
 			if hv_card and speed > 0.0:
 				fx.fly_card(c, m, Rect2(hv_card.global_position - global_position, hv_card.size), board3d.position + board3d.project(board3d.cell_center(HUMAN, i)))
-			m.play_card(HUMAN, selected_hand, i)
+			_do({"type": "play", "hand": selected_hand, "lane": i})
 			_after_action()
 			return
 		elif c.type() != "event" and m.players[p].lanes[i].creature == null:
@@ -787,7 +829,7 @@ func _on_hero_tapped(p: int) -> void:
 func _scuoti(lane: int) -> void:
 	var targets := Abilities.targets(m, HUMAN, m.players[HUMAN].lanes[lane].creature, lane)
 	if targets == [null]:
-		m.scuoti(HUMAN, lane, null)
+		_do({"type": "scuoti", "lane": lane})
 		_after_action()
 	else:
 		_ask_target({"kind": "scuoti", "lane": lane, "targets": targets})
@@ -796,7 +838,7 @@ func _scuoti(lane: int) -> void:
 func _use_hero() -> void:
 	var targets := Abilities.hero_targets(m, HUMAN)
 	if targets == [null]:
-		m.use_hero(HUMAN, null)
+		_do({"type": "hero"})
 		_after_action()
 	elif targets[0] is Dictionary and targets[0].has("band"):
 		var buttons := []
@@ -808,7 +850,7 @@ func _use_hero() -> void:
 
 
 func _resolve_hero_band(t: Dictionary) -> void:
-	m.use_hero(HUMAN, t)
+	_do({"type": "hero", "target": t})
 	_after_action()
 
 
@@ -816,7 +858,7 @@ func _play_event(idx: int) -> void:
 	var c := m.players[HUMAN].hand[idx]
 	var targets := Abilities.targets(m, HUMAN, c, -1)
 	if targets == [null]:
-		m.play_card(HUMAN, idx, -1, null)
+		_do({"type": "play", "hand": idx, "lane": -1})
 		_after_action()
 	else:
 		_ask_target({"kind": "event", "hand": idx, "targets": targets})
@@ -838,11 +880,11 @@ func _cancel_target() -> void:
 func _resolve_pending(t: Dictionary) -> void:
 	match pending["kind"]:
 		"scuoti":
-			m.scuoti(HUMAN, pending["lane"], t)
+			_do({"type": "scuoti", "lane": pending["lane"], "target": t})
 		"hero":
-			m.use_hero(HUMAN, t)
+			_do({"type": "hero", "target": t})
 		"event":
-			m.play_card(HUMAN, pending["hand"], -1, t)
+			_do({"type": "play", "hand": pending["hand"], "lane": -1, "target": t})
 	pending = {}
 	state = "play"
 	_after_action()
@@ -970,7 +1012,7 @@ func _on_end_turn() -> void:
 			var att := m.players[HUMAN].lanes[i].creature
 			await _attack_cue(HUMAN, i)
 			var res := await _dial(att.def["name"], m.lane_undefended(HUMAN, i))
-			m.attack_lane(HUMAN, i, res == "botta")
+			_do({"type": "attack", "lane": i, "crit": res == "botta"})
 			refresh()
 			await _present()
 			if _check_over():
@@ -979,12 +1021,84 @@ func _on_end_turn() -> void:
 	else:
 		_flash("Primo turno: niente attacco")
 		await _wait(0.6)
-	m.end_turn(HUMAN)
+	_do({"type": "end"})
 	refresh()
 	await _present()
 	if _check_over():
 		return
-	await _ai_turn()
+	await _opponent_turn()
+
+
+func _opponent_turn() -> void:
+	if online:
+		await _remote_turn()
+	else:
+		await _ai_turn()
+
+
+## Applica una tua mossa e, se si gioca online, la manda all'amico.
+func _do(a: Dictionary) -> bool:
+	if not Protocol.apply(m, HUMAN, a):
+		return false
+	if online:
+		var out := a.duplicate()
+		if out["type"] == "end":
+			out["sum"] = Protocol.checksum(m, HUMAN)
+		online.send_move(out)
+	return true
+
+
+## Turno dell'amico: le sue mosse arrivano dalla rete e si raccontano come quelle dell'IA.
+func _remote_turn() -> void:
+	state = "busy"
+	_flash("Turno di %s" % them_name)
+	if speed > 0.0:
+		Sfx.play("turn_opp", 1.0, 0.0)
+	refresh()
+	var attacked := false
+	while true:
+		while _remote_moves.is_empty():
+			await _remote_arrived
+		var a: Dictionary = _remote_moves.pop_front()
+		match a.get("type", ""):
+			"play", "scuoti", "hero":
+				await _reveal_ai_action(a)
+				Protocol.apply(m, AI, a)
+			"attack":
+				if not attacked:
+					attacked = true
+					_flash("%s attacca!" % them_name)
+					await _wait(0.9)
+				await _attack_cue(AI, int(a["lane"]))
+				Protocol.apply(m, AI, a)
+			"end":
+				Protocol.apply(m, AI, a)
+				if a.has("sum") and int(a["sum"]) != Protocol.checksum(m, AI):
+					_log("Attenzione: le due partite non coincidono più")
+					push_warning("online: checksum diverso")
+			_:
+				continue
+		refresh()
+		await _present()
+		if _check_over():
+			return
+		if a.get("type", "") == "end":
+			break
+	_begin_human_turn()
+
+
+func _show_waiting(t: String) -> void:
+	if _waiting_label.get_parent() == null:
+		_waiting_label.add_theme_font_size_override("font_size", Ui.MID)
+		_waiting_label.add_theme_color_override("font_color", Art.c("giallo_2"))
+		_waiting_label.add_theme_constant_override("outline_size", 8)
+		_waiting_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_waiting_label.z_index = 25
+		add_child(_waiting_label)
+	_waiting_label.text = t
+	_waiting_label.position = Vector2(0, size.y * 0.42)
+	_waiting_label.size = Vector2(size.x, 40)
+	_waiting_label.visible = true
 
 
 func _ai_turn() -> void:
@@ -1197,10 +1311,11 @@ func _check_over() -> bool:
 			Sfx.music("")
 			Sfx.play("lose", 1.0, 0.0)
 			Sfx.buzz("heavy")
-		if m.can_resurrect(HUMAN) and profile and profile.tonno > 0:
+		if m.can_resurrect(HUMAN) and profile and profile.tonno > 0 and online == null:
 			_add_over_button("Rialzati (1 tonno)", _resurrect, true)
-	_add_over_button("Rivincita", _end_and.bind("rematch"), m.winner == HUMAN or not (m.can_resurrect(HUMAN) and profile and profile.tonno > 0))
-	_add_over_button("Menu", _end_and.bind("menu"))
+	if online == null:
+		_add_over_button("Rivincita", _end_and.bind("rematch"), m.winner == HUMAN or not (m.can_resurrect(HUMAN) and profile and profile.tonno > 0 and online == null))
+	_add_over_button("Menu", _end_and.bind("menu"), online != null)
 	over_panel.visible = true
 	if speed > 0.0 and is_inside_tree():
 		over_panel.pivot_offset = over_panel.size / 2.0
@@ -1244,6 +1359,8 @@ func _record_loss() -> void:
 
 func _end_and(what: String) -> void:
 	_record_loss()
+	if online:
+		online.leave()
 	if what == "rematch":
 		rematch.emit()
 	else:

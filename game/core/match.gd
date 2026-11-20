@@ -41,10 +41,18 @@ func setup(seed_value: int, decks: Array, zones: Array, heroes: Array, hero_leve
 		players.append(ps)
 
 
+## Partita online (D-025): i due telefoni calcolano la stessa partita con lo stesso seme. Su quello dell'ospite i
+## giocatori sono scambiati (lui è sempre lo 0, vicino a sé): `mirrored` fa usare il caso nello stesso ordine
+## "canonico" (prima chi ha creato la stanza), così mazzi e primo turno vengono identici.
+var mirrored := false
+
+
 func start() -> void:
-	first_player = rng.randi_range(0, 1)
+	var fp := rng.randi_range(0, 1)
+	first_player = (1 - fp) if mirrored else fp
 	round_caos = db.rule_i("caos_iniziale")
-	for p in 2:
+	for k in 2:
+		var p := (1 - k) if mirrored else k
 		_shuffle(players[p].deck)
 		players[p].caos = round_caos
 		if p != first_player:
@@ -63,6 +71,7 @@ func clone() -> Match:
 	for p in players:
 		m.players.append(p.clone())
 	m.first_player = first_player
+	m.mirrored = mirrored
 	m.current = current
 	m.turn_number = turn_number
 	m.round_caos = round_caos

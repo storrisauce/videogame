@@ -311,6 +311,14 @@ committato (es. `game/data/supabase.local.json`, da aggiungere a `.gitignore`).
   (`Board3D.refresh_view`), gettoni (`LaneView.show_lane`), Pazienza (`HeroView.disp_hp`) e contatori cambiano solo al
   loro turno; chi muore resta a vita 0 finché non tocca alla sua morte. Nel Match Scuotere, abilità ed eventi si
   annunciano prima dei loro effetti. Ogni mutazione del Match va seguita da `await _present()` prima di `_check_over()`.
+- ✅ **D-025, partita online con un amico (cross play iPhone/Android):** Supabase Realtime, solo canali "broadcast"
+  (nessuna tabella). `net/realtime.gd` (protocollo Phoenix su WebSocket), `net/online_game.gd` (stanza con codice, hello/start
+  col seme, mosse numerate con richiesta di quelle perse, ping, disconnessione), `net/protocol.gd` (mosse relative a chi le
+  manda, checksum). Lockstep: i due telefoni calcolano la stessa partita (`Match.mirrored` per l'ospite). Home: "Con un amico".
+  Configurazione **solo in locale**: `game/data/supabase.local.json` (url + chiave publishable; ignorato da git, ma entra
+  nelle build). Test: `tests/test_online.gd` (senza rete, 40 partite), `tests/test_online_net.gd` e `tests/test_realtime.gd`
+  (via internet). Avversario di prova: `godot --headless --path game --script res://tools/online_bot.gd -- PROVA1`.
+  In online: niente Rialzarsi né Rivincita; mirino solo nei propri attacchi.
 - ❌ Non ancora fatto: trascinamento delle carte (D-010), tutorial, set di lancio (~90 carte),
   costruzione libera del mazzo, campagna, casse/collezione, Supabase, build su iPhone reale, Android.
 

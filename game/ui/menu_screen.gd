@@ -6,6 +6,7 @@ extends Control
 ## Un solo elemento memorabile (il personaggio), niente testi di troppo (frontend-design, game-ui-ux).
 
 signal play(hero: String, bands: Array)
+signal play_online(og: OnlineGame, info: Dictionary)
 
 var db: CardDB
 var profile: Profile
@@ -24,6 +25,11 @@ var play_button := Button.new()
 var wallet := Wallet.new()
 var gear := Button.new()
 var settings := PanelContainer.new()
+var friend_button := Button.new()
+var lobby := PanelContainer.new()
+var lobby_status := Label.new()
+var code_edit := LineEdit.new()
+var _og: OnlineGame
 var auto_check := CheckBox.new()
 var motion_check := CheckBox.new()
 var music_check := CheckBox.new()
@@ -85,6 +91,22 @@ func _ready() -> void:
 	play_button.pressed.connect(_on_play)
 	Juice.press(play_button)
 	add_child(play_button)
+	friend_button.text = "Con un amico"
+	friend_button.add_theme_font_size_override("font_size", Ui.MID)
+	for st in ["normal", "hover", "pressed", "focus"]:
+		var fsb := StyleBoxFlat.new()
+		fsb.bg_color = Art.c({"normal": "acqua_4", "hover": "acqua_5", "pressed": "acqua_2", "focus": "acqua_4"}[st])
+		fsb.border_color = Art.c("inchiostro")
+		fsb.set_border_width_all(4)
+		fsb.set_corner_radius_all(22)
+		fsb.shadow_color = Art.c("inchiostro")
+		fsb.shadow_offset = Vector2(0, 0 if st == "pressed" else 4)
+		fsb.shadow_size = 1
+		friend_button.add_theme_stylebox_override(st, fsb)
+	friend_button.pressed.connect(_open_lobby)
+	Juice.press(friend_button)
+	add_child(friend_button)
+	_build_lobby()
 	add_child(wallet)
 	gear.text = ""   # il simbolo ⚙ non c'è nei font su iPhone: la rotellina è disegnata (GearIcon)
 	gear.custom_minimum_size = Vector2(44, 44)
@@ -183,6 +205,10 @@ func _layout() -> void:
 		t.size = Vector2(tok, tok + 18)
 	play_button.size = Vector2(clampf(W * 0.26, 180.0, 240.0), 66)
 	play_button.position = Vector2(W - play_button.size.x - m, H - 66 - m)
+	friend_button.size = Vector2(play_button.size.x, 46)
+	friend_button.position = play_button.position - Vector2(0, 56)
+	lobby.position = Vector2(W / 2.0 - 190, H * 0.12)
+	lobby.size = Vector2(380, 0)
 	gear.size = Vector2(44, 44)
 	gear.position = Vector2(W - 44 - m, 10)
 	wallet.size = Vector2(150, 44)
@@ -340,3 +366,121 @@ class GearIcon extends Control:
 		draw_polyline(outline, ink, 2.0, true)
 		draw_circle(c, r * 0.45, Art.c("ferro_2"))
 		draw_arc(c, r * 0.45, 0, TAU, 20, ink, 2.0, true)
+
+
+
+# --- Gioca con un amico (online, D-025) ----------------------------------------------------------
+## Pannello: "Crea partita" dà un codice da dire all'amico; "Entra" usa il codice dell'amico.
+
+func _build_lobby() -> void:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Art.c("ferro_1")
+	sb.border_color = Art.c("inchiostro")
+	sb.set_border_width_all(4)
+	sb.set_corner_radius_all(14)
+	sb.set_content_margin_all(14)
+	lobby.add_theme_stylebox_override("panel", sb)
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 10)
+	var title := Label.new()
+	title.text = "Gioca con un amico"
+	title.add_theme_font_size_override("font_size", Ui.MID + 2)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vb.add_child(title)
+	var create := Button.new()
+	create.text = "Crea partita"
+	create.custom_minimum_size = Vector2(0, 46)
+	create.pressed.connect(_create_room)
+	Juice.press(create)
+	vb.add_child(create)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	code_edit.placeholder_text = "Codice dell'amico"
+	code_edit.max_length = 8
+	code_edit.custom_minimum_size = Vector2(0, 46)
+	code_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	code_edit.add_theme_font_size_override("font_size", Ui.MID)
+	code_edit.text_submitted.connect(func(_t: String): _join_room())
+	row.add_child(code_edit)
+	var enter := Button.new()
+	enter.text = "Entra"
+	enter.custom_minimum_size = Vector2(90, 46)
+	enter.pressed.connect(_join_room)
+	Juice.press(enter)
+	row.add_child(enter)
+	vb.add_child(row)
+	lobby_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lobby_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lobby_status.add_theme_font_override("font", Ui.body())
+	lobby_status.add_theme_font_size_override("font_size", Ui.BODY + 3)
+	lobby_status.custom_minimum_size = Vector2(340, 0)
+	vb.add_child(lobby_status)
+	var cancel := Button.new()
+	cancel.text = "Chiudi"
+	cancel.custom_minimum_size = Vector2(0, 40)
+	cancel.pressed.connect(_close_lobby)
+	Juice.press(cancel)
+	vb.add_child(cancel)
+	lobby.add_child(vb)
+	lobby.visible = false
+	lobby.z_index = 20
+	add_child(lobby)
+
+
+func _open_lobby() -> void:
+	settings.visible = false
+	lobby.visible = true
+	lobby_status.text = "Crea una partita e di' il codice al tuo amico,\noppure scrivi il suo codice ed entra." if Realtime.available() \
+		else "Il gioco online non è configurato su questo dispositivo."
+
+
+func _close_lobby() -> void:
+	if _og:
+		_og.leave()
+		_og.queue_free()
+		_og = null
+	lobby.visible = false
+
+
+func _my_info() -> Dictionary:
+	var h: Dictionary = db.heroes[hero_ids[hero_index]]
+	return {"hero": hero_ids[hero_index], "bands": [DeckFactory.BANDS[band_sel[0]], DeckFactory.BANDS[band_sel[1]]], "name": h.get("name", "Amico")}
+
+
+func _new_og() -> OnlineGame:
+	if _og:
+		_og.leave()
+		_og.queue_free()
+	_og = OnlineGame.new()
+	add_child(_og)
+	_og.failed.connect(func(r: String): lobby_status.text = "Non riesco a collegarmi (%s). Controlla internet e riprova." % r)
+	_og.ready_to_start.connect(func(info: Dictionary):
+		lobby_status.text = "Si parte!"
+		Sfx.play("play")
+		var og := _og
+		_og = null
+		play_online.emit(og, info))
+	return _og
+
+
+func _create_room() -> void:
+	if not Realtime.available():
+		return
+	var code := OnlineGame.new_code()
+	_new_og().host(code, _my_info())
+	lobby_status.text = "Il tuo codice è  %s\nDillo al tuo amico. Aspetto che entri…" % code
+
+
+func _join_room() -> void:
+	if not Realtime.available():
+		return
+	var code := OnlineGame.clean_code(code_edit.text)
+	if code.length() < 4:
+		lobby_status.text = "Scrivi il codice che ti ha dato l'amico (es. MUCA42)."
+		return
+	var og := _new_og()
+	og.join(code, _my_info())
+	lobby_status.text = "Entro nella partita %s…" % code
+	get_tree().create_timer(12.0).timeout.connect(func():
+		if is_instance_valid(og) and og == _og and not og.started:
+			lobby_status.text = "Nessuna partita con il codice %s. Controlla il codice, o chiedi all'amico di crearne una nuova." % code)

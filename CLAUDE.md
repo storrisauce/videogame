@@ -267,6 +267,48 @@ M1 regole senza grafica ✅ → **M2 vertical slice su iPhone** (gioco fatto; ma
 
 ---
 
+## 11. Risorse esterne: pacchetti, skill, asset (cosa, perché, licenza, stato)
+Aggiornala ogni volta che si installa, si scarica o si scarta qualcosa. "Usata" = applicata davvero nel progetto.
+
+### 11.1 Programmi sul Mac
+| Programma | Perché | Stato |
+|---|---|---|
+| Godot 4.7.2 (Homebrew) | motore del gioco (D-002) | installato, comando `godot` |
+| Blender 5.3 (Homebrew) | modelli 3D e ritocchi degli asset (togliere/aggiungere mutazioni, convertire FBX → GLB) | installato, non ancora collegato a Claude (§4.2.2) |
+| Xcode 27.2 | build iOS | presente |
+| Node 24, Python 3.14, uv | installare skill; strumenti dell'arte; MCP di Blender | presenti |
+| GitHub Desktop | push su GitHub (il terminale non ha il login: `gh auth login` mai completato) | in uso per i push |
+
+### 11.2 Skill di Claude Code (in `~/.claude/skills`)
+| Pacchetto | Skill usate e perché | Non usate e perché |
+|---|---|---|
+| gamedev-skills/awesome-gamedev-agent-skills | `game-docs` (GDD), `godot-gdscript-headless-testing` (test), `godot-ui-control` + `game-ui-ux` (gerarchia dell'HUD, tocchi ≥ 44 pt, contrasto, safe area), `game-feel` (tre livelli di impatto, scossa a trauma, numeri, schiacciamento), `card-game` (zone e invarianti), `godot-animation` (Tween), `godot-3d-essentials` (tavolo 3D), `godot-export`, `create-game-assets` | quelle di altri motori (Unity, Unreal, Roblox, Phaser...) |
+| RobLe3/cc-blender-skill (30) | pronte per quando Blender sarà collegato via MCP | non ancora usate: manca il collegamento |
+| greensock/gsap-skills (8) | `gsap-core`, `gsap-timeline`: principi di sequenze, easing, sfalsamenti, riduzione del movimento, tradotti in Tween di Godot | GSAP è una libreria JavaScript: nel gioco Godot non si usa il codice |
+| majidmanzarpour/threejs-game-skills (9) | `threejs-game-ui-designer`: gerarchia (sopravvivenza → obiettivo → feedback → contorno), niente "cartelle di statistiche" | il resto è per giochi Three.js nel browser |
+| cloudai-x/threejs-skills (13), scottstts Three.js Graphics (24) | solo principi di luci, materiali, bloom | il gioco non è Three.js |
+| animate, emil-design-eng | regole di movimento: ease-out in entrata, mai da scala 0, 150–300 ms, pressione 0,97, sfalsamento 30–80 ms | — |
+| frontend-design | un solo elemento memorabile per schermata, testi semplici e attivi, niente maiuscole decorative | — |
+| vercel-react-view-transitions | idea di "elemento condiviso": la carta vola dalla mano al recinto | il codice è React |
+| vercel-react-native-skills, vercel-react-best-practices, vercel-composition-patterns, web-design-guidelines | solo il principio "anima solo posizione/scala/trasparenza" | regole per codice React o pagine web: nel progetto Godot non c'è niente a cui applicarle |
+
+### 11.3 Asset e riferimenti
+| Risorsa | Licenza | Uso | Stato |
+|---|---|---|---|
+| Sunnyside World (danieldiggle.itch.io/sunnyside) | uso commerciale e modifiche sì; **niente ridistribuzione, niente addestramento AI** | solo riferimento di stile per la pixel art (D-013) | in `art/reference/`, ignorato da git |
+| ENDESGA 32 | palette pubblica | base della palette di 63 colori | usata |
+| Cainos Pixel Art Top Down | commerciale sì, ridistribuzione no | valutato | non usato |
+| Kenney Pixel UI Pack / UI Pack / UI Pack Adventure / Fantasy UI Borders (kenney.nl) | CC0 | cornici, bottoni, pannelli 9-slice, icone come base dell'interfaccia | **proposta, in attesa di ok** |
+| Kenney Survival Kit, Nature Kit, Food Kit (3D, glTF) | CC0 | oggetti di scena attorno al tavolo, alberi, rocce, ortaggi | **proposta, in attesa di ok** |
+| Quaternius LowPoly Animated Animals (cow, pig, horse...; FBX/OBJ/Blend) | CC0 | animali 3D da mutare in Blender | **proposta**; manca la gallina, va convertito in GLB |
+| Vertexcat Farm Animals Set (anatra, gallina, mucca, maiale, pecora; FBX + .blend) | CC0 | animali 3D low-poly a colori sui vertici | **proposta** |
+| Lilita One (Google Fonts) | SIL OFL 1.1 | font cartoon grosso con contorno, con accenti | **proposta** |
+
+### 11.4 Strumenti nostri
+`art/tools/pixel.py` (render .pxl → PNG, `check` palette, `stats`, `compare`, `preview`), `art/tools/shapes.py` (forme per gli sprite),
+`art/gen/*.py` (generatori di sprite e terreni), `game/tools/simulate.gd` (bilanciamento, con varianti), `game/tools/screenshot.gd`
+(menu, tavolo, partita, mirino), `game/tools/anim_check.gd` (partita animata, una foto al secondo).
+
 ## 10. Note solo per la sessione cloud (container Linux)
 Valide solo quando si lavora nel cloud di Claude Code, non sul Mac.
 - La rete passa da un proxy: `download.blender.org` è bloccato; GitHub releases e PyPI funzionano.
